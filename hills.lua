@@ -9,6 +9,11 @@ end
 
 function init()
   midi_notes = {70,74,63,65,67,62,72,70,60,55,77,70,74,75,63,67}
+  midi_note_dest = {8,9,11,6,4,5,7}
+  midi_device = {}
+  for i = 1,#midi.vports do -- query all ports
+    midi_device[i] = midi.connect(i) -- connect each device
+  end
   hills = {}
   for i = 1,2 do
     hills[i] = {{},{},{},{},{},{},{},{}}
@@ -55,10 +60,14 @@ iterate = function(i)
   seg.current_val = util.wrap(curves[seg.shape](seg.step,1,#midi_notes-1,seg.duration),seg.min,seg.max)
   seg.step = util.round(seg.step + 0.01,0.01)
   if util.round(pre_change) ~= util.round(seg.current_val) then
-    print(midi_notes[ util.wrap(util.round(math.abs(seg.current_val)),1,#midi_notes) ], seg.step, seg.current_val, math.abs(seg.current_val))
-    engine.cutoff(seg.step*1000)
-    engine.hz(midi_to_hz( midi_notes[ util.wrap(util.round(math.abs(seg.current_val)),1,#midi_notes) ] + seg.random_octaves[math.random(#seg.random_octaves)] ))
-    engine.release(seg.step/2)
+    -- print(midi_notes[ util.wrap(util.round(math.abs(seg.current_val)),1,#midi_notes) ], seg.step, seg.current_val, math.abs(seg.current_val), util.linlin(0,seg.duration,1,127,seg.step))
+    if i == 1 then
+      engine.cutoff(seg.step*1000)
+      engine.hz(midi_to_hz( midi_notes[ util.wrap(util.round(math.abs(seg.current_val)),1,#midi_notes) ] + seg.random_octaves[math.random(#seg.random_octaves)] ))
+      engine.release(seg.step/2)
+    elseif i == 2 then
+      midi_device[4]:note_on(midi_note_dest[ util.wrap(util.round(math.abs(seg.current_val)),1,#midi_note_dest) ],util.round(util.linlin(0,seg.duration,1,64,seg.step)),1)
+    end
   end
   if util.round(seg.step,0.01) == util.round(seg.duration,0.01) then
     seg.counter:stop()
