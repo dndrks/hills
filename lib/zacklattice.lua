@@ -83,7 +83,7 @@ function Lattice:hard_sync()
   for i = 1,#p_rec do
     p_rec.hard_reset(i)
   end
-  -- params:set("clock_reset",1)
+  params:set("clock_reset",1)
   self:start()
 end
 
@@ -171,6 +171,28 @@ end
 -- @tparam function the action
 function Pattern:set_action(fn)
   self.action = fn
+end
+
+function Pattern:watch(t)
+  if self.rec then
+    self:rec_event(t)
+  elseif self.overdub then
+    self:overdub_event(t)
+  elseif self.overwrite then
+    self:overwrite_event(t)
+  end
+end
+
+function Pattern:rec_event(t)
+  if self.rec then
+    self.entries[self.bar][self.index] = t
+  end
+end
+
+function Pattern:play_event(bar,tick)
+  if self.entries[bar][tick] ~= nil then
+    self.process(self.entries[bar][tick])
+  end
 end
 
 return Lattice

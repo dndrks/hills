@@ -37,7 +37,7 @@ local sqrt = math.sqrt
 local abs = math.abs
 local asin  = math.asin
 
-local easingNames =
+easingNames =
 {
   "linear",
   "inQuad",
