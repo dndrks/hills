@@ -134,6 +134,27 @@ m.offset_timeend = function(i,j,target,delta)
   calculate_timedeltas(i,j)
 end
 
+m.offset_timeend_quantized = function(i,j,target,smallest,delta)
+  local notes_to_durs =
+  {
+    ["1/4"] = 1
+  , ["1/4d"] = 2/3
+  , ["1/4t"] = 3/2
+  , ["1/8"] = 2
+  , ["1/8d"] = 4/3
+  , ["1/8t"] = 3
+  , ["1/16"] = 4
+  , ["1/16d"] = 8/3
+  , ["1/16t"] = 6
+  , ["1/32"] = 8
+  , ["1/32d"] = 16/3
+  , ["1/32t"] = 12
+  }
+  local quant_val = clock.get_beat_sec()/notes_to_durs[smallest]
+  hills[i][j].note_timedelta[target+1] = hills[i][j].note_timedelta[target+1] + quant_val*delta
+  m.adjust_timestamps(i,j)
+end
+
 
 m.deep_copy = function(orig)
   local orig_type = type(orig)
@@ -148,6 +169,79 @@ m.deep_copy = function(orig)
     copy = orig
   end
   return copy
+end
+
+m.quantize = function(i,j,smallest,start_point,end_point)
+  local s_p = start_point
+  local e_p = end_point
+  if s_p == nil then
+    s_p = hills[i][j].low_bound.note
+  end
+  if e_p == nil then
+    e_p = hills[i][j].high_bound.note
+  end
+  local notes_to_durs =
+  {
+    ["1/4"] = 1
+  , ["1/4d"] = 2/3
+  , ["1/4t"] = 3/2
+  , ["1/8"] = 2
+  , ["1/8d"] = 4/3
+  , ["1/8t"] = 3
+  , ["1/16"] = 4
+  , ["1/16d"] = 8/3
+  , ["1/16t"] = 6
+  , ["1/32"] = 8
+  , ["1/32d"] = 16/3
+  , ["1/32t"] = 12
+  }
+  local quant_val = clock.get_beat_sec()/notes_to_durs[smallest]
+  -- for k = 1,#hills[i][j].note_timedelta do
+  for k = s_p,e_p do
+    hills[i][j].note_timedelta[k] = util.round(hills[i][j].note_timedelta[k]/quant_val) * quant_val
+  end
+  -- for k = #hills[i][j].note_timedelta,1,-1 do
+  for k = e_p,s_p,-1 do
+    if hills[i][j].note_timedelta[k] == 0 then
+      print(k)
+      -- table.remove(hills[i][j].note_timedelta,k)
+      hills[i][j].note_timedelta[k] = quant_val
+    end
+  end
+  if hills[i][j].high_bound.note > #hills[i][j].note_timedelta then
+    hills[i][j].high_bound.note = #hills[i][j].note_timedelta
+  end
+  -- tab.print(hills[i][j].note_timestamp)
+  m.adjust_timestamps(i,j)
+  -- tab.print(hills[i][j].note_timestamp)
+end
+
+m.remove_zero_times = function(i,j)
+  local to_remove = {}
+  for k,v in pairs(hills[i][j].note_timedelta) do
+    if v == 0 then
+      
+    end
+  end
+end
+
+m.clamp_to_steps = function(i,j,count)
+  hills[i][j].high_bound.note = hills[i][j].low_bound.note + (count-1)
+end
+
+m.adjust_timestamps = function(i,j)
+  hills[i][j].note_timestamp[1] = 0
+  for k = 2,#hills[i][j].note_timedelta do
+    hills[i][j].note_timestamp[k] = hills[i][j].note_timestamp[k-1] + hills[i][j].note_timedelta[k]
+  end
+end
+
+m.adjust_hill_start = function(i,j,delta)
+  hills[i][j].low_bound.note = util.clamp(hills[i][j].low_bound.note+delta,1,hills[i][j].high_bound.note)
+end
+
+m.adjust_hill_end = function(i,j,delta)
+  hills[i][j].high_bound.note = util.clamp(hills[i][j].high_bound.note+delta,hills[i][j].low_bound.note,#hills[i][j].note_timedelta)
 end
 
 return m
