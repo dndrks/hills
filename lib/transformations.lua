@@ -7,31 +7,39 @@ local m = {}
 --   params:delta("hill "..i.." base note",delta)
 -- end
 
+-- m.transpose = function(i,j,pos,delta)
+--   local current_scale = mu.generate_scale_of_length(params:get("hill "..i.." base note"),params:get("hill "..i.." scale"),hills[i][j].max)
+--   local current_note_pos = tab.key(current_scale,shape_data[i][j].notes[pos])
+--   current_note_pos = util.clamp(current_note_pos + delta,hills[i][j].min,hills[i][j].max)
+--   -- hills[i][j].notes[pos] = current_scale[current_note_pos]
+--   shape_data[i][j].notes[pos] = current_scale[current_note_pos]
+-- end
+
 m.transpose = function(i,j,pos,delta)
-  local current_scale = mu.generate_scale_of_length(params:get("hill "..i.." base note"),params:get("hill "..i.." scale"),hills[i][j].max)
-  local current_note_pos = tab.key(current_scale,shape_data[i][j].notes[pos])
-  current_note_pos = util.clamp(current_note_pos + delta,hills[i][j].min,hills[i][j].max)
-  -- hills[i][j].notes[pos] = current_scale[current_note_pos]
-  shape_data[i][j].notes[pos] = current_scale[current_note_pos]
+  hills[i][j].note_num.pool[pos] = util.clamp(hills[i][j].note_num.pool[pos]+delta,1,hills[i][j].note_num.max)
 end
 
 -- 2. REVERSAL
 m.reverse = function(i,j,start_point,end_point)
 	local rev = {}
 	for k = end_point, start_point, -1 do
-		rev[end_point - k + 1] = stored[i][j].note_step[k]
+		rev[end_point - k + 1] = hills[i][j].note_num.pool[k]
 	end
   for k = start_point, end_point do
     local range = (end_point-start_point)+1
-    stored[i][j].note_step[k] = rev[util.linlin(start_point,end_point,1,range,k)]
+    hills[i][j].note_num.pool[k] = rev[util.linlin(start_point,end_point,1,range,k)]
   end
 end
 
 -- 3. ROTATION
-m.rotate = function(i,j,first,second)
-  local originals = {stored[i][j].note_step[first], stored[i][j].note_step[second]}
-  stored[i][j].note_step[first] = originals[2]
-  stored[i][j].note_step[second] = originals[1]
+m.rotate = function(i,j,start_point,end_point)
+  local originals = {}
+  for k = start_point,end_point do
+    table.insert(originals,hills[i][j].note_num.pool[k])
+  end
+  for k = 1,#originals do
+    hills[i][j].note_num.pool[util.wrap(start_point+k,start_point,end_point)] = originals[k]
+  end
 end
 
 -- 4. PHASE OFFSET
@@ -43,27 +51,22 @@ end
 
 -- 5. RESCALING
 m.rescale = function(i,j,mult)
+
   local pre_change_duration = hills[i][j].duration
   hills[i][j].duration = util.round(clock.get_beat_sec() * mult,0.01)
   -- hills[i][j].base_step = 0
   hills[i][j].base_step = util.linlin(0,pre_change_duration,0,hills[i][j].duration,hills[i][j].base_step)
   -- hills[i][j].eject = hills[i][j].duration
   hills[i][j].eject = util.linlin(0,pre_change_duration,0,hills[i][j].duration,hills[i][j].eject)
-
-  --- doesn't really work....
-  -- for x = 1,128 do
-  --   if #hills[i].base_step_pattern.entries[x] > 0 then
-  --     for k,v in pairs(hills[i].base_step_pattern.entries[x]) do
-  --       -- print(k,v)
-  --       hills[i].base_step_pattern.entries[x][k].base_step = util.linlin(0,pre_change_duration,0,hills[i][j].duration,v.base_step)
-  --     end
-  --   end
-  -- end
 end
 
 -- 6. INTERPOLATION
 m.reshape = function(i,j,new_shape)
   hills[i][j].shape = new_shape
+end
+
+m.clamp_down = function(i,j)
+  
 end
 
 -- 7. EXTRAPOLATION
@@ -216,15 +219,6 @@ m.quantize = function(i,j,smallest,start_point,end_point)
   -- tab.print(hills[i][j].note_timestamp)
 end
 
-m.remove_zero_times = function(i,j)
-  local to_remove = {}
-  for k,v in pairs(hills[i][j].note_timedelta) do
-    if v == 0 then
-      
-    end
-  end
-end
-
 m.clamp_to_steps = function(i,j,count)
   hills[i][j].high_bound.note = hills[i][j].low_bound.note + (count-1)
 end
@@ -238,10 +232,18 @@ end
 
 m.adjust_hill_start = function(i,j,delta)
   hills[i][j].low_bound.note = util.clamp(hills[i][j].low_bound.note+delta,1,hills[i][j].high_bound.note)
+  if hills[i][j].index < hills[i][j].low_bound.note then
+    hills[i][j].index = hills[i][j].low_bound.note
+    hills[i][j].step = hills[i][j].note_timestamp[hills[i][j].index]
+  end
 end
 
 m.adjust_hill_end = function(i,j,delta)
   hills[i][j].high_bound.note = util.clamp(hills[i][j].high_bound.note+delta,hills[i][j].low_bound.note,#hills[i][j].note_timedelta)
+  if hills[i][j].index > hills[i][j].high_bound.note then
+    hills[i][j].index = hills[i][j].high_bound.note
+    hills[i][j].step = hills[i][j].note_timestamp[hills[i][j].index]
+  end
 end
 
 return m
