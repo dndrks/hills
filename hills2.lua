@@ -5,10 +5,12 @@
 
 curves = include 'lib/easing'
 prms = include 'lib/parameters'
-_m = include 'lib/transformations'
+_t = include 'lib/transformations'
 _a = include 'lib/actions'
 _g = include 'lib/grid_lib'
-_p = include 'lib/patterning'
+_p = include 'lib/new-patterning'
+_e = include 'lib/enc_actions'
+_k = include 'lib/key_actions'
 mu = require 'musicutil'
 engine.name = "PolyPerc"
 
@@ -36,6 +38,9 @@ function init()
   ui.hill_focus = 1
   ui.menu_focus = 1
   ui.screen_controls = {}
+  ui.seq_menu_focus = 1
+  ui.seq_menu_layer = "nav"
+  ui.seq_controls = {}
 
   hills = {}
 
@@ -64,6 +69,11 @@ function init()
 
     hills[i].note_scale = mu.generate_scale_of_length(60,1,28)
     hills[i].segment = 1
+    ui.seq_controls[i] =
+    {
+      ["seq"] = {["focus"] = 1}
+    , ["trig_detail"] = {["focus"] = 1, ["max"] = 3}
+    }
     ui.screen_controls[i] = {}
     ui.screen_controls[i] =
     {
@@ -107,7 +117,7 @@ function init()
       hills[i][j].counter_div = 1
 
       construct(i,j)
-      _m.shuffle(i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
+      _t.shuffle(i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
 
       ui.edit_note[i][j] = 1
       ui.screen_controls[i][j] =
@@ -292,105 +302,11 @@ pass_note = function(i,j,seg,note_val,destination)
 end
 
 function enc(n,d)
-  local s_c = ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]
-  local i = ui.hill_focus
-  local j = hills[i].screen_focus
-  if n == 1 then
-    ui.hill_focus = util.clamp(ui.hill_focus+d,1,4)
-  elseif n == 2 then
-    if ui.control_set == "play" then
-      ui.menu_focus = util.clamp(ui.menu_focus+d,1,4)
-    elseif ui.control_set == "edit" then
-      if ui.menu_focus == 2 then
-        s_c["bounds"]["focus"] = util.clamp(s_c["bounds"]["focus"]+d,1,s_c["bounds"]["max"])
-      elseif ui.menu_focus == 3 then
-        s_c["notes"]["focus"] = util.clamp(s_c["notes"]["focus"]+d,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
-      elseif ui.menu_focus == 4 then
-        s_c["loop"]["focus"] = util.clamp(s_c["loop"]["focus"]+d,1,s_c["loop"]["max"])
-      end
-    elseif ui.control_set == "seq" then
-      ui.screen_controls[i]["seq"]["focus"] = util.clamp(ui.screen_controls[i]["seq"]["focus"]+d,1,64)
-    end
-  elseif n == 3 then
-    if ui.control_set ~= "seq" then
-      if ui.menu_focus == 1 then
-        hills[i].screen_focus = util.clamp(j+d,1,8)
-      elseif ui.menu_focus == 2 then
-        if ui.control_set == "edit" then
-          if s_c["bounds"]["focus"] == 1 then
-            _m.adjust_hill_start(i,j,d)
-          elseif s_c["bounds"]["focus"] == 2 then
-            _m.adjust_hill_end(i,j,d)
-          end
-        end
-      elseif ui.menu_focus == 3 then
-        if not key1_hold then
-          _m.transpose(i,j,s_c["notes"]["focus"],d)
-        else
-          local note_adjustments = {"shuffle","reverse","rotate"}
-          local current_adjustment = tab.key(note_adjustments,s_c["notes"]["transform"])
-          s_c["notes"]["transform"] = note_adjustments[util.clamp(current_adjustment+d,1,#note_adjustments)]
-        end
-      elseif ui.menu_focus == 4 then
-        if s_c["loop"]["focus"] == 1 then
-          hills[i][j].counter_div = util.clamp(hills[i][j].counter_div+d/16,1/16,2)
-          if j == hills[i].segment then
-            hills[i].counter.time = 0.01/hills[i][j].counter_div
-          end
-        elseif s_c["loop"]["focus"] == 2 then
-          hills[i][j].loop = d > 0 and true or false
-        end
-      end
-    elseif ui.control_set == "seq" then
-      local current_focus = ui.screen_controls[i]["seq"]["focus"]
-      local current_val = _p.get_note(i,current_focus)
-      _p.delta_note(i,current_focus,true,d)
-    end
-  end
-  screen_dirty = true
+  _e.parse(n,d)
 end
 
 function key(n,z)
-  if z == 1 then
-    local s_c = ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]
-    local i = ui.hill_focus
-    local j = hills[i].screen_focus
-    if n == 1 then
-      key1_hold = true
-    elseif n == 2 then
-      if ui.control_set == "edit" then
-        ui.control_set = "play"
-      elseif ui.control_set == "play" then
-        ui.control_set = "seq"
-      elseif ui.control_set == "seq" then
-        ui.control_set = "play"
-      end
-    elseif n == 3 then
-      if ui.control_set == "play" then
-        ui.control_set = "edit"
-        if ui.menu_focus == 3 then
-          if s_c["notes"]["focus"] < hills[i][j].low_bound.note then
-            s_c["notes"]["focus"] = hills[i][j].low_bound.note
-          elseif s_c["notes"]["focus"] > hills[i][j].high_bound.note then
-            s_c["notes"]["focus"] = hills[i][j].high_bound.note
-          end
-        end
-      elseif ui.control_set == "edit" then
-        if not key1_hold then
-          _a.one_shot(ui.hill_focus,hills[ui.hill_focus].screen_focus)
-        else
-          if ui.menu_focus == 3 then
-            _m[s_c["notes"]["transform"]](i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
-          end
-        end
-      end
-    end
-  elseif z == 0 then
-    if n == 1 then
-      key1_hold = false
-    end
-  end
-  screen_dirty = true
+  _k.parse(n,z)
 end
 
 redraw = function()
@@ -407,7 +323,7 @@ redraw = function()
     if ui.control_set ~= "seq" then
       local focus = h.screen_focus
       local seg = h[focus]
-      local sorted = _m.deep_copy(hills[hf][focus].note_num.pool)
+      local sorted = _t.deep_copy(hills[hf][focus].note_num.pool)
       table.sort(sorted)
       local peak_pitch = sorted[#sorted]
       screen.level(1) -- or 15?
@@ -424,7 +340,6 @@ redraw = function()
         end
         if hills[hf][focus].note_timedelta[i] > hills[hf][focus].duration/#hills[hf][focus].note_num.pool then
           screen.circle(horizontal+util.round_up(hills[hf][focus].note_timedelta[i]*2),vertical,util.round_up(hills[hf][focus].note_timedelta[i]*2))
-          -- screen.circle(horizontal+util.round_up(hills[hf][focus].note_timedelta[i]*2),vertical+util.round_up(hills[hf][focus].note_timedelta[i]*2),util.round_up(hills[hf][focus].note_timedelta[i]*2))
         elseif hills[hf][focus].note_timedelta[i] < (hills[hf][focus].duration/#hills[hf][focus].note_num.pool)/2 then
           screen.pixel(horizontal,vertical)
         else
@@ -473,11 +388,46 @@ redraw = function()
       end
     else
       screen.font_size(8)
-      screen.level(15)
+      local menus = {"TRIG","LEN","RATE","TPORT"}
+      local current_focus = ui.seq_controls[hf]["seq"]["focus"]
+      local MARGIN = 8
+      local GUTTER = 14
+      local col_width = (128 - (MARGIN * 2) - GUTTER * (#menus - 1)) / #menus
+      for i = 1, #menus do
+        screen.level(ui.seq_menu_focus == i and 15 or 3)
+        screen.move(MARGIN + col_width * 0.5 + ((col_width + GUTTER) * (i - 1)), 25)
+        if (ui.seq_menu_layer == "edit" or ui.seq_menu_layer == "deep_edit") and ui.seq_menu_focus == i then
+          screen.text_center("["..menus[i].."]")
+        elseif ui.seq_menu_layer ~= "edit" and ui.seq_menu_layer ~= "deep_edit" then
+          screen.text_center(menus[i])
+        end
+      end
+      if ui.seq_menu_layer ~= "deep_edit" then
+        local mods = _p.get_mod(hf,current_focus)
+        if #mods ~= 0 then
+          for i = 1,#mods do
+            screen.move(120,0+(i*10))
+            screen.text_right(mods[i])
+          end
+        end
+      end
       for i = 1,64 do
-        screen.move((index_to_grid_pos(i,16)[1]-1)*8,15+(8*index_to_grid_pos(i,16)[2]))
-        screen.level(ui.screen_controls[hf]["seq"]["focus"] == i and 15 or (pattern[hf].steps.current == i and 10 or 3))
+        screen.move(2+(index_to_grid_pos(i,16)[1]-1)*8,30+(8*index_to_grid_pos(i,16)[2]))
+        if ui.seq_menu_layer == "edit" or ui.seq_menu_layer == "deep_edit" then
+          screen.level(current_focus == i and 15 or (pattern[hf].steps.current == i and 6 or 2))
+        elseif ui.seq_menu_layer == "nav" then
+          screen.level(pattern[hf].steps.current == i and 6 or 2)
+        end
         screen.text(pattern[hf].steps.event[i] ~= 0 and pattern[hf].steps.event[i] or "-")
+      end
+      if ui.seq_menu_layer == "deep_edit" then
+        local deep_edits = {"PROB", "A", "B"}
+        local deep_displays = {pattern[hf].steps.probability[current_focus],pattern[hf].steps.A[current_focus],pattern[hf].steps.B[current_focus]}
+        for i = 1,#deep_edits do
+          screen.move(40,0+(i*10))
+          screen.level(ui.seq_controls[hf]["trig_detail"]["focus"] == i and 15 or 3)
+          screen.text(deep_edits[i]..": "..deep_displays[i])
+        end
       end
     end
     screen.update()

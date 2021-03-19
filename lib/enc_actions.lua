@@ -1,0 +1,75 @@
+local enc_actions = {}
+
+function enc_actions.parse(n,d)
+  local s_c = ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]
+  local i = ui.hill_focus
+  local j = hills[i].screen_focus
+  local s_q = ui.seq_controls[i]
+  if n == 1 then
+    ui.hill_focus = util.clamp(ui.hill_focus+d,1,4)
+  elseif n == 2 then
+    if ui.control_set == "play" then
+      ui.menu_focus = util.clamp(ui.menu_focus+d,1,4)
+    elseif ui.control_set == "edit" then
+      if ui.menu_focus == 2 then
+        s_c["bounds"]["focus"] = util.clamp(s_c["bounds"]["focus"]+d,1,s_c["bounds"]["max"])
+      elseif ui.menu_focus == 3 then
+        s_c["notes"]["focus"] = util.clamp(s_c["notes"]["focus"]+d,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
+      elseif ui.menu_focus == 4 then
+        s_c["loop"]["focus"] = util.clamp(s_c["loop"]["focus"]+d,1,s_c["loop"]["max"])
+      end
+    elseif ui.control_set == "seq" then
+      if ui.seq_menu_layer == "nav" then
+        ui.seq_menu_focus = util.clamp(ui.seq_menu_focus+d,1,4)
+      elseif ui.seq_menu_layer == "edit" then
+        s_q["seq"]["focus"] = util.clamp(s_q["seq"]["focus"]+d,1,64)
+      elseif ui.seq_menu_layer == "deep_edit" then
+        s_q["trig_detail"]["focus"] = util.clamp(s_q["trig_detail"]["focus"]+d,1,s_q["trig_detail"]["max"])
+      end
+    end
+  elseif n == 3 then
+    if ui.control_set ~= "seq" then
+      if ui.menu_focus == 1 then
+        hills[i].screen_focus = util.clamp(j+d,1,8)
+      elseif ui.menu_focus == 2 then
+        if ui.control_set == "edit" then
+          if s_c["bounds"]["focus"] == 1 then
+            _t.adjust_hill_start(i,j,d)
+          elseif s_c["bounds"]["focus"] == 2 then
+            _t.adjust_hill_end(i,j,d)
+          end
+        end
+      elseif ui.menu_focus == 3 then
+        if not key1_hold then
+          _t.transpose(i,j,s_c["notes"]["focus"],d)
+        else
+          local note_adjustments = {"shuffle","reverse","rotate"}
+          local current_adjustment = tab.key(note_adjustments,s_c["notes"]["transform"])
+          s_c["notes"]["transform"] = note_adjustments[util.clamp(current_adjustment+d,1,#note_adjustments)]
+        end
+      elseif ui.menu_focus == 4 then
+        if s_c["loop"]["focus"] == 1 then
+          hills[i][j].counter_div = util.clamp(hills[i][j].counter_div+d/16,1/16,2)
+          if j == hills[i].segment then
+            hills[i].counter.time = 0.01/hills[i][j].counter_div
+          end
+        elseif s_c["loop"]["focus"] == 2 then
+          hills[i][j].loop = d > 0 and true or false
+        end
+      end
+    elseif ui.control_set == "seq" then
+      if ui.seq_menu_focus == 1 then
+        if ui.seq_menu_layer == "edit" then
+          local current_focus = s_q["seq"]["focus"]
+          local current_val = _p.get_note(i,current_focus)
+          _p.delta_note(i,current_focus,true,d)
+        elseif ui.seq_menu_layer == "deep_edit" then
+          _p.delta_probability(i,s_q["seq"]["focus"],d)
+        end
+      end
+    end
+  end
+  screen_dirty = true
+end
+
+return enc_actions

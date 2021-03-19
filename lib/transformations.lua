@@ -174,6 +174,20 @@ m.deep_copy = function(orig)
   return copy
 end
 
+m.notes_same_from_here = function(i,j,pos,end_point)
+  local e_p = end_point
+  if e_p == nil then
+    e_p = hills[i][j].high_bound.note
+  end
+  if pos ~= end_point then
+    for k = pos+1,e_p do
+      hills[i][j].note_num.pool[k] = hills[i][j].note_num.pool[pos]
+    end
+  else
+    print("this is the last note, can't change any more!")
+  end
+end
+
 m.quantize = function(i,j,smallest,start_point,end_point)
   local s_p = start_point
   local e_p = end_point
