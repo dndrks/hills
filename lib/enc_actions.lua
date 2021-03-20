@@ -64,7 +64,13 @@ function enc_actions.parse(n,d)
           local current_val = _p.get_note(i,current_focus)
           _p.delta_note(i,current_focus,true,d)
         elseif ui.seq_menu_layer == "deep_edit" then
-          _p.delta_probability(i,s_q["seq"]["focus"],d)
+          if ui.seq_controls[i]["trig_detail"]["focus"] == 1 then
+            _p.delta_probability(i,s_q["seq"]["focus"],d,key1_hold)
+          elseif ui.seq_controls[i]["trig_detail"]["focus"] == 2 then
+            _p.delta_conditional(i,s_q["seq"]["focus"],"A",d,key1_hold)
+          elseif ui.seq_controls[i]["trig_detail"]["focus"] == 3 then
+            _p.delta_conditional(i,s_q["seq"]["focus"],"B",d,key1_hold)
+          end
         end
       end
     end
