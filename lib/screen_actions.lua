@@ -77,19 +77,16 @@ function screen_actions.draw()
       end
     end
   else
-    screen.font_size(8)
-    local menus = {"TRIG","LEN","RATE","TPORT"}
+    local menus = {"step","rec","tport"}
     local current_focus = ui.seq_controls[hf]["seq"]["focus"]
-    local MARGIN = 8
-    local GUTTER = 14
-    local col_width = (128 - (MARGIN * 2) - GUTTER * (#menus - 1)) / #menus
-    for i = 1, #menus do
+    screen.font_size(8)
+    for i = 1,#menus do
       screen.level(ui.seq_menu_focus == i and 15 or 3)
-      screen.move(MARGIN + col_width * 0.5 + ((col_width + GUTTER) * (i - 1)), 25)
+      screen.move(0,15+(10*i))
       if (ui.seq_menu_layer == "edit" or ui.seq_menu_layer == "deep_edit") and ui.seq_menu_focus == i then
-        screen.text_center("["..menus[i].."]")
+        screen.text("["..menus[i].."]")
       elseif ui.seq_menu_layer ~= "edit" and ui.seq_menu_layer ~= "deep_edit" then
-        screen.text_center(menus[i])
+        screen.text(menus[i])
       end
     end
     if ui.seq_menu_layer ~= "deep_edit" then
@@ -101,28 +98,33 @@ function screen_actions.draw()
         end
       end
     end
-    for i = 1,64 do
-      screen.move(2+(index_to_grid_pos(i,16)[1]-1)*8,30+(8*index_to_grid_pos(i,16)[2]))
-      if ui.seq_menu_layer == "edit" or ui.seq_menu_layer == "deep_edit" then
-        screen.level(current_focus == i and 15 or (pattern[hf].steps.current == i and 6 or 2))
-      elseif ui.seq_menu_layer == "nav" then
-        screen.level(pattern[hf].steps.current == i and 6 or 2)
+    if ui.seq_menu_focus == 1 then
+      local chunk = step_seq[hf].active_chunk
+      local s_p = step_seq[hf].chunks[chunk][1]
+      local e_p = step_seq[hf].chunks[chunk][2]
+      for i = s_p,e_p do
+        screen.move(40+(index_to_grid_pos(i,8)[1]-1)*8,15+(8*index_to_grid_pos(i,8)[2]))
+        if ui.seq_menu_layer == "edit" or ui.seq_menu_layer == "deep_edit" then
+          screen.level(current_focus == i and 15 or (step_seq[hf].steps.current == i and 6 or 2))
+        elseif ui.seq_menu_layer == "nav" then
+          screen.level(step_seq[hf].steps.current == i and 6 or 2)
+        end
+        screen.text(step_seq[hf].steps.event[i] ~= 0 and step_seq[hf].steps.event[i] or "-")
       end
-      screen.text(pattern[hf].steps.event[i] ~= 0 and pattern[hf].steps.event[i] or "-")
-    end
-    if ui.seq_menu_layer == "deep_edit" then
-      local deep_edits = {"PROB", "A", "B"}
-      local deep_positions = {{128,8},{104,16},{128,16}}
-      local deep_displays = {pattern[hf].steps.probability[current_focus],pattern[hf].steps.A[current_focus],pattern[hf].steps.B[current_focus]}
-      for i = 1,#deep_edits do
-        screen.move(deep_positions[i][1],deep_positions[i][2])
-        screen.level(ui.seq_controls[hf]["trig_detail"]["focus"] == i and 15 or 3)
-        screen.text_right(deep_edits[i]..": "..deep_displays[i])
+      if ui.seq_menu_layer == "deep_edit" then
+        local deep_edits = {"PROB", "A", "B"}
+        local deep_positions = {{128,8},{104,16},{128,16}}
+        local deep_displays = {step_seq[hf].steps.probability[current_focus],step_seq[hf].steps.A[current_focus],step_seq[hf].steps.B[current_focus]}
+        for i = 1,#deep_edits do
+          screen.move(deep_positions[i][1],deep_positions[i][2])
+          screen.level(ui.seq_controls[hf]["trig_detail"]["focus"] == i and 15 or 3)
+          screen.text_right(deep_edits[i]..": "..deep_displays[i])
+        end
+        screen.move(70,12)
+        screen.level(15)
+        local k1 = tostring(key1_hold) == "true" and "(all)" or ""
+        screen.text(k1)
       end
-      screen.move(70,12)
-      screen.level(15)
-      local k1 = tostring(key1_hold) == "true" and "(all)" or ""
-      screen.text(k1)
     end
   end
   screen.update()

@@ -1,6 +1,4 @@
-local patterning = {}
-
-lattice = include("lib/hillattice")
+local rec_patterning = {}
 
 function dev()
   step_seq[1].steps.A[1] = 9
@@ -53,42 +51,10 @@ function patterning.init()
       step_seq[i].steps.A[j] = 1
       step_seq[i].steps.B[j] = 1
       -- step_seq[i].sub_steps.max[j] = 16 -- 16 pulses per step
-      step_seq[i].sub_steps.max[j] = 128 -- 8 pulses per step
+      step_seq[i].sub_steps.max[j] = 8 -- 8 pulses per step
     end
+
     step_seq[i].queued_rate = nil
-
-    -- recorder = {}
-    -- recorder[i] = main_lattice:new_pattern{
-    --   action = function() patterning.rec_iterate(i) end,
-    --   -- division = 1/256 -- this allows the sub_steps to run 16 = 16ths
-    --   division = 1/256 -- this allows the sub_steps to run 8 = 16ths
-    -- }
-    -- recorder[i].active = false
-    -- recorder[i].restart_flag = false
-    -- recorder[i].steps = {}
-    -- recorder[i].steps.max = 1024 -- the largest a recorder can get
-    -- recorder[i].steps.start_point = 1
-    -- recorder[i].steps.end_point = 1024 -- let's start with 16 steps
-    -- recorder[i].steps.current = 1
-    -- recorder[i].sub_steps = {}
-    -- recorder[i].sub_steps.max = {}
-    -- recorder[i].sub_steps.current = 1
-    -- recorder[i].steps.active = {}
-    -- recorder[i].steps.event = {}
-    -- recorder[i].steps.probability = {}
-    -- recorder[i].steps.cycle = 1 -- to keep track of cycles for conditionals
-    -- recorder[i].steps.A = {} -- base, so when is the first time it's true?
-    -- recorder[i].steps.B = {} -- scale, so how many until it's true again?
-    -- -- 4:7 = true 4th, 11th, 18th
-    -- for j = 1,1024 do
-    --   recorder[i].steps.active[j] = false
-    --   recorder[i].steps.event[j] = 0
-    --   recorder[i].steps.probability[j] = 100
-    --   recorder[i].steps.A[j] = 1
-    --   recorder[i].steps.B[j] = 1
-    --   recorder[i].sub_steps.max[j] = 16 -- 8 pulses per step
-    -- end
-
     pattern_focus[i] = "s1"
   end
 end
@@ -269,63 +235,5 @@ end
 function patterning.get_state(i,j)
   return step_seq[i].steps.state[j]
 end
-
-
--- RECORDER
-
-function patterning.rec_iterate(i)
-  if step_seq[i].active then
-    local current_sub = step_seq[i].sub_steps.current
-    local current_step = step_seq[i].steps.current
-    if step_seq[i].steps.active[current_step] and step_seq[i].steps.event[current_step] ~= 0 and current_sub == 1 then
-      if patterning.check_probability(i,current_step) then
-        if step_seq[i].steps.cycle < step_seq[i].steps.A[current_step] then
-          -- keep going...
-        elseif step_seq[i].steps.cycle == step_seq[i].steps.A[current_step] then
-          -- play the step
-          print(clock.get_beats(),current_step)
-          _a.one_shot(i,step_seq[i].steps.event[current_step])
-          print("first "..step_seq[i].steps.cycle)
-        elseif step_seq[i].steps.cycle > step_seq[i].steps.A[current_step] then
-          -- if A = 2 and B = 6 then...
-          -- on cycle == 2
-          -- on cycle == 8
-          -- on cycle == 14
-          if step_seq[i].steps.cycle <= (step_seq[i].steps.A[current_step] + step_seq[i].steps.B[current_step]) then
-            if step_seq[i].steps.cycle % (step_seq[i].steps.A[current_step] + step_seq[i].steps.B[current_step]) == 0 then
-              print(clock.get_beats(),current_step)
-              _a.one_shot(i,step_seq[i].steps.event[current_step])
-              print("second "..step_seq[i].steps.cycle)
-            end
-          else
-            if (step_seq[i].steps.cycle - step_seq[i].steps.A[current_step]) % step_seq[i].steps.B[current_step] == 0 then
-              print(clock.get_beats(),current_step)
-              _a.one_shot(i,step_seq[i].steps.event[current_step])
-              print("..."..step_seq[i].steps.cycle)
-            end
-          end
-        end
-      end
-    end
-    if current_sub == 1 then
-      patterning.check_rate_queue(i)
-    end
-    step_seq[i].sub_steps.current = step_seq[i].sub_steps.current + 1
-    screen_dirty = true
-    if step_seq[i].sub_steps.current > step_seq[i].sub_steps.max[current_step] then
-      step_seq[i].sub_steps.current = 1
-      step_seq[i].steps.current = step_seq[i].steps.current + 1
-    end
-    if step_seq[i].steps.current > step_seq[i].steps.end_point then
-      step_seq[i].steps.current = step_seq[i].steps.start_point
-      step_seq[i].steps.cycle = step_seq[i].steps.cycle + 1
-    end
-  end
-end
-
-
-
-
-
 
 return patterning

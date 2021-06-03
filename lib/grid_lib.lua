@@ -1,4 +1,5 @@
 local grid_lib = {}
+local grid = util.file_exists(_path.code.."midigrid") and include "midigrid/lib/midigrid" or grid
 
 g = grid.connect()
 

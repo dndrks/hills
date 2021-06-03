@@ -13,7 +13,7 @@ _e = include 'lib/enc_actions'
 _k = include 'lib/key_actions'
 _s = include 'lib/screen_actions'
 mu = require 'musicutil'
-engine.name = "PolyPerc"
+engine.name = "Krick"
 
 r = function()
   norns.script.load("code/a-hills/hills2.lua")
@@ -43,6 +43,7 @@ function init()
   ui.seq_menu_focus = 1
   ui.seq_menu_layer = "nav"
   ui.seq_controls = {}
+  ui.pattern_focus = {"s1","s1","s1","s1"}
 
   hills = {}
 
@@ -62,12 +63,15 @@ function init()
     ui.edit_note[i] = {}
     hills[i] = {}
     hills[i].mode = "iterate"
-    hills[i].counter = metro.init()
-    hills[i].counter.time = 0.01
-    hills[i].counter.event = function() _G[hills[i].mode](i) end
-    hills[i].iterate_counter = metro.init()
-    hills[i].iterate_counter.time = 0.01
-    hills[i].iterate_counter.event = function() iterate(i) end
+    -- hills[i].counter = metro.init()
+    -- hills[i].counter.time = 0.01
+    -- hills[i].counter.event = function() _G[hills[i].mode](i) end
+    hills[i].counter = clock.run(function() _G[hills[i].mode](i) end)
+    hills[i].active = false
+
+    -- hills[i].iterate_counter = metro.init()
+    -- hills[i].iterate_counter.time = 0.01
+    -- hills[i].iterate_counter.event = function() iterate(i) end
 
     hills[i].note_scale = mu.generate_scale_of_length(60,1,28)
     hills[i].segment = 1
@@ -130,8 +134,8 @@ function init()
       }
     end
 
-    hills[i].counter.count = -1
-    hills[i].iterate_counter.count = (hills[1][1].duration * 100)+1
+    -- hills[i].counter.count = -1
+    -- hills[i].iterate_counter.count = (hills[1][1].duration * 100)+1
     hills[i].screen_focus = 1
     clock.run(function()
       while true do
@@ -185,58 +189,68 @@ calculate_timedeltas = function(i,j)
 end
 
 iterate = function(i)
-  local h = hills[i]
-  local seg = h[h.segment]
-  if seg.loop then
-    if seg.high_bound.note ~= seg.low_bound.note then
-      if seg.note_timestamp[seg.index] ~= nil then
-        if util.round(seg.note_timestamp[seg.index],0.01) == util.round(seg.step,0.01) then
-          pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],"midi")
-          screen_dirty = true
-          seg.index = seg.index + 1
+  while true do
+    clock.sync(1/100)
+    if hills[i].active then
+      local h = hills[i]
+      local seg = h[h.segment]
+      if seg.loop then
+        if seg.high_bound.note ~= seg.low_bound.note then
+          if seg.note_timestamp[seg.index] ~= nil then
+            if util.round(seg.note_timestamp[seg.index],0.01) == util.round(seg.step,0.01) then
+              pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],"midi")
+              pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],"crow-v8_jf-pulse")
+              screen_dirty = true
+              seg.index = seg.index + 1
+            end
+            seg.step = util.round(seg.step + 0.01,0.01)
+            local reasonable_max = seg.note_timestamp[seg.high_bound.note+1] ~= nil and seg.note_timestamp[seg.high_bound.note+1] or seg.note_timestamp[seg.high_bound.note] + seg.note_timedelta[seg.high_bound.note]
+            if util.round(seg.step,0.01) >= util.round(reasonable_max,0.01) then
+              _a.one_shot(i,h.segment)
+            end
+          end
+        else
+          if util.round(seg.note_timestamp[seg.index+1],0.01) == util.round(seg.step,0.01) then
+            pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],"midi")
+            pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],"crow-v8_jf-pulse")
+            screen_dirty = true
+            seg.step = seg.note_timestamp[seg.index]
+          else
+            seg.step = util.round(seg.step + 0.01,0.01)
+            -- seg.step = 
+          end
         end
-        seg.step = util.round(seg.step + 0.01,0.01)
-        local reasonable_max = seg.note_timestamp[seg.high_bound.note+1] ~= nil and seg.note_timestamp[seg.high_bound.note+1] or seg.note_timestamp[seg.high_bound.note] + seg.note_timedelta[seg.high_bound.note]
-        if util.round(seg.step,0.01) >= util.round(reasonable_max,0.01) then
-          _a.one_shot(i,h.segment)
-        end
-      end
-    else
-      if util.round(seg.note_timestamp[seg.index+1],0.01) == util.round(seg.step,0.01) then
-        pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],"midi")
-        screen_dirty = true
-        seg.step = seg.note_timestamp[seg.index]
       else
-        seg.step = util.round(seg.step + 0.01,0.01)
-        -- seg.step = 
-      end
-    end
-  else
-    if seg.index <= seg.high_bound.note then
-      if util.round(seg.note_timestamp[seg.index],0.01) == util.round(seg.step,0.01) then
-        -- print(seg.index,seg.note_timestamp[seg.index],seg.note_num.pool[seg.index],seg.step)
-        pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],"midi")
-        screen_dirty = true
-        -- seg.index = util.clamp(seg.index + 1,seg.low_bound.note,seg.high_bound.note)
-        seg.index = seg.index + 1
-      end
-      seg.step = util.round(seg.step + 0.01,0.01)
-      local comparator;
-      if seg.bound_mode == "time" then
-        comparator = util.round(seg.step,0.01) > util.round(seg.high_bound.time,0.01)
-      elseif seg.bound_mode == "note" then
-        comparator = seg.index > seg.high_bound.note
-      end
-      if comparator then -- if `>` then this get us a final tick, which is technically duration + 0.01
-        print("stopping")
-        h.counter:stop()
-        seg.iterated = true
-        seg.step = seg.note_timestamp[seg.low_bound.note] -- reset
-        screen_dirty = true
-        local ch = params:get("hill "..i.." MIDI note channel")
-        local dev = params:get("hill "..i.." MIDI device")
-        midi_device[dev]:note_off(pre_note[i],seg.velocity,ch)
-        -- seg.index = seg.low_bound.note -- reset
+        if seg.index <= seg.high_bound.note then
+          if util.round(seg.note_timestamp[seg.index],0.01) == util.round(seg.step,0.01) then
+            -- print(seg.index,seg.note_timestamp[seg.index],seg.note_num.pool[seg.index],seg.step)
+            pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],"midi")
+            pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],"crow-v8_jf-pulse")
+            screen_dirty = true
+            -- seg.index = util.clamp(seg.index + 1,seg.low_bound.note,seg.high_bound.note)
+            seg.index = seg.index + 1
+          end
+          seg.step = util.round(seg.step + 0.01,0.01)
+          local comparator;
+          if seg.bound_mode == "time" then
+            comparator = util.round(seg.step,0.01) > util.round(seg.high_bound.time,0.01)
+          elseif seg.bound_mode == "note" then
+            comparator = seg.index > seg.high_bound.note
+          end
+          if comparator then -- if `>` then this get us a final tick, which is technically duration + 0.01
+            print("stopping")
+            -- h.counter:stop()
+            -- clock.cancel(hills[i].counter)
+            hills[i].active = false
+            seg.iterated = true
+            seg.step = seg.note_timestamp[seg.low_bound.note] -- reset
+            screen_dirty = true
+            local ch = params:get("hill "..i.." MIDI note channel")
+            local dev = params:get("hill "..i.." MIDI device")
+            midi_device[dev]:note_off(pre_note[i],seg.velocity,ch)
+            -- seg.index = seg.low_bound.note -- reset
+          end
+        end
       end
     end
   end
@@ -298,8 +312,10 @@ pass_note = function(i,j,seg,note_val,destination)
     -- midi_device[4]:cc(18,seg.cc_val,9)
     pre_note[i] = played_note
   elseif destination == "crow_pulse" then
-    crow.output[i].volts = (played_note-60)/12
     crow.output[i+2]()
+  elseif destination == "crow-v8_jf-pulse" then
+    crow.output[i].volts = (played_note-60)/12
+    crow.ii.jf.trigger(i,1)
   end
 end
 
