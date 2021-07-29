@@ -3,34 +3,20 @@
 -- note_timestamp holds each step's place in the total timescale
 -- note_timedelta holds each step's duration
 
-local mxsamples=nil
-if util.file_exists(_path.code.."mx.samples") then
-  mxsamples=include("mx.samples/lib/mx.samples")
-  engine.name = "MxSamples"
-end
-
-if mxsamples~=nil then
-  _mx=mxsamples:new()
-  _mx.instrument_list=_mx:list_instruments()
-else
-  _mx=nil
-  _mx.instrument_list={}
-end
-
 curves = include 'lib/easing'
 prms = include 'lib/parameters'
 _t = include 'lib/transformations'
 _a = include 'lib/actions'
 _g = include 'lib/grid_lib'
-_p = include 'lib/patterning'
+_p = include 'lib/new-patterning'
 _e = include 'lib/enc_actions'
 _k = include 'lib/key_actions'
 _s = include 'lib/screen_actions'
 mu = require 'musicutil'
--- engine.name = "Krick"
+engine.name = "Krick"
 
 r = function()
-  norns.script.load("code/hills/hills.lua")
+  norns.script.load("code/a-hills/hills2.lua")
 end
 
 for i = 1,3 do
@@ -75,10 +61,17 @@ function init()
 
   for i = 1,8 do
     ui.edit_note[i] = {}
-
     hills[i] = {}
     hills[i].mode = "iterate"
+    -- hills[i].counter = metro.init()
+    -- hills[i].counter.time = 0.01
+    -- hills[i].counter.event = function() _G[hills[i].mode](i) end
+    hills[i].counter = clock.run(function() _G[hills[i].mode](i) end)
     hills[i].active = false
+
+    -- hills[i].iterate_counter = metro.init()
+    -- hills[i].iterate_counter.time = 0.01
+    -- hills[i].iterate_counter.event = function() iterate(i) end
 
     hills[i].note_scale = mu.generate_scale_of_length(60,1,28)
     hills[i].segment = 1
@@ -96,14 +89,16 @@ function init()
     for j = 1,8 do
       hills[i][j] = {}
       hills[i][j].edit_position = 1
-      hills[i][j].duration = util.round(clock.get_beat_sec() * 16,0.01)
+      -- hills[i][j].duration = util.round(clock.get_beat_sec() * math.random(8,15),0.01) -- in seconds
+      hills[i][j].duration = util.round(clock.get_beat_sec() * 10,0.01)
       hills[i][j].eject = hills[i][j].duration
       hills[i][j].base_step = 0
-      hills[i][j].population = math.random(10,100)/100
+      hills[i][j].population = 1
       hills[i][j].current_val = 0
       hills[i][j].step = 0
       hills[i][j].index = 1
       hills[i][j].note_ocean = mu.generate_scale_of_length(params:get("hill "..i.." base note"),params:get("hill "..i.." scale"),127) -- the full range of notes
+      -- hills[i][j].note_ocean = {70,62,63,65,67,70,72,79,84,85,63,77,75}
       hills[i][j].timing = {}
       hills[i][j].shape =  params:string("hill ["..i.."]["..j.."] shape")
       hills[i][j].constructed = false
@@ -114,20 +109,18 @@ function init()
       hills[i][j].high_bound.time = hills[i][j].duration
       hills[i][j].bound_mode = "note"
       hills[i][j].loop = false
-      hills[i][j].counter_div = 1
-      hills[i][j].perf_led = false
-      hills[i][j].iterated = false
 
       hills[i][j].note_num = -- this is where we track the note entries for the constructed hill
       {
         ["min"] = 1, -- defines the lowest note degree
-        ["max"] = 15, -- defines the highest note degree
-        ["pool"] = {}, -- gets filled with the constructed hill's notes
-        ["active"] = {} -- tracks whether the note should play
+        ["max"] = 12, -- defines the highest note degree
+        ["pool"] = {} -- gets filled with the constructed hill's notes
       }
-
+        
       hills[i][j].note_timestamp = {}
       hills[i][j].note_timedelta = {}
+
+      hills[i][j].counter_div = 1
 
       construct(i,j)
       _t.shuffle(i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
@@ -141,8 +134,8 @@ function init()
       }
     end
 
-    hills[i].counter = clock.run(function() _G[hills[i].mode](i) end)
-
+    -- hills[i].counter.count = -1
+    -- hills[i].iterate_counter.count = (hills[1][1].duration * 100)+1
     hills[i].screen_focus = 1
     clock.run(function()
       while true do
@@ -174,6 +167,7 @@ construct = function(i,j)
       pass_data_into_storage(i,j,index,{note_num,k/100})
     end
   end
+  -- hills[i][j].high_bound.note = 
   calculate_timedeltas(i,j)
   screen_dirty = true
 end
@@ -182,7 +176,6 @@ pass_data_into_storage = function(i,j,index,data)
   hills[i][j].note_num.pool[index] = data[1]
   hills[i][j].note_timestamp[index] = data[2]
   hills[i][j].high_bound.note = #hills[i][j].note_num.pool
-  hills[i][j].note_num.active[index] = true
 end
 
 calculate_timedeltas = function(i,j)
@@ -197,7 +190,7 @@ end
 
 iterate = function(i)
   while true do
-    clock.sync(1/(32*hills[i][hills[i].segment].counter_div))
+    clock.sync(1/100)
     if hills[i].active then
       local h = hills[i]
       local seg = h[h.segment]
@@ -205,14 +198,10 @@ iterate = function(i)
         if seg.high_bound.note ~= seg.low_bound.note then
           if seg.note_timestamp[seg.index] ~= nil then
             if util.round(seg.note_timestamp[seg.index],0.01) == util.round(seg.step,0.01) then
-              pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index,"midi")
-              pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index,"crow-v8_jf-pulse")
+              pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],"midi")
+              pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],"crow-v8_jf-pulse")
               screen_dirty = true
               seg.index = seg.index + 1
-              seg.perf_led = true
-              grid_dirty = true 
-            else
-              grid_dirty = true
             end
             seg.step = util.round(seg.step + 0.01,0.01)
             local reasonable_max = seg.note_timestamp[seg.high_bound.note+1] ~= nil and seg.note_timestamp[seg.high_bound.note+1] or seg.note_timestamp[seg.high_bound.note] + seg.note_timedelta[seg.high_bound.note]
@@ -222,31 +211,24 @@ iterate = function(i)
           end
         else
           if util.round(seg.note_timestamp[seg.index+1],0.01) == util.round(seg.step,0.01) then
-            pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index,"midi")
-            pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index,"crow-v8_jf-pulse")
+            pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],"midi")
+            pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],"crow-v8_jf-pulse")
             screen_dirty = true
             seg.step = seg.note_timestamp[seg.index]
-            seg.perf_led = true
-            grid_dirty = true 
           else
             seg.step = util.round(seg.step + 0.01,0.01)
-            grid_dirty = true
+            -- seg.step = 
           end
         end
       else
-        seg.iterated = false
         if seg.index <= seg.high_bound.note then
           if util.round(seg.note_timestamp[seg.index],0.01) == util.round(seg.step,0.01) then
             -- print(seg.index,seg.note_timestamp[seg.index],seg.note_num.pool[seg.index],seg.step)
-            pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index,"midi")
-            pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index,"crow-v8_jf-pulse")
+            pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],"midi")
+            pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],"crow-v8_jf-pulse")
             screen_dirty = true
+            -- seg.index = util.clamp(seg.index + 1,seg.low_bound.note,seg.high_bound.note)
             seg.index = seg.index + 1
-            seg.perf_led = true
-            grid_dirty = true
-          else
-            -- seg.perf_led = false
-            grid_dirty = true
           end
           seg.step = util.round(seg.step + 0.01,0.01)
           local comparator;
@@ -256,25 +238,17 @@ iterate = function(i)
             comparator = seg.index > seg.high_bound.note
           end
           if comparator then -- if `>` then this get us a final tick, which is technically duration + 0.01
-            seg.perf_led = true
             print("stopping")
-            grid_dirty = true
+            -- h.counter:stop()
+            -- clock.cancel(hills[i].counter)
             hills[i].active = false
             seg.iterated = true
             seg.step = seg.note_timestamp[seg.low_bound.note] -- reset
             screen_dirty = true
             local ch = params:get("hill "..i.." MIDI note channel")
             local dev = params:get("hill "..i.." MIDI device")
-            seg.end_of_cycle_clock = clock.run(
-              function()
-                clock.sleep(1/15)
-                if seg.iterated then
-                  seg.perf_led = false
-                  grid_dirty = true
-                  midi_device[dev]:note_off(pre_note[i],seg.velocity,ch)
-                  _mx:off({name = _mx.dests[i],midi=pre_note[i]})
-                end
-              end)
+            midi_device[dev]:note_off(pre_note[i],seg.velocity,ch)
+            -- seg.index = seg.low_bound.note -- reset
           end
         end
       end
@@ -315,49 +289,33 @@ adjust_timestamps_for_injection = function(i,j,index,duration)
   calculate_timedeltas(i,j)
 end
 
-pass_note = function(i,j,seg,note_val,index,destination)
+pass_note = function(i,j,seg,note_val,destination)
   local midi_notes = hills[i][j].note_ocean
   local played_note = midi_notes[note_val]
-  if played_note ~= nil and hills[i][j].note_num.active[index] then
-    if _mx.dests[i] ~= "none" then
-      if pre_note[i] ~= nil then
-        _mx:off({name = _mx.dests[i],midi=pre_note[i]})
-      end
-      if _mx ~= nil then
-        _mx:on({
-          name = _mx.dests[i],
-          midi=played_note,
-          velocity=seg.velocity,
-          amp=params:get("hill "..i.." mx_amp"),
-          attack=params:get("hill "..i.." mx_attack"),
-          release=params:get("hill "..i.." mx_release"),
-          pan=params:get("hill "..i.." mx_pan"),
-        })
+  -- print(hills[i][j].index,i,j,note_val,midi_notes[note_val])
+  if destination == "engine" then
+    if i < 4 then
+      engine.hz(midi_to_hz(played_note))
+    end
+  elseif destination == "midi" then
+    local ch = params:get("hill "..i.." MIDI note channel")
+    local dev = params:get("hill "..i.." MIDI device")
+    if pre_note[i] ~= nil then
+      midi_device[dev]:note_off(pre_note[i],seg.velocity,ch)
+    end
+    midi_device[dev]:note_on(played_note,seg.velocity,ch)
+    for j = 1,5 do
+      if params:string("hill "..i.." cc_"..j) ~= "none" then
+        midi_device[dev]:cc(params:get("hill "..i.." cc_"..j),seg.cc_val,params:get("hill "..i.." cc_"..j.."_ch"))
       end
     end
-    if destination == "engine" then
-      if i < 4 then
-        engine.hz(midi_to_hz(played_note))
-      end
-    elseif destination == "midi" then
-      local ch = params:get("hill "..i.." MIDI note channel")
-      local dev = params:get("hill "..i.." MIDI device")
-      if pre_note[i] ~= nil then
-        midi_device[dev]:note_off(pre_note[i],seg.velocity,ch)
-      end
-      midi_device[dev]:note_on(played_note,seg.velocity,ch)
-      for j = 1,5 do
-        if params:string("hill "..i.." cc_"..j) ~= "none" then
-          midi_device[dev]:cc(params:get("hill "..i.." cc_"..j),seg.cc_val,params:get("hill "..i.." cc_"..j.."_ch"))
-        end
-      end
-    elseif destination == "crow_pulse" then
-      crow.output[i+2]()
-    elseif destination == "crow-v8_jf-pulse" then
-      crow.output[i].volts = (played_note-60)/12
-      crow.ii.jf.trigger(i,1)
-    end
+    -- midi_device[4]:cc(18,seg.cc_val,9)
     pre_note[i] = played_note
+  elseif destination == "crow_pulse" then
+    crow.output[i+2]()
+  elseif destination == "crow-v8_jf-pulse" then
+    crow.output[i].volts = (played_note-60)/12
+    crow.ii.jf.trigger(i,1)
   end
 end
 
