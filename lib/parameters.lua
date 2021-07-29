@@ -1,6 +1,9 @@
 local parameters = {}
 
+_mx.dests ={"none","none","none"}
+
 function parameters.init()
+  table.insert(_mx.instrument_list,1,"none")
   for i = 1,8 do
     params:add_option("hill "..i.." scale","hill "..i.." scale",scale_names,1)
     params:set_action("hill "..i.." scale",
@@ -14,10 +17,40 @@ function parameters.init()
     function(x)
       for j = 1,8 do
         hills[i][j].note_ocean = mu.generate_scale_of_length(x,params:get("hill "..i.." scale"),127)
+        if params:get("hill "..i.." span") > #hills[i][j].note_ocean then
+          params:set("hill "..i.." span",#hills[i][j].note_ocean)
+        end
+        for k = 1,#hills[i][j].note_num.pool do
+          if hills[i][j].note_num.pool[k] > #hills[i][j].note_ocean then
+            hills[i][j].note_num.pool[k] = #hills[i][j].note_ocean
+          end
+        end
       end
     end)
+    params:add_number("hill "..i.." span","hill "..i.." note degree span",1,127,14)
+    params:set_action("hill "..i.." span",
+    function(x)
+      for j = 1,8 do
+        if x > #hills[i][j].note_ocean then
+          params:set("hill "..i.." span",#hills[i][j].note_ocean)
+        else
+          hills[i][j].note_num.max = util.clamp(x+1,1,#hills[i][j].note_ocean)
+        end
+      end
+    end)
+
+    params:add_option("hill "..i.." Mx voice", "hill "..i.." Mx voice",_mx.instrument_list,1)
+    params:set_action("hill "..i.." Mx voice",function(x)
+      _mx.dests[i] = _mx.instrument_list[x]
+    end)
+    params:add{type="number",id="hill "..i.." mx_velocity",name="Mx.velocity",min=0,max=127,default=80}
+    params:add{type='control',id="hill "..i.." mx_amp",name="Mx.amp",controlspec=controlspec.new(0,2,'lin',0.01,0.5,'amp',0.01/2)}
+    params:add{type="control",id="hill "..i.." mx_pan",name="Mx.pan",controlspec=controlspec.new(-1,1,'lin',0,0)}
+    params:add{type='control',id="hill "..i.." mx_attack",name="Mx.attack",controlspec=controlspec.new(0,10,'lin',0,0,'s')}
+    params:add{type='control',id="hill "..i.." mx_release",name="Mx.release",controlspec=controlspec.new(0,10,'lin',0,2,'s')}
+
     params:add_number("hill "..i.." MIDI note channel","hill "..i.." MIDI note channel",1,16,1)
-    params:add_number("hill "..i.." MIDI device","hill "..i.." MIDI device",1,16,3)
+    params:add_number("hill "..i.." MIDI device","hill "..i.." MIDI device",1,16,1)
     params:add_number("hill "..i.." velocity","hill "..i.." velocity",0,127,60)
     params:add_number("hill "..i.." cc_val","hill "..i.." cc value",0,127,60)
     local fixed_ccs = {}

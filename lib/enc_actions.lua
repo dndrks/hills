@@ -6,7 +6,7 @@ function enc_actions.parse(n,d)
   local j = hills[i].screen_focus
   local s_q = ui.seq_controls[i]
   if n == 1 then
-    ui.hill_focus = util.clamp(ui.hill_focus+d,1,4)
+    ui.hill_focus = util.clamp(ui.hill_focus+d,1,8)
   elseif n == 2 then
     if ui.control_set == "play" then
       ui.menu_focus = util.clamp(ui.menu_focus+d,1,4)
@@ -43,16 +43,13 @@ function enc_actions.parse(n,d)
         if not key1_hold then
           _t.transpose(i,j,s_c["notes"]["focus"],d)
         else
-          local note_adjustments = {"shuffle","reverse","rotate"}
+          local note_adjustments = {"shuffle","reverse","rotate","rand fill","static"}
           local current_adjustment = tab.key(note_adjustments,s_c["notes"]["transform"])
           s_c["notes"]["transform"] = note_adjustments[util.clamp(current_adjustment+d,1,#note_adjustments)]
         end
       elseif ui.menu_focus == 4 then
         if s_c["loop"]["focus"] == 1 then
-          hills[i][j].counter_div = util.clamp(hills[i][j].counter_div+d/16,1/16,2)
-          if j == hills[i].segment then
-            hills[i].counter.time = 0.01/hills[i][j].counter_div
-          end
+          hills[i][j].counter_div = util.clamp(hills[i][j].counter_div+d/128,1/128,4)
         elseif s_c["loop"]["focus"] == 2 then
           hills[i][j].loop = d > 0 and true or false
         end

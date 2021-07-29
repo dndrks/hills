@@ -7,7 +7,7 @@ function screen_actions.draw()
   screen.level(15)
   screen.move(0,10)
   screen.font_size(12)
-  local hill_names = {"A","B","C","D"}
+  local hill_names = {"A","B","C","D","E","F","G","H"}
   screen.text(hill_names[ui.hill_focus])
   screen.fill()
   if ui.control_set ~= "seq" then
@@ -15,8 +15,9 @@ function screen_actions.draw()
     local seg = h[focus]
     local sorted = _t.deep_copy(hills[hf][focus].note_num.pool)
     table.sort(sorted)
-    local peak_pitch = sorted[#sorted]
-    screen.level(1) -- or 15?
+    -- local peak_pitch = sorted[#sorted]
+    local peak_pitch = util.clamp(seg.note_num.max,1,#seg.note_ocean)
+    screen.level(1)
     screen.rect(40,15,80,40)
     screen.fill()
     local s_c = ui.screen_controls[hf][focus]
@@ -24,9 +25,9 @@ function screen_actions.draw()
       local horizontal = util.linlin(hills[hf][focus].note_timestamp[hills[hf][focus].low_bound.note], hills[hf][focus].note_timestamp[hills[hf][focus].high_bound.note],40,120,hills[hf][focus].note_timestamp[i])
       local vertical = util.linlin(hills[hf][focus].note_ocean[1],hills[hf][focus].note_ocean[peak_pitch],55,15,hills[hf][focus].note_ocean[hills[hf][focus].note_num.pool[i]])
       if ui.control_set == "edit" and ui.menu_focus == 3 then
-        screen.level(s_c["notes"]["focus"] == i and 15 or (seg.index-1 == i and 10 or 3))
+        screen.level(s_c["notes"]["focus"] == i and 15 or (seg.index-1 == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0)))
       else
-        screen.level(seg.index-1 == i and 10 or 3)
+        screen.level(seg.index-1 == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0))
       end
       if hills[hf][focus].note_timedelta[i] > hills[hf][focus].duration/#hills[hf][focus].note_num.pool then
         screen.circle(horizontal+util.round_up(hills[hf][focus].note_timedelta[i]*2),vertical,util.round_up(hills[hf][focus].note_timedelta[i]*2))
@@ -50,11 +51,13 @@ function screen_actions.draw()
         screen.level(key1_hold == true and 3 or 15)
         screen.move(40,10)
         local note_number = seg.note_ocean[seg.note_num.pool[s_c["notes"]["focus"]]]
-        screen.text("note: "..note_number.." / "..mu.note_num_to_name(note_number))
+        screen.text("note: "..note_number.." / "..mu.note_num_to_name(note_number)..(hills[hf][focus].note_num.active[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["notes"]["focus"]] and "" or " (muted)"))
         if key1_hold then
           screen.level(key1_hold == true and 15 or 3)
           screen.move(0,64)
-          screen.text("K3 transform: "..ui.screen_controls[hf][focus]["notes"]["transform"])
+          screen.text("K2: "..(hills[hf][focus].note_num.active[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["notes"]["focus"]] and "mute" or "un-mute"))
+          screen.move(128,64)
+          screen.text_right("K3: "..ui.screen_controls[hf][focus]["notes"]["transform"])
         end
       elseif ui.menu_focus == 4 then
         screen.level(s_c["loop"]["focus"] == 1 and 15 or 3)
@@ -67,6 +70,11 @@ function screen_actions.draw()
     end
     local menus = {"hill: "..focus,"bound","notes","loop"}
     screen.font_size(8)
+    if ui.control_set == "edit" and ui.menu_focus ~= 1 then
+      screen.move(0,25)
+      screen.level(3)
+      screen.text("hill: "..focus)
+    end
     for i = 1,4 do
       screen.level(ui.menu_focus == i and 15 or 3)
       screen.move(0,15+(10*i))
