@@ -109,25 +109,19 @@ m.shuffle = function(i,j,lo,hi)
   end
 end
 
-m.random_note_fill = function(i,j,start_point,end_point,lo,hi)
-  -- fill these steps with random notes between min and max
-  local randomized = {}
+m["rand fill"] = function(i,j,start_point,end_point)
   for m = start_point,end_point do
-    hills[i][j].note_num.pool[m] = math.random(lo,hi)
+    hills[i][j].note_num.pool[m] = math.random(1,hills[i][j].note_num.max)
   end
-  tab.print(hills[i][j].note_num.pool)
 end
 
-m.flatten = function(i,j,start_point,end_point,note)
-  for m = start_point, end_point do
-    hills[i][j].note_num.pool[m] = note
-  end
+m.mute = function(i,j,pos)
+  hills[i][j].note_num.active[pos] = not hills[i][j].note_num.active[pos]
 end
 
 m.offset_timestart = function(i,j,target,delta)
   hills[i][j].note_timestamp[target] = hills[i][j].note_timestamp[target] + delta
   print(hills[i][j].note_timestamp[target])
-  -- calculate_timedeltas(i,j)
 end
 
 m.offset_timeend = function(i,j,target,delta)
@@ -174,13 +168,13 @@ m.deep_copy = function(orig)
   return copy
 end
 
-m.notes_same_from_here = function(i,j,pos,end_point)
+m.static = function(i,j,start_point,end_point,pos)
   local e_p = end_point
   if e_p == nil then
     e_p = hills[i][j].high_bound.note
   end
-  if pos ~= end_point then
-    for k = pos+1,e_p do
+  if start_point ~= end_point then
+    for k = start_point,e_p do
       hills[i][j].note_num.pool[k] = hills[i][j].note_num.pool[pos]
     end
   else
