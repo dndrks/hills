@@ -15,6 +15,7 @@ local hill_names = {"A","B","C","D","E","F","G","H"}
 function parameters.init()
   table.insert(_mx.instrument_list,1,"none")
   refresh_params_vports()
+
   params:add_separator("hills")
   params:add_option("global engine","global engine",engine_options,1)
   params:add_trigger("reload engine","reload engine")
@@ -24,7 +25,7 @@ function parameters.init()
     end
   )
   for i = 1,8 do
-    params:add_group(hill_names[i],33)
+    params:add_group(hill_names[i],41)
 
     params:add_separator("note management ["..hill_names[i].."]")
     params:add_option("hill "..i.." scale","scale",scale_names,1)
@@ -67,7 +68,7 @@ function parameters.init()
     params:add{type="control",id="hill "..i.." pp_amp",name="amp",controlspec=controlspec.new(0,1,'lin',0,0.25,'')}
     params:add{type="control",id="hill "..i.." pp_pw",name="pw",controlspec=controlspec.new(0,100,'lin',0,50,'%')}
     params:add{type="control",id="hill "..i.." pp_release",name="release",controlspec=controlspec.new(0.1,3.2,'lin',0,1.2,'s')}
-    params:add{type="control",id="hill "..i.." pp_cut",name="cutoff",controlspec=controlspec.new(50,5000,'exp',0,800,'hz')}
+    params:add{type="control",id="hill "..i.." pp_cut",name="cutoff",controlspec=controlspec.new(50,12000,'exp',0,800,'hz')}
 
     params:add_separator("MxSamples management ["..hill_names[i].."]")
     params:add_text("hill "..i.." mx_state","not selected, no params")
@@ -86,6 +87,72 @@ function parameters.init()
     params:hide("hill "..i.." mx_pan")
     params:hide("hill "..i.." mx_attack")
     params:hide("hill "..i.." mx_release")
+
+    params:add_separator("Thebangs management ["..hill_names[i].."]")
+    params:add_text("hill "..i.." thebangs_state","not selected, no params")
+    params:add{type="option",id="hill "..i.." thebangs_algo",name="algo",options={"square", "square_mod1", "square_mod2","sinfmlp", "sinfb","reznoise"},1}
+    params:set_action("hill "..i.." thebangs_algo",
+      function(x)
+        if engine.name == "Thebangs" then
+          engine.algoIndex(x)
+        end
+      end
+    )
+    params:add{type="control",id="hill "..i.." thebangs_pw",name="pw",controlspec=controlspec.new(0,100,'lin',0,50,'%')}
+    params:set_action("hill "..i.." thebangs_pw",
+      function(x)
+        if engine.name == "Thebangs" then
+          engine.pw(x/100)
+        end
+      end
+    )
+    params:add{type="control",id="hill "..i.." thebangs_attack",name="attack",controlspec=controlspec.new(0.0001, 1, 'exp', 0, 0.01, '')}
+    params:set_action("hill "..i.." thebangs_attack",
+      function(x)
+        if engine.name == "Thebangs" then
+          engine.attack(x)
+        end
+      end
+    )
+    params:add{type="control",id="hill "..i.." thebangs_release",name="release",controlspec=controlspec.new(0.1,3.2,'lin',0,1.2,'s')}
+    params:set_action("hill "..i.." thebangs_release",
+      function(x)
+        if engine.name == "Thebangs" then
+          engine.release(x)
+        end
+      end
+    )
+    params:add{type="control",id="hill "..i.." thebangs_cut",name="cutoff",controlspec=controlspec.new(50,19000,'exp',0,12000,'hz')}
+    params:set_action("hill "..i.." thebangs_cut",
+      function(x)
+        if engine.name == "Thebangs" then
+          engine.cutoff(x)
+        end
+      end
+    )
+    params:add{type="control",id="hill "..i.." thebangs_amp",name="amp",controlspec=controlspec.new(0,1,'lin',0,0.25,'')}
+    params:set_action("hill "..i.." thebangs_amp",
+      function(x)
+        if engine.name == "Thebangs" then
+          engine.amp(x)
+        end
+      end
+    )
+    params:add{type="control",id="hill "..i.." thebangs_pan",name="pan",controlspec=controlspec.new(-1,1,'lin',0,0,'')}
+    params:set_action("hill "..i.." thebangs_pan",
+      function(x)
+        if engine.name == "Thebangs" then
+          engine.pan(x)
+        end
+      end
+    )
+    params:hide("hill "..i.." thebangs_algo")
+    params:hide("hill "..i.." thebangs_pw")
+    params:hide("hill "..i.." thebangs_attack")
+    params:hide("hill "..i.." thebangs_release")
+    params:hide("hill "..i.." thebangs_cut")
+    params:hide("hill "..i.." thebangs_amp")
+    params:hide("hill "..i.." thebangs_pan")
 
     params:add_separator("MIDI management ["..hill_names[i].."]")
     params:add_option("hill "..i.." MIDI output", "MIDI output?",{"no","yes"},1)
@@ -182,6 +249,30 @@ function parameters.reload_engine(id,silent)
       params:show("hill "..i.." mx_attack")
       params:show("hill "..i.." mx_release")
       params:hide("hill "..i.." mx_state")
+    end
+  end
+  if id ~= 3 then
+    for i = 1,8 do
+      params:hide("hill "..i.." thebangs_algo")
+      params:hide("hill "..i.." thebangs_pw")
+      params:hide("hill "..i.." thebangs_attack")
+      params:hide("hill "..i.." thebangs_release")
+      params:hide("hill "..i.." thebangs_cut")
+      params:hide("hill "..i.." thebangs_amp")
+      params:hide("hill "..i.." thebangs_pan")
+      params:show("hill "..i.." thebangs_state")
+    end
+  end
+  if id == 3 then
+    for i = 1,8 do
+      params:show("hill "..i.." thebangs_algo")
+      params:show("hill "..i.." thebangs_pw")
+      params:show("hill "..i.." thebangs_attack")
+      params:show("hill "..i.." thebangs_release")
+      params:show("hill "..i.." thebangs_cut")
+      params:show("hill "..i.." thebangs_amp")
+      params:show("hill "..i.." thebangs_pan")
+      params:hide("hill "..i.." thebangs_state")
     end
   end
   if not silent then

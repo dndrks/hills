@@ -133,7 +133,7 @@ function init()
       hills[i][j].loop = false
       hills[i][j].counter_div = 1
       hills[i][j].perf_led = false
-      hills[i][j].iterated = false
+      hills[i][j].iterated = true
 
       hills[i][j].note_num = -- this is where we track the note entries for the constructed hill
       {
@@ -273,32 +273,39 @@ iterate = function(i)
             comparator = seg.index > seg.high_bound.note
           end
           if comparator then -- if `>` then this get us a final tick, which is technically duration + 0.01
-            seg.perf_led = true
-            print("stopping")
-            grid_dirty = true
-            hills[i].active = false
-            seg.iterated = true
-            seg.step = seg.note_timestamp[seg.low_bound.note] -- reset
-            screen_dirty = true
-            local ch = params:get("hill "..i.." MIDI note channel")
-            local dev = params:get("hill "..i.." MIDI device")
-            seg.end_of_cycle_clock = clock.run(
-              function()
-                clock.sleep(1/15)
-                if seg.iterated then
-                  seg.perf_led = false
-                  grid_dirty = true
-                  midi_device[dev]:note_off(pre_note[i],seg.velocity,ch)
-                  if engine.name == "MxSamples" then
-                    _mx:off({name = _mx.dests[i],midi=pre_note[i]})
-                  end
-                end
-              end)
+            stop(i)
           end
         end
       end
     end
   end
+end
+
+stop = function(i)
+  local h = hills[i]
+  local seg = h[h.segment]
+  seg.perf_led = true
+  print("stopping")
+  grid_dirty = true
+  hills[i].active = false
+  seg.iterated = true
+  seg.step = seg.note_timestamp[seg.low_bound.note] -- reset
+  screen_dirty = true
+  local ch = params:get("hill "..i.." MIDI note channel")
+  local dev = params:get("hill "..i.." MIDI device")
+  seg.end_of_cycle_clock = clock.run(
+    function()
+      clock.sleep(1/15)
+      if seg.iterated then
+        seg.perf_led = false
+        grid_dirty = true
+        midi_device[dev]:note_off(pre_note[i],seg.velocity,ch)
+        if engine.name == "MxSamples" then
+          _mx:off({name = _mx.dests[i],midi=pre_note[i]})
+        end
+      end
+    end
+  )
 end
 
 inject = function(shape,i,injection_point,duration)
@@ -356,32 +363,46 @@ pass_note = function(i,j,seg,note_val,index,destination)
         end
       end
     elseif engine.name == "PolyPerc" then
+      engine.amp(params:get("hill "..i.." pp_amp"))
+      engine.pw(params:get("hill "..i.." pp_pw")/100)
+      engine.release(params:get("hill "..i.." pp_release"))
+      engine.cutoff(params:get("hill "..i.." pp_cut"))
       engine.hz(midi_to_hz(played_note))
     elseif engine.name == "Thebangs" then
+      engine.algoIndex(params:get("hill "..i.." thebangs_algo"))
+      engine.amp(params:get("hill "..i.." thebangs_amp"))
+      engine.pan(params:get("hill "..i.." thebangs_pan"))
+      engine.pw(params:get("hill "..i.." thebangs_pw")/100)
+      engine.attack(params:get("hill "..i.." thebangs_attack"))
+      engine.release(params:get("hill "..i.." thebangs_release"))
+      engine.cutoff(params:get("hill "..i.." thebangs_cut"))
       engine.hz(midi_to_hz(played_note))
     end
-    if destination == "engine" then
-      if i < 4 then
-        engine.hz(midi_to_hz(played_note))
-      end
-    elseif destination == "midi" then
+    if params:string("hill "..i.." MIDI output") == "yes" then
       local ch = params:get("hill "..i.." MIDI note channel")
       local dev = params:get("hill "..i.." MIDI device")
       if pre_note[i] ~= nil then
         midi_device[dev]:note_off(pre_note[i],seg.velocity,ch)
       end
       midi_device[dev]:note_on(played_note,seg.velocity,ch)
-      for j = 1,5 do
-        if params:string("hill "..i.." cc_"..j) ~= "none" then
-          midi_device[dev]:cc(params:get("hill "..i.." cc_"..j),seg.cc_val,params:get("hill "..i.." cc_"..j.."_ch"))
-        end
-      end
-    elseif destination == "crow_pulse" then
-      crow.output[i+2]()
-    elseif destination == "crow-v8_jf-pulse" then
-      crow.output[i].volts = (played_note-60)/12
-      crow.ii.jf.trigger(i,1)
+      -- for j = 1,5 do
+      --   if params:string("hill "..i.." cc_"..j) ~= "none" then
+      --     midi_device[dev]:cc(params:get("hill "..i.." cc_"..j),seg.cc_val,params:get("hill "..i.." cc_"..j.."_ch"))
+      --   end
+      -- end
     end
+    -- if destination == "engine" then
+    --   if i < 4 then
+    --     engine.hz(midi_to_hz(played_note))
+    --   end
+    -- elseif destination == "midi" then
+      
+    -- elseif destination == "crow_pulse" then
+    --   crow.output[i+2]()
+    -- elseif destination == "crow-v8_jf-pulse" then
+    --   crow.output[i].volts = (played_note-60)/12
+    --   crow.ii.jf.trigger(i,1)
+    -- end
     pre_note[i] = played_note
   end
 end
