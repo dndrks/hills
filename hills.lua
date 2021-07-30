@@ -1,21 +1,38 @@
--- if construct is interrrupted, clamp to that time/step
-
--- note_timestamp holds each step's place in the total timescale
--- note_timedelta holds each step's duration
+-- hills
+--
+-- __/\______/\\___
+-- ____/\\\\\___/\_
+-- /\///_____/\\\__
 
 local mxsamples=nil
 if util.file_exists(_path.code.."mx.samples") then
   mxsamples=include("mx.samples/lib/mx.samples")
-  engine.name = "MxSamples"
+  -- engine.name = "MxSamples"
 end
 
-if mxsamples~=nil then
+thebangs = nil
+if util.file_exists(_path.code.."thebangs") then
+  thebangs = include('thebangs/lib/thebangs_engine')
+  -- engine.name = "Thebangs"
+end
+
+engine_options = {"PolyPerc"}
+if mxsamples ~= nil then
+  table.insert(engine_options,"MxSamples")
   _mx=mxsamples:new()
   _mx.instrument_list=_mx:list_instruments()
 else
   _mx=nil
   _mx.instrument_list={}
 end
+if thebangs ~= nil then
+  table.insert(engine_options,"Thebangs")
+  -- params:add_group("THEBANGS",6)
+  -- thebangs.add_additional_synth_params()
+  -- thebangs.add_voicer_params()
+end
+
+engine.name = "PolyPerc"
 
 curves = include 'lib/easing'
 prms = include 'lib/parameters'
@@ -130,7 +147,6 @@ function init()
       hills[i][j].note_timedelta = {}
 
       construct(i,j)
-      _t.shuffle(i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
 
       ui.edit_note[i][j] = 1
       ui.screen_controls[i][j] =
@@ -175,6 +191,7 @@ construct = function(i,j)
     end
   end
   calculate_timedeltas(i,j)
+  _t.shuffle(i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
   screen_dirty = true
 end
 
@@ -272,7 +289,9 @@ iterate = function(i)
                   seg.perf_led = false
                   grid_dirty = true
                   midi_device[dev]:note_off(pre_note[i],seg.velocity,ch)
-                  _mx:off({name = _mx.dests[i],midi=pre_note[i]})
+                  if engine.name == "MxSamples" then
+                    _mx:off({name = _mx.dests[i],midi=pre_note[i]})
+                  end
                 end
               end)
           end
@@ -319,21 +338,27 @@ pass_note = function(i,j,seg,note_val,index,destination)
   local midi_notes = hills[i][j].note_ocean
   local played_note = midi_notes[note_val]
   if played_note ~= nil and hills[i][j].note_num.active[index] then
-    if _mx.dests[i] ~= "none" then
-      if pre_note[i] ~= nil then
-        _mx:off({name = _mx.dests[i],midi=pre_note[i]})
+    if engine.name == "MxSamples" then
+      if _mx.dests[i] ~= "none" then
+        if pre_note[i] ~= nil then
+          _mx:off({name = _mx.dests[i],midi=pre_note[i]})
+        end
+        if _mx ~= nil then
+          _mx:on({
+            name = _mx.dests[i],
+            midi=played_note,
+            velocity=seg.velocity,
+            amp=params:get("hill "..i.." mx_amp"),
+            attack=params:get("hill "..i.." mx_attack"),
+            release=params:get("hill "..i.." mx_release"),
+            pan=params:get("hill "..i.." mx_pan"),
+          })
+        end
       end
-      if _mx ~= nil then
-        _mx:on({
-          name = _mx.dests[i],
-          midi=played_note,
-          velocity=seg.velocity,
-          amp=params:get("hill "..i.." mx_amp"),
-          attack=params:get("hill "..i.." mx_attack"),
-          release=params:get("hill "..i.." mx_release"),
-          pan=params:get("hill "..i.." mx_pan"),
-        })
-      end
+    elseif engine.name == "PolyPerc" then
+      engine.hz(midi_to_hz(played_note))
+    elseif engine.name == "Thebangs" then
+      engine.hz(midi_to_hz(played_note))
     end
     if destination == "engine" then
       if i < 4 then
