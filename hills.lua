@@ -195,6 +195,23 @@ construct = function(i,j)
   screen_dirty = true
 end
 
+reconstruct = function(i,j,new_shape)
+  local h = hills[i]
+  local seg = h[j]
+  -- keep min and max timestamps the same...
+  local beginVal = seg.note_timestamp[seg.low_bound.note]
+  local endVal = seg.note_timestamp[seg.high_bound.note]
+  local change = endVal - beginVal
+  local duration = endVal - beginVal
+  for k = seg.low_bound.note,seg.high_bound.note do
+    print(curves[new_shape](seg.note_timestamp[k],beginVal,change,duration))
+    local new_timestamp = curves[new_shape](seg.note_timestamp[k],beginVal,change,duration)
+    seg.note_timestamp[k] = new_timestamp
+  end
+  calculate_timedeltas(i,j)
+  screen_dirty = true
+end
+
 pass_data_into_storage = function(i,j,index,data)
   hills[i][j].note_num.pool[index] = data[1]
   hills[i][j].note_timestamp[index] = data[2]
@@ -286,13 +303,13 @@ stop = function(i)
   local seg = h[h.segment]
   seg.perf_led = true
   print("stopping")
-  grid_dirty = true
   hills[i].active = false
   seg.iterated = true
   seg.step = seg.note_timestamp[seg.low_bound.note] -- reset
   screen_dirty = true
   local ch = params:get("hill "..i.." MIDI note channel")
   local dev = params:get("hill "..i.." MIDI device")
+  grid_dirty = true
   seg.end_of_cycle_clock = clock.run(
     function()
       clock.sleep(1/15)

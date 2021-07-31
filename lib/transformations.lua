@@ -152,7 +152,6 @@ m.offset_timeend_quantized = function(i,j,target,smallest,delta)
   m.adjust_timestamps(i,j)
 end
 
-
 m.deep_copy = function(orig)
   local orig_type = type(orig)
   local copy
@@ -252,6 +251,36 @@ m.adjust_hill_end = function(i,j,delta)
     hills[i][j].index = hills[i][j].high_bound.note
     hills[i][j].step = hills[i][j].note_timestamp[hills[i][j].index]
   end
+end
+
+m.nudge = function(i,j,index,delta)
+  local h = hills[i]
+  local seg = h[j]
+  local reasonable_min, reasonable_max;
+  if index == 1 then
+    reasonable_min = 0
+  else
+    reasonable_min = seg.note_timestamp[index-1]+0.01
+  end
+  if index == #seg.note_timedelta then
+    reasonable_max = seg.note_timestamp[index]
+  else
+    reasonable_max = seg.note_timestamp[index+1]-0.01
+  end
+  seg.note_timestamp[index] = util.clamp(seg.note_timestamp[index] + delta/100, reasonable_min, reasonable_max)
+  calculate_timedeltas(i,j)
+end
+
+m.snap_bound = function(i,j)
+  local h = hills[i]
+  local seg = h[j]
+  local clamp_to;
+  if seg.index < 1 then
+    clamp_to = 1
+  else
+    clamp_to = seg.index-1
+  end
+  seg.high_bound.note = clamp_to
 end
 
 return m

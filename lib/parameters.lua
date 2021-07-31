@@ -25,7 +25,7 @@ function parameters.init()
     end
   )
   for i = 1,8 do
-    params:add_group(hill_names[i],41)
+    params:add_group(hill_names[i],42)
 
     params:add_separator("note management ["..hill_names[i].."]")
     params:add_option("hill "..i.." scale","scale",scale_names,1)

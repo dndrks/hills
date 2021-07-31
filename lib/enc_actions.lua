@@ -36,7 +36,11 @@ function enc_actions.parse(n,d)
           if s_c["bounds"]["focus"] == 1 then
             _t.adjust_hill_start(i,j,d)
           elseif s_c["bounds"]["focus"] == 2 then
-            _t.adjust_hill_end(i,j,d)
+            if not key1_hold then
+              _t.adjust_hill_end(i,j,d)
+            else
+              _t.snap_bound(i,j)
+            end
           end
         end
       elseif ui.menu_focus == 3 then

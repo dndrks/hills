@@ -26,8 +26,8 @@ function grid_lib.init()
   grid_dirty = true
 end
 
-local mods = {["hill"] = false,["bound"] = false,["notes"] = false,["loop"] = false,[5] = false,[6] = false,[7] = false,["stop"] = false}
-local modkeys = {"hill","bound","notes","loop",5,6,7,"stop"}
+local mods = {["hill"] = false,["bound"] = false,["notes"] = false,["loop"] = false,[5] = false,[6] = false,["copy"] = false,["stop"] = false}
+local modkeys = {"hill","bound","notes","loop",5,6,"copy","stop"}
 function g.key(x,y,z)
   if x == 1 then
     if y >= 1 and y <= 4 then
@@ -39,9 +39,13 @@ function g.key(x,y,z)
       else
         ui.control_set = "play"
       end
-    elseif y == 8 then
+    elseif y == 7 or y == 8 then
       mod_held = z == 1 and true or false
       mods[modkeys[y]] = z == 1 and true or false
+      if not mods["copy"] and clipboard then
+        clipboard = nil
+        copied = nil
+      end
     end
     grid_dirty = true
     screen_dirty = true
@@ -60,9 +64,19 @@ function g.key(x,y,z)
     elseif mods["hill"] or mods["bound"] or mods["notes"] or mods["loop"] then
       ui.hill_focus = x-1
       hills[ui.hill_focus].screen_focus = y
+    elseif mods["copy"] and z == 1 then
+      print("copying...")
+      if not clipboard then
+        clipboard = _t.deep_copy(hills[x-1][y])
+        copied = {x-1,y}
+      else
+        hills[x-1][y] = _t.deep_copy(clipboard)
+        copied = nil
+        clipboard = nil
+      end
     end
   end
-  if mod_held and not mods["stop"] then
+  if mod_held and not mods["stop"] and not mods["copy"] then
     if x == 14 and y == 8 then
       if z == 1 then
         start_dir_clock("L",2,-1)
@@ -104,12 +118,34 @@ function grid_redraw()
   for i = 2,9 do
     for j = 1,8 do
       if mod_held then
-        if hills[i-1].segment == j then
-          g:led(i,j,hills[i-1][j].perf_led and 10 or (hills[i-1][j].iterated and 6 or 8))
+        if not mods["copy"] then
+          if i-1 == ui.hill_focus and hills[ui.hill_focus].screen_focus == j then
+            g:led(i,j,15)
+          else
+            if hills[i-1].segment == j then
+              g:led(i,j,hills[i-1][j].perf_led and 10 or (hills[i-1][j].iterated and 6 or 8))
+            else
+              g:led(i,j,4)
+            end
+          end
+          if mods["stop"] then
+            if hills[i-1].segment == j then
+              g:led(i,j,hills[i-1][j].perf_led and 15 or (hills[i-1][j].iterated and 6 or 15))
+            else
+              g:led(i,j,4)
+            end
+            -- g:led(i,j,hills[i-1].screen_focus == j and 15 or 4)
+          end
         else
-          g:led(i,j,4)
+          if hills[i-1].segment == j then
+            g:led(i,j,10)
+          end
+          if copied ~= nil then
+            if copied[1] == i-1 and copied[2] == j then
+              g:led(i,j,15)
+            end
+          end
         end
-        g:led(i,j,hills[i-1].screen_focus == j and 15 or 4)
       else
         if hills[i-1].segment == j then
           g:led(i,j,hills[i-1][j].perf_led and 15 or (hills[i-1][j].iterated and 6 or 8))
@@ -122,11 +158,36 @@ function grid_redraw()
   for i = 1,8 do
     g:led(1,i,mods[modkeys[i]] and 15 or 0)
   end
-  if mod_held and not mods["stop"] then
+  if mod_held and not mods["stop"] and not mods["copy"] then
     g:led(14,8,dirs["L"] and 15 or 8)
     g:led(15,7,dirs["U"] and 15 or 8)
     g:led(15,8,dirs["D"] and 15 or 8)
     g:led(16,8,dirs["R"] and 15 or 8)
+  end
+  if mod_held and mods["copy"] then
+    if not clipboard then
+      for i = 12,14 do
+        for j = 3,6 do
+          if j == 3 or j == 6 then
+            g:led(i,j,15)
+          elseif (j == 4 or j == 5) and i == 12 then
+            g:led(i,j,15)
+          end
+        end
+      end
+    elseif clipboard then
+      for i = 12,14 do
+        for j = 3,6 do
+          if j == 3 or j == 5 then
+            g:led(i,j,15)
+          elseif j == 4 and (i == 12 or i == 14) then
+            g:led(i,j,15)
+          elseif j == 6 and i == 12 then
+            g:led(i,j,15)
+          end
+        end
+      end
+    end
   end
   g:refresh()
 end
