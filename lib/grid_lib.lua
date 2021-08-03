@@ -26,22 +26,35 @@ function grid_lib.init()
   grid_dirty = true
 end
 
-local mods = {["hill"] = false,["bound"] = false,["notes"] = false,["loop"] = false,[5] = false,[6] = false,["copy"] = false,["stop"] = false}
-local modkeys = {"hill","bound","notes","loop",5,6,"copy","stop"}
+mods = {["hill"] = false,["bound"] = false,["notes"] = false,["loop"] = false,["playmode"] = false,[6] = false,["copy"] = false,["stop"] = false}
+local modkeys = {"hill","bound","notes","loop","playmode",6,"copy","stop"}
 function g.key(x,y,z)
   if x == 1 then
-    if y >= 1 and y <= 4 then
-      mod_held = z == 1 and true or false
-      mods[modkeys[y]] = z == 1 and true or false
-      if z == 1 then
+    if y >= 1 and y <= 4 and z == 1 then
+      for i = 1,#modkeys do
+        if i ~= y then
+          mods[modkeys[i]] = false
+        else
+          mods[modkeys[y]] = not mods[modkeys[y]]
+          mod_held = mods[modkeys[y]]
+        end
+      end
+      if mod_held then
         ui.control_set = "edit"
         ui.menu_focus = y
       else
         ui.control_set = "play"
       end
-    elseif y == 7 or y == 8 then
-      mod_held = z == 1 and true or false
-      mods[modkeys[y]] = z == 1 and true or false
+    elseif y == 5 or y == 7 or y == 8 then
+      for i = 1,#modkeys do
+        if i ~= y then
+          mods[modkeys[i]] = false
+        else
+          mods[modkeys[y]] = not mods[modkeys[y]]
+          mod_held = mods[modkeys[y]]
+        end
+      end
+      ui.control_set = "play"
       if not mods["copy"] and clipboard then
         clipboard = nil
         copied = nil
@@ -58,12 +71,22 @@ function g.key(x,y,z)
       hills[x-1][y].perf_led = true
       grid_dirty = true
     end
+    if z == 0 then
+      if hills[x-1][y].playmode == "momentary" and hills[x-1].segment == y then
+        stop(x-1)
+        screen_dirty = true
+        hills[x-1][y].perf_led = true
+        grid_dirty = true
+      end
+    end
   elseif x > 1 and x <= 9 and mod_held then
     if mods["stop"] and z == 1 then
       stop(x-1)
     elseif mods["hill"] or mods["bound"] or mods["notes"] or mods["loop"] then
       ui.hill_focus = x-1
       hills[ui.hill_focus].screen_focus = y
+    elseif mods["playmode"] and z == 0 then
+      hills[x-1][y].playmode = hills[x-1][y].playmode == "momentary" and "latch" or "momentary"
     elseif mods["copy"] and z == 1 then
       print("copying...")
       if not clipboard then
@@ -118,25 +141,25 @@ function grid_redraw()
   for i = 2,9 do
     for j = 1,8 do
       if mod_held then
-        if not mods["copy"] then
+        if not mods["playmode"] and not mods["copy"] then
           if i-1 == ui.hill_focus and hills[ui.hill_focus].screen_focus == j then
             g:led(i,j,15)
           else
             if hills[i-1].segment == j then
               g:led(i,j,hills[i-1][j].perf_led and 10 or (hills[i-1][j].iterated and 6 or 8))
             else
-              g:led(i,j,4)
+              g:led(i,j,0)
             end
           end
           if mods["stop"] then
             if hills[i-1].segment == j then
               g:led(i,j,hills[i-1][j].perf_led and 15 or (hills[i-1][j].iterated and 6 or 15))
             else
-              g:led(i,j,4)
+              g:led(i,j,0)
             end
             -- g:led(i,j,hills[i-1].screen_focus == j and 15 or 4)
           end
-        else
+        elseif not mods["playmode"] then
           if hills[i-1].segment == j then
             g:led(i,j,10)
           end
@@ -145,12 +168,20 @@ function grid_redraw()
               g:led(i,j,15)
             end
           end
+        elseif mods["playmode"] then
+          -- local display_level = 4
+          if hills[i-1][j].playmode == "momentary" then
+            display_level = 4
+          else
+            display_level = 15
+          end
+          g:led(i,j,display_level)
         end
       else
         if hills[i-1].segment == j then
           g:led(i,j,hills[i-1][j].perf_led and 15 or (hills[i-1][j].iterated and 6 or 8))
         else
-          g:led(i,j,4)
+          g:led(i,j,0)
         end
       end
     end
@@ -158,7 +189,7 @@ function grid_redraw()
   for i = 1,8 do
     g:led(1,i,mods[modkeys[i]] and 15 or 0)
   end
-  if mod_held and not mods["stop"] and not mods["copy"] then
+  if mod_held and not mods["playmode"] and not mods["stop"] and not mods["copy"] then
     g:led(14,8,dirs["L"] and 15 or 8)
     g:led(15,7,dirs["U"] and 15 or 8)
     g:led(15,8,dirs["D"] and 15 or 8)
@@ -188,6 +219,9 @@ function grid_redraw()
         end
       end
     end
+  end
+  if mod_held and mods["playmode"] then
+
   end
   g:refresh()
 end

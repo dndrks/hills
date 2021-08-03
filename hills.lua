@@ -39,7 +39,6 @@ prms = include 'lib/parameters'
 _t = include 'lib/transformations'
 _a = include 'lib/actions'
 _g = include 'lib/grid_lib'
-_p = include 'lib/patterning'
 _e = include 'lib/enc_actions'
 _k = include 'lib/key_actions'
 _s = include 'lib/screen_actions'
@@ -61,7 +60,6 @@ end
 function init()
   math.randomseed(os.time())
   _g.init()
-  _p.init()
   key1_hold = false
   
   ui = {}
@@ -131,6 +129,7 @@ function init()
       hills[i][j].high_bound.time = hills[i][j].duration
       hills[i][j].bound_mode = "note"
       hills[i][j].loop = false
+      hills[i][j].playmode = "latch"
       hills[i][j].counter_div = 1
       hills[i][j].perf_led = false
       hills[i][j].iterated = true
@@ -169,6 +168,28 @@ function init()
       end
     end)
   end
+
+  params.action_read = function(filename)
+    for i = 1,8 do
+      if hills[i].active then
+        stop(i)
+      end
+      hills[i] = tab.load(_path.data.."hills/"..params.name.."/"..i..".txt")
+      if hills[i].active then
+        stop(i)
+      end
+    end
+    params:set("reload engine",1)
+    grid_dirty = true
+  end
+
+  params.action_write = function(filename,name)
+    os.execute("mkdir -p ".._path.data.."hills/"..name.."/")
+    for i = 1,8 do
+      tab.save(hills[i],_path.data.."hills/"..name.."/"..i..".txt")
+    end
+  end
+
 end
 
 process_events = function(i)
@@ -239,8 +260,7 @@ iterate = function(i)
         if seg.high_bound.note ~= seg.low_bound.note then
           if seg.note_timestamp[seg.index] ~= nil then
             if util.round(seg.note_timestamp[seg.index],0.01) == util.round(seg.step,0.01) then
-              pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index,"midi")
-              pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index,"crow-v8_jf-pulse")
+              pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index)
               screen_dirty = true
               seg.index = seg.index + 1
               seg.perf_led = true
@@ -256,8 +276,7 @@ iterate = function(i)
           end
         else
           if util.round(seg.note_timestamp[seg.index+1],0.01) == util.round(seg.step,0.01) then
-            pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index,"midi")
-            pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index,"crow-v8_jf-pulse")
+            pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index)
             screen_dirty = true
             seg.step = seg.note_timestamp[seg.index]
             seg.perf_led = true
@@ -272,8 +291,7 @@ iterate = function(i)
         if seg.index <= seg.high_bound.note then
           if util.round(seg.note_timestamp[seg.index],0.01) == util.round(seg.step,0.01) then
             -- print(seg.index,seg.note_timestamp[seg.index],seg.note_num.pool[seg.index],seg.step)
-            pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index,"midi")
-            pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index,"crow-v8_jf-pulse")
+            pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index)
             screen_dirty = true
             seg.index = seg.index + 1
             seg.perf_led = true
@@ -302,7 +320,6 @@ stop = function(i)
   local h = hills[i]
   local seg = h[h.segment]
   seg.perf_led = true
-  print("stopping")
   hills[i].active = false
   seg.iterated = true
   seg.step = seg.note_timestamp[seg.low_bound.note] -- reset
@@ -358,9 +375,38 @@ adjust_timestamps_for_injection = function(i,j,index,duration)
   calculate_timedeltas(i,j)
 end
 
+get_random_offset = function(i,note)
+  if params:get("hill "..i.." random offset probability") == 0 then
+    return note
+  elseif params:get("hill "..i.." random offset probability") >= math.random(0,100) then
+    if params:string("hill "..i.." random offset style") == "+ oct" then
+      if note + 12 <= 127 then
+        return note + 12
+      else
+        return note
+      end
+    elseif params:string("hill "..i.." random offset style") == "- oct" then
+      if note + 12 >= 0 then
+        return note - 12
+      else
+        return note
+      end
+    elseif params:string("hill "..i.." random offset style") == "+/- oct" then
+      local modifier = math.random(0,100) <= 50 and 12 or -12;
+      if (note + modifier >= 0) and (note + modifier <=127) then
+        return note + modifier
+      else
+        return note
+      end
+    end 
+  else
+    return note
+  end
+end
+
 pass_note = function(i,j,seg,note_val,index,destination)
   local midi_notes = hills[i][j].note_ocean
-  local played_note = midi_notes[note_val]
+  local played_note = get_random_offset(i,midi_notes[note_val])
   if played_note ~= nil and hills[i][j].note_num.active[index] then
     if engine.name == "MxSamples" then
       if _mx.dests[i] ~= "none" then

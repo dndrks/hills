@@ -25,7 +25,7 @@ function parameters.init()
     end
   )
   for i = 1,8 do
-    params:add_group(hill_names[i],42)
+    params:add_group(hill_names[i],46)
 
     params:add_separator("note management ["..hill_names[i].."]")
     params:add_option("hill "..i.." scale","scale",scale_names,1)
@@ -61,6 +61,26 @@ function parameters.init()
         end
       end
     end)
+    params:add_trigger("hill "..i.." octave up","base octave up")
+    params:set_action("hill "..i.." octave up",
+      function()
+        local current_note = params:get("hill "..i.." base note")
+        if current_note + 12 <= 127 then
+          params:set("hill "..i.." base note", current_note + 12)
+        end
+      end
+    )
+    params:add_trigger("hill "..i.." octave down","base octave down")
+    params:set_action("hill "..i.." octave down",
+      function()
+        local current_note = params:get("hill "..i.." base note")
+        if current_note - 12 >= 0 then
+          params:set("hill "..i.." base note", current_note - 12)
+        end
+      end
+    )
+    params:add_option("hill "..i.." random offset style", "random offset style", {"+ oct","- oct","+/- oct"},1)
+    params:add_number("hill "..i.." random offset probability","random offset probability",0,100,0)
 
     params:add_separator("PolyPerc management ["..hill_names[i].."]")
     params:add_text("hill "..i.." pp_state","not selected, no params")
