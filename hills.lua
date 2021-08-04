@@ -94,6 +94,7 @@ function init()
     hills[i] = {}
     hills[i].mode = "iterate"
     hills[i].active = false
+    hills[i].crow_change_queued = false
 
     hills[i].note_scale = mu.generate_scale_of_length(60,1,28)
     hills[i].segment = 1
@@ -180,6 +181,7 @@ function init()
       end
     end
     params:set("reload engine",1)
+    params:bang()
     grid_dirty = true
   end
 
@@ -337,6 +339,16 @@ stop = function(i)
         if engine.name == "MxSamples" then
           _mx:off({name = _mx.dests[i],midi=pre_note[i]})
         end
+        if params:string("hill "..i.." JF output") == "yes" then
+          local ch = params:get("hill "..i.." JF output id")
+          if pre_note[i] ~= nil then
+            if params:string("hill "..i.." JF output style") == "sound" then
+              crow.ii.jf.play_voice(ch,0)
+            elseif params:string("hill "..i.." JF output style") == "shape" then
+              crow.ii.jf.trigger(ch,0)
+            end
+          end
+        end
       end
     end
   )
@@ -448,24 +460,65 @@ pass_note = function(i,j,seg,note_val,index,destination)
         midi_device[dev]:note_off(pre_note[i],seg.velocity,ch)
       end
       midi_device[dev]:note_on(played_note,seg.velocity,ch)
-      -- for j = 1,5 do
-      --   if params:string("hill "..i.." cc_"..j) ~= "none" then
-      --     midi_device[dev]:cc(params:get("hill "..i.." cc_"..j),seg.cc_val,params:get("hill "..i.." cc_"..j.."_ch"))
-      --   end
-      -- end
     end
-    -- if destination == "engine" then
-    --   if i < 4 then
-    --     engine.hz(midi_to_hz(played_note))
-    --   end
-    -- elseif destination == "midi" then
-      
-    -- elseif destination == "crow_pulse" then
-    --   crow.output[i+2]()
-    -- elseif destination == "crow-v8_jf-pulse" then
-    --   crow.output[i].volts = (played_note-60)/12
-    --   crow.ii.jf.trigger(i,1)
-    -- end
+    if params:string("hill "..i.." crow output") == "yes" then
+      if params:string("hill "..i.." crow output style") == "osc" then
+        local out = params:get("hill "..i.." crow output id")
+        if hills[i].crow_change_queued then
+          crow.output[out].action = "oscillate( dyn{pitch="..mu.note_num_to_freq(played_note).."}, dyn{lev="..(params:get("hill "..i.." crow osc level")/100).."}:mul(dyn{dur="..(params:get("hill "..i.." crow osc decay")/100).."}), '"..params:string("hill "..i.." crow osc shape").."')"
+          crow.output[out]()
+          if params:string("hill "..i.." crow osc aliasing") == 'none' then
+            crow.output[out].scale('none')
+          elseif params:string("hill "..i.." crow osc aliasing") == 'soft' then
+            crow.output[out].scale({0,2,3,5,7,8,10})
+          elseif params:string("hill "..i.." crow osc aliasing") == 'harsh' then
+            crow.output[out].scale({0})
+          end
+          hills[i].crow_change_queued = false
+        else
+          if params:string("hill "..i.." crow osc aliasing") == 'none' then
+            crow.output[out].scale('none')
+          elseif params:string("hill "..i.." crow osc aliasing") == 'soft' then
+            crow.output[out].scale({0,2,3,5,7,8,10})
+          elseif params:string("hill "..i.." crow osc aliasing") == 'harsh' then
+            crow.output[out].scale({0})
+          end
+          crow.output[out].dyn.pitch = mu.note_num_to_freq(played_note)
+          crow.output[out].dyn.lev = params:get("hill "..i.." crow osc level")/100
+          crow.output[out].dyn.dur = params:get("hill "..i.." crow osc decay")/100
+        end
+      elseif params:string("hill "..i.." crow output style") == "v/8" then
+        local out = params:get("hill "..i.." crow output id")
+        crow.output[out].scale('none')
+        -- crow.output[out].volts = (played_note - params:get("hill "..i.." base note"))/12
+        crow.output[out].volts = (played_note - 60)/12
+      elseif params:string("hill "..i.." crow output style") == "v/8+pulse" then
+        local v8_out = params:get("hill "..i.." crow output id")
+        local pulse_out = params:get("hill "..i.." crow v/8 pulse output id")
+        crow.output[v8_out].scale('none')
+        crow.output[v8_out].volts = (played_note - 60)/12
+        norns.crow.send ("output["..pulse_out.."]( pulse(0.001) )")
+      elseif params:string("hill "..i.." crow output style") == "pulse" then
+        local out = params:get("hill "..i.." crow output id")
+        norns.crow.send ("output["..out.."]( pulse(0.001) )")
+      end
+    end
+    if params:string("hill "..i.." JF output") == "yes" then
+      local ch = params:get("hill "..i.." JF output id")
+      if pre_note[i] ~= nil then
+        if params:string("hill "..i.." JF output style") == "sound" then
+          crow.ii.jf.play_voice(ch,0)
+        elseif params:string("hill "..i.." JF output style") == "shape" then
+          crow.ii.jf.trigger(ch,0)
+        end
+      end
+      if params:string("hill "..i.." JF output style") == "sound" then
+        crow.ii.jf.play_voice(ch,(played_note - 60)/12,5)
+        print(ch,(played_note - 60)/12,5)
+      elseif params:string("hill "..i.." JF output style") == "shape" then
+        crow.ii.jf.trigger(ch,1)
+      end
+    end
     pre_note[i] = played_note
   end
 end

@@ -25,7 +25,7 @@ function parameters.init()
     end
   )
   for i = 1,8 do
-    params:add_group(hill_names[i],46)
+    params:add_group(hill_names[i],75)
 
     params:add_separator("note management ["..hill_names[i].."]")
     params:add_option("hill "..i.." scale","scale",scale_names,1)
@@ -226,6 +226,91 @@ function parameters.init()
       end)
       params:hide("hill ["..i.."]["..j.."] population")
     end
+
+    params:add_separator("crow management ["..hill_names[i].."]")
+    params:add_option("hill "..i.." crow output", "crow output?",{"no","yes"},1)
+    params:set_action("hill "..i.." crow output",
+      function(x)
+        if x == 1 then
+          params:hide("hill "..i.." crow output style")
+          params:hide("hill "..i.." crow output id")
+          params:hide("hill "..i.." crow osc shape")
+          params:hide("hill "..i.." crow osc aliasing")
+          params:hide("hill "..i.." crow osc level")
+          params:hide("hill "..i.." crow osc decay")
+        else
+          params:show("hill "..i.." crow output style")
+          params:show("hill "..i.." crow output id")
+        end
+        _menu.rebuild_params()
+      end
+    )
+    params:add_option("hill "..i.." crow output style", "output style",{"v/8","v/8+pulse","pulse","osc"},1)
+    params:set_action("hill "..i.." crow output style",
+      function(x)
+        if params:string("hill "..i.." crow output") == "yes" then
+          if x ~= 4 then
+            params:hide("hill "..i.." crow osc shape")
+            params:hide("hill "..i.." crow osc aliasing")
+            params:hide("hill "..i.." crow osc level")
+            params:hide("hill "..i.." crow osc decay")
+          end
+          if x == 2 then
+            params:show("hill "..i.." crow v/8 pulse output id")
+          elseif x ~= 2 then
+            params:hide("hill "..i.." crow v/8 pulse output id")
+          end
+          if x == 4 then
+            params:show("hill "..i.." crow osc shape")
+            params:show("hill "..i.." crow osc aliasing")
+            params:show("hill "..i.." crow osc level")
+            params:show("hill "..i.." crow osc decay")
+          end
+          _menu.rebuild_params()
+          hills[i].crow_change_queued = true
+        end
+      end
+    )
+    params:add_number("hill "..i.." crow output id", "out id",1,4,1)
+    params:set_action("hill "..i.." crow output id",
+      function()
+        hills[i].crow_change_queued = true
+      end
+    )
+    params:add_number("hill "..i.." crow v/8 pulse output id","secondary out id",1,4,2)
+    params:set_action("hill "..i.." crow v/8 pulse output id",
+      function()
+        hills[i].crow_change_queued = true
+      end
+    )
+    params:add_option("hill "..i.." crow osc shape", "shape",{'linear','sine','logarithmic','exponential','now','wait','over','under','rebound'},1)
+    params:set_action("hill "..i.." crow osc shape",
+      function()
+        hills[i].crow_change_queued = true
+      end
+    )
+    params:add_option("hill "..i.." crow osc aliasing", "aliasing",{'none','soft','harsh'},1)
+    params:set_action("hill "..i.." crow osc aliasing",
+      function()
+        hills[i].crow_change_queued = true
+      end
+    )
+    params:add_number("hill "..i.." crow osc level", "output level",0,100,50)
+    params:add_control("hill "..i.." crow osc decay", "output decay", controlspec.new(50,100,'exp',0,95,"%"))
+
+    params:hide("hill "..i.." crow output style")
+    params:hide("hill "..i.." crow output id")
+    params:hide("hill "..i.." crow v/8 pulse output id")
+    params:hide("hill "..i.." crow osc shape")
+    params:hide("hill "..i.." crow osc aliasing")
+    params:hide("hill "..i.." crow osc level")
+    params:hide("hill "..i.." crow osc decay")
+    _menu.rebuild_params()
+
+    params:add_separator("JF management ["..hill_names[i].."]")
+    params:add_option("hill "..i.." JF output", "JF output?",{"no","yes"},1)
+    params:add_option("hill "..i.." JF output style", "output style",{"sound","shape"},1)
+    params:add_option("hill "..i.." JF output id","output id",{"IDENTITY","2N","3N","4N","5N","6N","all"},1)
   end
   clock.run(function() clock.sleep(1) params:bang() end)
 end
