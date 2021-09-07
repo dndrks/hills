@@ -271,6 +271,12 @@ m.nudge = function(i,j,index,delta)
   calculate_timedeltas(i,j)
 end
 
+m.kill = function(i,j,index)
+  local h = hills[i]
+  local seg = h[j]
+
+end
+
 m.snap_bound = function(i,j)
   local h = hills[i]
   local seg = h[j]

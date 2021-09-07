@@ -11,7 +11,9 @@ function enc_actions.parse(n,d)
     if ui.control_set == "play" then
       ui.menu_focus = util.clamp(ui.menu_focus+d,1,4)
     elseif ui.control_set == "edit" then
-      if ui.menu_focus == 2 then
+      if ui.menu_focus == 1 then
+        s_c["hills"]["focus"] = util.clamp(s_c["hills"]["focus"]+d,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
+      elseif ui.menu_focus == 2 then
         s_c["bounds"]["focus"] = util.clamp(s_c["bounds"]["focus"]+d,1,s_c["bounds"]["max"])
       elseif ui.menu_focus == 3 then
         s_c["notes"]["focus"] = util.clamp(s_c["notes"]["focus"]+d,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
@@ -30,7 +32,14 @@ function enc_actions.parse(n,d)
   elseif n == 3 then
     if ui.control_set ~= "seq" then
       if ui.menu_focus == 1 then
-        hills[i].screen_focus = util.clamp(j+d,1,8)
+        if ui.control_set == "play" then
+          hills[i].screen_focus = util.clamp(j+d,1,8)
+          if mods["hill"] then
+            grid_dirty = true
+          end
+        elseif ui.control_set == "edit" then
+          _t.nudge(i,j,ui.screen_controls[i][j].hills.focus,d)
+        end
       elseif ui.menu_focus == 2 then
         if ui.control_set == "edit" then
           if s_c["bounds"]["focus"] == 1 then
@@ -44,18 +53,22 @@ function enc_actions.parse(n,d)
           end
         end
       elseif ui.menu_focus == 3 then
-        if not key1_hold then
-          _t.transpose(i,j,s_c["notes"]["focus"],d)
-        else
-          local note_adjustments = {"shuffle","reverse","rotate","rand fill","static"}
-          local current_adjustment = tab.key(note_adjustments,s_c["notes"]["transform"])
-          s_c["notes"]["transform"] = note_adjustments[util.clamp(current_adjustment+d,1,#note_adjustments)]
+        if ui.control_set == "edit" then
+          if not key1_hold then
+            _t.transpose(i,j,s_c["notes"]["focus"],d)
+          else
+            local note_adjustments = {"shuffle","reverse","rotate","rand fill","static"}
+            local current_adjustment = tab.key(note_adjustments,s_c["notes"]["transform"])
+            s_c["notes"]["transform"] = note_adjustments[util.clamp(current_adjustment+d,1,#note_adjustments)]
+          end
         end
       elseif ui.menu_focus == 4 then
-        if s_c["loop"]["focus"] == 1 then
-          hills[i][j].counter_div = util.clamp(hills[i][j].counter_div+d/128,1/128,4)
-        elseif s_c["loop"]["focus"] == 2 then
-          hills[i][j].loop = d > 0 and true or false
+        if ui.control_set == "edit" then
+          if s_c["loop"]["focus"] == 1 then
+            hills[i][j].counter_div = util.clamp(hills[i][j].counter_div+d/128,1/128,4)
+          elseif s_c["loop"]["focus"] == 2 then
+            hills[i][j].loop = d > 0 and true or false
+          end
         end
       end
     elseif ui.control_set == "seq" then

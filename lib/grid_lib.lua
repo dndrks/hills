@@ -4,7 +4,8 @@ local grid = util.file_exists(_path.code.."midigrid") and include "midigrid/lib/
 g = grid.connect()
 
 local dirs = {["L"] = false,["R"] = false,["U"] = false,["D"] = false}
-held_dirs = {["L"] = nil,["R"] = nil,["U"] = nil,["D"] = nil}
+held_dirs_clocks = {["L"] = nil,["R"] = nil,["U"] = nil,["D"] = nil}
+held_dirs_iters = {["L"] = 0,["R"] = 0,["U"] = 0,["D"] = 0}
 
 function grid_lib.init()
   clock.run(function()
@@ -65,7 +66,7 @@ function g.key(x,y,z)
   end
   if x > 1 and x <= 9 and not mod_held then
     if z == 1 then
-      _a.one_shot(x-1,y)
+      _a.start(x-1,y,true)
       hills[x-1].screen_focus = y
       screen_dirty = true
       hills[x-1][y].perf_led = true
@@ -73,7 +74,7 @@ function g.key(x,y,z)
     end
     if z == 0 then
       if hills[x-1][y].playmode == "momentary" and hills[x-1].segment == y then
-        stop(x-1)
+        stop(x-1,true)
         screen_dirty = true
         hills[x-1][y].perf_led = true
         grid_dirty = true
@@ -81,7 +82,7 @@ function g.key(x,y,z)
     end
   elseif x > 1 and x <= 9 and mod_held then
     if mods["stop"] and z == 1 then
-      stop(x-1)
+      stop(x-1,true)
     elseif mods["hill"] or mods["bound"] or mods["notes"] or mods["loop"] then
       ui.hill_focus = x-1
       hills[ui.hill_focus].screen_focus = y
@@ -227,12 +228,18 @@ function grid_redraw()
 end
 
 function start_dir_clock(dir,n,d)
+  if not mods["hill"] then
+    d = d
+  else
+    d = d * -1
+  end
   _e.parse(n,d)
-  held_dirs[dir] = clock.run(
+  held_dirs_clocks[dir] = clock.run(
     function()
       while true do
-        clock.sleep(0.15)
+        clock.sleep(held_dirs_iters[dir] <= 5 and 0.15 or (held_dirs_iters[dir] <= 15 and 0.1 or (held_dirs_iters[dir] <= 30 and 0.05 or 0.01)))
         _e.parse(n,d)
+        held_dirs_iters[dir] = held_dirs_iters[dir]+1
       end
     end
   )
@@ -240,8 +247,9 @@ function start_dir_clock(dir,n,d)
 end
 
 function stop_dir_clock(dir)
-  if held_dirs[dir] then
-    clock.cancel(held_dirs[dir])
+  if held_dirs_clocks[dir] then
+    clock.cancel(held_dirs_clocks[dir])
+    held_dirs_iters[dir] = 0
   end
   dirs[dir] = false
 end

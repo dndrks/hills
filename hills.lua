@@ -98,6 +98,7 @@ function init()
 
     hills[i].note_scale = mu.generate_scale_of_length(60,1,28)
     hills[i].segment = 1
+    hills[i].looper = {["clock"] = nil}
     ui.seq_controls[i] =
     {
       ["seq"] = {["focus"] = 1}
@@ -130,6 +131,12 @@ function init()
       hills[i][j].high_bound.time = hills[i][j].duration
       hills[i][j].bound_mode = "note"
       hills[i][j].loop = false
+      hills[i][j].looper = {
+        ["clock"] = nil,
+        ["runner"] = 1,
+        ["mode"] = "event",
+        ["clock_time"] = 1
+      }
       hills[i][j].playmode = "latch"
       hills[i][j].counter_div = 1
       hills[i][j].perf_led = false
@@ -151,7 +158,8 @@ function init()
       ui.edit_note[i][j] = 1
       ui.screen_controls[i][j] =
       {
-        ["bounds"] = {["focus"] = 1, ["max"] = 2}
+        ["hills"] = {["focus"] = 1, ["max"] = 12}
+      , ["bounds"] = {["focus"] = 1, ["max"] = 2}
       , ["notes"] = {["focus"] = 1, ["max"] = 12, ["transform"] = "shuffle"}
       , ["loop"] = {["focus"] = 1, ["max"] = 2}
       }
@@ -173,11 +181,11 @@ function init()
   params.action_read = function(filename)
     for i = 1,8 do
       if hills[i].active then
-        stop(i)
+        stop(i,true)
       end
       hills[i] = tab.load(_path.data.."hills/"..params.name.."/"..i..".txt")
       if hills[i].active then
-        stop(i)
+        stop(i,true)
       end
     end
     params:set("reload engine",1)
@@ -272,11 +280,11 @@ iterate = function(i)
             end
             seg.step = util.round(seg.step + 0.01,0.01)
             local reasonable_max = seg.note_timestamp[seg.high_bound.note+1] ~= nil and seg.note_timestamp[seg.high_bound.note+1] or seg.note_timestamp[seg.high_bound.note] + seg.note_timedelta[seg.high_bound.note]
-            if util.round(seg.step,0.01) >= util.round(reasonable_max,0.01) then
-              _a.one_shot(i,h.segment)
+            if util.round(seg.step,0.01) >= util.round(reasonable_max,0.01) and seg.looper.mode == "event" then
+              _a.start(i,h.segment)
             end
           end
-        else
+        elseif not seg.loop then
           if util.round(seg.note_timestamp[seg.index+1],0.01) == util.round(seg.step,0.01) then
             pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index)
             screen_dirty = true
@@ -310,7 +318,7 @@ iterate = function(i)
             comparator = seg.index > seg.high_bound.note
           end
           if comparator then -- if `>` then this get us a final tick, which is technically duration + 0.01
-            stop(i)
+            stop(i,true)
           end
         end
       end
@@ -318,7 +326,7 @@ iterate = function(i)
   end
 end
 
-stop = function(i)
+stop = function(i,clock_synced_loop)
   local h = hills[i]
   local seg = h[h.segment]
   seg.perf_led = true
@@ -335,7 +343,9 @@ stop = function(i)
       if seg.iterated then
         seg.perf_led = false
         grid_dirty = true
-        midi_device[dev]:note_off(pre_note[i],seg.velocity,ch)
+        if params:string("hill "..i.." MIDI output") == "yes" then
+          midi_device[dev]:note_off(pre_note[i],seg.velocity,ch)
+        end
         if engine.name == "MxSamples" then
           _mx:off({name = _mx.dests[i],midi=pre_note[i]})
         end
@@ -352,6 +362,11 @@ stop = function(i)
       end
     end
   )
+  if clock_synced_loop then
+    if hills[i].looper.clock ~= nil then
+      _a.kill_clock(i)
+    end
+  end
 end
 
 inject = function(shape,i,injection_point,duration)

@@ -193,16 +193,16 @@ function parameters.init()
           params:show("hill "..i.." MIDI note channel")
           params:show("hill "..i.." MIDI device")
           params:show("hill "..i.." velocity")
-          for j = 1,5 do
-            params:show("hill "..i.." cc_"..j)
-            params:show("hill "..i.." cc_"..j.."_ch")
-          end
+          -- for j = 1,5 do
+          --   params:show("hill "..i.." cc_"..j)
+          --   params:show("hill "..i.." cc_"..j.."_ch")
+          -- end
           _menu.rebuild_params()
         end
       end
     )
-    params:add_option("hill "..i.." MIDI device", "MIDI output device",vports,1)
-    params:add_number("hill "..i.." MIDI note channel","MIDI note channel",1,16,1)
+    params:add_option("hill "..i.." MIDI device", "device",vports,1)
+    params:add_number("hill "..i.." MIDI note channel","note channel",1,16,1)
     params:add_number("hill "..i.." velocity","velocity",0,127,60)
     local fixed_ccs = {}
     fixed_ccs[1] = "none"
@@ -305,13 +305,28 @@ function parameters.init()
     params:hide("hill "..i.." crow osc aliasing")
     params:hide("hill "..i.." crow osc level")
     params:hide("hill "..i.." crow osc decay")
-    _menu.rebuild_params()
 
     params:add_separator("JF management ["..hill_names[i].."]")
     params:add_option("hill "..i.." JF output", "JF output?",{"no","yes"},1)
+    params:set_action("hill "..i.." JF output",
+      function(x)
+        if x == 1 then
+          params:hide("hill "..i.." JF output style")
+          params:hide("hill "..i.." JF output id")
+          _menu.rebuild_params()
+        else
+          params:show("hill "..i.." JF output style")
+          params:show("hill "..i.." JF output id")
+          _menu.rebuild_params()
+        end
+      end
+    )
     params:add_option("hill "..i.." JF output style", "output style",{"sound","shape"},1)
     params:add_option("hill "..i.." JF output id","output id",{"IDENTITY","2N","3N","4N","5N","6N","all"},1)
+    params:hide("hill "..i.." JF output style")
+    params:hide("hill "..i.." JF output id")
   end
+  _menu.rebuild_params()
   clock.run(function() clock.sleep(1) params:bang() end)
 end
 
@@ -381,7 +396,25 @@ function parameters.reload_engine(id,silent)
     end
   end
   if not silent then
-    engine.load(params:string("global engine"))
+    local was_playing = {0,0,0,0,0,0,0,0}
+    clock.run(
+      function()
+        for i = 1,8 do
+          if hills[i].active then
+            stop(i,true)
+            was_playing[i] = hills[i].segment
+          end
+        end
+        clock.sleep(0.25)
+        engine.load(params:string("global engine"))
+        clock.sleep(1)
+        for i = 1,8 do
+          if was_playing[i]~= 0 then
+            _a.start(i,was_playing[i],true)
+          end
+        end
+      end
+    )
   end
 end
 

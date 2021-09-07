@@ -24,8 +24,12 @@ function screen_actions.draw()
     for i = hills[hf][focus].low_bound.note,hills[hf][focus].high_bound.note do
       local horizontal = util.linlin(hills[hf][focus].note_timestamp[hills[hf][focus].low_bound.note], hills[hf][focus].note_timestamp[hills[hf][focus].high_bound.note],40,120,hills[hf][focus].note_timestamp[i])
       local vertical = util.linlin(hills[hf][focus].note_ocean[1],hills[hf][focus].note_ocean[peak_pitch],55,15,hills[hf][focus].note_ocean[hills[hf][focus].note_num.pool[i]])
-      if ui.control_set == "edit" and ui.menu_focus == 3 then
-        screen.level(s_c["notes"]["focus"] == i and 15 or (seg.index-1 == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0)))
+      if ui.control_set == "edit" and (ui.menu_focus == 1 or ui.menu_focus == 3) then
+        if ui.menu_focus == 1 then
+          screen.level(s_c["hills"]["focus"] == i and 15 or (seg.index-1 == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0)))
+        elseif ui.menu_focus == 3 then
+          screen.level(s_c["notes"]["focus"] == i and 15 or (seg.index-1 == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0)))
+        end
       else
         screen.level(seg.index-1 == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0))
       end

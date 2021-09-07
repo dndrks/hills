@@ -31,7 +31,7 @@ function key_actions.parse(n,z)
         end
       elseif ui.control_set == "edit" then
         if not key1_hold then
-          _a.one_shot(ui.hill_focus,hills[ui.hill_focus].screen_focus)
+          _a.start(ui.hill_focus,hills[ui.hill_focus].screen_focus,true)
         else
           if ui.menu_focus == 3 then
             _t[s_c["notes"]["transform"]](i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note,s_c.notes.focus)
