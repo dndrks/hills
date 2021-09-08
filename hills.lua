@@ -134,8 +134,8 @@ function init()
       hills[i][j].looper = {
         ["clock"] = nil,
         ["runner"] = 1,
-        ["mode"] = "event",
-        ["clock_time"] = 1
+        ["mode"] = "phase",
+        ["clock_time"] = 0
       }
       hills[i][j].playmode = "latch"
       hills[i][j].counter_div = 1
@@ -280,21 +280,26 @@ iterate = function(i)
             end
             seg.step = util.round(seg.step + 0.01,0.01)
             local reasonable_max = seg.note_timestamp[seg.high_bound.note+1] ~= nil and seg.note_timestamp[seg.high_bound.note+1] or seg.note_timestamp[seg.high_bound.note] + seg.note_timedelta[seg.high_bound.note]
-            if util.round(seg.step,0.01) >= util.round(reasonable_max,0.01) and seg.looper.mode == "event" then
-              _a.start(i,h.segment)
+            if util.round(seg.step,0.01) >= util.round(reasonable_max,0.01) then
+              if seg.looper.mode == "phase" then
+                _a.start(i,h.segment)
+              else
+                stop(i)
+              end
             end
           end
         elseif not seg.loop then
-          if util.round(seg.note_timestamp[seg.index+1],0.01) == util.round(seg.step,0.01) then
-            pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index)
-            screen_dirty = true
-            seg.step = seg.note_timestamp[seg.index]
-            seg.perf_led = true
-            grid_dirty = true 
-          else
-            seg.step = util.round(seg.step + 0.01,0.01)
-            grid_dirty = true
-          end
+          print("WHY WOULD THIS EVER HAPPEN ANYWAY??")
+          -- if util.round(seg.note_timestamp[seg.index+1],0.01) == util.round(seg.step,0.01) then
+          --   pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index)
+          --   screen_dirty = true
+          --   seg.step = seg.note_timestamp[seg.index]
+          --   seg.perf_led = true
+          --   grid_dirty = true 
+          -- else
+          --   seg.step = util.round(seg.step + 0.01,0.01)
+          --   grid_dirty = true
+          -- end
         end
       else
         seg.iterated = false

@@ -64,10 +64,19 @@ function enc_actions.parse(n,d)
         end
       elseif ui.menu_focus == 4 then
         if ui.control_set == "edit" then
-          if s_c["loop"]["focus"] == 1 then
-            hills[i][j].counter_div = util.clamp(hills[i][j].counter_div+d/128,1/128,4)
-          elseif s_c["loop"]["focus"] == 2 then
-            hills[i][j].loop = d > 0 and true or false
+          if not key1_hold then
+            if s_c["loop"]["focus"] == 1 then
+              hills[i][j].counter_div = util.clamp(hills[i][j].counter_div+d/128,1/128,4)
+            elseif s_c["loop"]["focus"] == 2 then
+              hills[i][j].loop = d > 0 and true or false
+            end
+          else
+            hills[i][j].looper.clock_time = util.round(util.clamp(hills[i][j].looper.clock_time + d,0,128))
+            if hills[i][j].looper.clock_time == 0 then
+              hills[i][j].looper.mode = "phase"
+            else
+              hills[i][j].looper.mode = "clock"
+            end
           end
         end
       end

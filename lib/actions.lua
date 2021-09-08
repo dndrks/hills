@@ -36,10 +36,14 @@ actions.clock_synced_loop = function(i,j)
   hills[i][j].looper.runner = 1
   while true do
     clock.sync(1/4)
-    if hills[i][j].looper.runner == hills[i][j].looper.clock_time * 4 then
+    if hills[i][j].looper.runner >= hills[i][j].looper.clock_time * 4 then
       hills[i][j].looper.runner = 1
-      stop(i)
-      actions.start(i,j)
+      if hills[i][j].loop and hills[i][j].looper.mode == "clock" then
+        stop(i)
+        actions.start(i,j)
+      elseif not hills[i][j].loop or not hills[i][j].looper.mode == "clock" then
+        stop(i,true)
+      end
     else
       hills[i][j].looper.runner = hills[i][j].looper.runner + 1
     end

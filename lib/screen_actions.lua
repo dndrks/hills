@@ -64,12 +64,17 @@ function screen_actions.draw()
           screen.text_right("K3: "..ui.screen_controls[hf][focus]["notes"]["transform"])
         end
       elseif ui.menu_focus == 4 then
-        screen.level(s_c["loop"]["focus"] == 1 and 15 or 3)
+        screen.level(s_c["loop"]["focus"] == 1 and (key1_hold and 3 or 15) or 3)
         screen.move(40,10)
         screen.text("rate: "..util.round(seg.counter_div,0.01).."x")
-        screen.level(s_c["loop"]["focus"] == 1 and 3 or 15)
+        screen.level(s_c["loop"]["focus"] == 1 and 3 or (key1_hold and 3 or 15))
         screen.move(120,10)
         screen.text_right("∞: "..(tostring(seg.loop) == "true" and "on" or "off"))
+        if key1_hold then
+          screen.level(15)
+          screen.move(128,64)
+          screen.text_right("RESET: "..(seg.looper.mode == "phase" and "PHASE" or "CLOCK ("..seg.looper.clock_time.." beats)"))
+        end
       end
     end
     local menus = {"hill: "..focus,"bound","notes","loop"}
