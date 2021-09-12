@@ -14,7 +14,9 @@ function key_actions.parse(n,z)
         end
       else
         if ui.control_set == "edit" then
-          if ui.menu_focus == 3 then
+          if ui.menu_focus == 1 then
+            _t.reseed(i,j,0.1)
+          elseif ui.menu_focus == 3 then
             _t.mute(i,j,s_c.notes.focus)
           end
         end
@@ -31,9 +33,11 @@ function key_actions.parse(n,z)
         end
       elseif ui.control_set == "edit" then
         if not key1_hold then
-          _a.start(ui.hill_focus,hills[ui.hill_focus].screen_focus,true)
+          _a.start(i,j,true)
         else
-          if ui.menu_focus == 3 then
+          if ui.menu_focus == 1 then
+            _t.quantize(i,j,params:string("hill "..i.." quant value"),hills[i][j].low_bound.note,hills[i][j].high_bound.note)
+          elseif ui.menu_focus == 3 then
             _t[s_c["notes"]["transform"]](i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note,s_c.notes.focus)
           end
         end

@@ -12,7 +12,11 @@ function enc_actions.parse(n,d)
       ui.menu_focus = util.clamp(ui.menu_focus+d,1,4)
     elseif ui.control_set == "edit" then
       if ui.menu_focus == 1 then
-        s_c["hills"]["focus"] = util.clamp(s_c["hills"]["focus"]+d,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
+        if not key1_hold then
+          s_c["hills"]["focus"] = util.clamp(s_c["hills"]["focus"]+d,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
+        else
+          hills[i][j].population = util.clamp((hills[i][j].population*100)+d,10,100)/100
+        end
       elseif ui.menu_focus == 2 then
         s_c["bounds"]["focus"] = util.clamp(s_c["bounds"]["focus"]+d,1,s_c["bounds"]["max"])
       elseif ui.menu_focus == 3 then
@@ -38,7 +42,11 @@ function enc_actions.parse(n,d)
             grid_dirty = true
           end
         elseif ui.control_set == "edit" then
-          _t.nudge(i,j,ui.screen_controls[i][j].hills.focus,d)
+          if not key1_hold then
+            _t.nudge(i,j,ui.screen_controls[i][j].hills.focus,d)
+          else
+            params:delta("hill "..i.." quant value",d)
+          end
         end
       elseif ui.menu_focus == 2 then
         if ui.control_set == "edit" then

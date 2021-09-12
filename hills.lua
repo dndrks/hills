@@ -153,7 +153,7 @@ function init()
       hills[i][j].note_timestamp = {}
       hills[i][j].note_timedelta = {}
 
-      construct(i,j)
+      construct(i,j,true)
 
       ui.edit_note[i][j] = 1
       ui.screen_controls[i][j] =
@@ -206,7 +206,7 @@ process_events = function(i)
   _G[hills[i].mode](i)
 end
 
-construct = function(i,j)
+construct = function(i,j,shuffle)
   local h = hills[i]
   local seg = h[j]
   local total_notes = util.round(#seg.note_ocean*seg.population)
@@ -222,7 +222,9 @@ construct = function(i,j)
     end
   end
   calculate_timedeltas(i,j)
-  _t.shuffle(i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
+  if shuffle then
+    _t.shuffle(i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
+  end
   screen_dirty = true
 end
 

@@ -44,7 +44,25 @@ function screen_actions.draw()
     end
     if ui.control_set == "edit" then
       screen.font_size(8)
-      if ui.menu_focus == 2 then
+      if ui.menu_focus == 1 then
+        screen.level(s_c["loop"]["focus"] == 1 and (key1_hold and 3 or 15) or 3)
+        screen.move(120,10)
+        local duration_marker;
+        local current_focus = s_c.hills.focus
+        if current_focus < tab.count(seg.note_timestamp) then
+          duration_marker = seg.note_timestamp[current_focus+1] - seg.note_timestamp[current_focus]
+          screen.text_right("step duration: "..string.format("%0.6g",duration_marker))
+        else
+          screen.text_right("total duration: "..string.format("%0.6g",seg.note_timestamp[current_focus] - seg.note_timestamp[1]))
+        end
+        if key1_hold then
+          screen.level(15)
+          screen.move(0,64)
+          screen.text("K2: RE-GEN ("..util.round(seg.population*100).."%)")
+          screen.move(128,64)
+          screen.text_right("K3: QUANT "..params:string("hill "..hf.." quant value"))
+        end
+      elseif ui.menu_focus == 2 then
         screen.level(s_c["bounds"]["focus"] == 1 and 15 or 3)
         screen.move(40,10)
         screen.text("min: "..seg.low_bound.note)

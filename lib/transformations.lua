@@ -206,25 +206,60 @@ m.quantize = function(i,j,smallest,start_point,end_point)
   , ["1/32t"] = 12
   }
   local quant_val = clock.get_beat_sec()/notes_to_durs[smallest]
-  -- for k = 1,#hills[i][j].note_timedelta do
   for k = s_p,e_p do
-    hills[i][j].note_timedelta[k] = util.round(hills[i][j].note_timedelta[k]/quant_val) * quant_val
+    hills[i][j].note_timedelta[k] = quant_val
   end
-  -- for k = #hills[i][j].note_timedelta,1,-1 do
   for k = e_p,s_p,-1 do
     if hills[i][j].note_timedelta[k] == 0 then
       print(k)
-      -- table.remove(hills[i][j].note_timedelta,k)
       hills[i][j].note_timedelta[k] = quant_val
     end
   end
   if hills[i][j].high_bound.note > #hills[i][j].note_timedelta then
     hills[i][j].high_bound.note = #hills[i][j].note_timedelta
   end
-  -- tab.print(hills[i][j].note_timestamp)
   m.adjust_timestamps(i,j)
-  -- tab.print(hills[i][j].note_timestamp)
 end
+
+-- m.quantize = function(i,j,smallest,start_point,end_point)
+--   local s_p = start_point
+--   local e_p = end_point
+--   if s_p == nil then
+--     s_p = hills[i][j].low_bound.note
+--   end
+--   if e_p == nil then
+--     e_p = hills[i][j].high_bound.note
+--   end
+--   local notes_to_durs =
+--   {
+--     ["1/4"] = 1
+--   , ["1/4d"] = 2/3
+--   , ["1/4t"] = 3/2
+--   , ["1/8"] = 2
+--   , ["1/8d"] = 4/3
+--   , ["1/8t"] = 3
+--   , ["1/16"] = 4
+--   , ["1/16d"] = 8/3
+--   , ["1/16t"] = 6
+--   , ["1/32"] = 8
+--   , ["1/32d"] = 16/3
+--   , ["1/32t"] = 12
+--   }
+--   local quant_val = clock.get_beat_sec()/notes_to_durs[smallest]
+--   for k = s_p,e_p do
+--     hills[i][j].note_timedelta[k] = util.round(hills[i][j].note_timedelta[k]/quant_val) * quant_val
+--   end
+--   for k = e_p,s_p,-1 do
+--     if hills[i][j].note_timedelta[k] == 0 then
+--       print(k)
+--       hills[i][j].note_timedelta[k] = quant_val
+--     end
+--   end
+--   if hills[i][j].high_bound.note > #hills[i][j].note_timedelta then
+--     hills[i][j].high_bound.note = #hills[i][j].note_timedelta
+--   end
+--   m.adjust_timestamps(i,j)
+-- end
 
 m.clamp_to_steps = function(i,j,count)
   hills[i][j].high_bound.note = hills[i][j].low_bound.note + (count-1)
@@ -263,7 +298,7 @@ m.nudge = function(i,j,index,delta)
     reasonable_min = seg.note_timestamp[index-1]+0.01
   end
   if index == #seg.note_timedelta then
-    reasonable_max = seg.note_timestamp[index]
+    reasonable_max = seg.note_timestamp[index]+1
   else
     reasonable_max = seg.note_timestamp[index+1]-0.01
   end
@@ -287,6 +322,21 @@ m.snap_bound = function(i,j)
     clamp_to = seg.index-1
   end
   seg.high_bound.note = clamp_to
+end
+
+m.reseed = function(i,j)
+  local total_shape_count = tab.count(curves.easingNames)
+  hills[i][j].shape = curves.easingNames[math.random(total_shape_count)]
+  hills[i][j].note_timestamp = {}
+  hills[i][j].note_timedelta = {}
+  hills[i][j].note_num = -- this is where we track the note entries for the constructed hill
+  {
+    ["min"] = 1, -- defines the lowest note degree
+    ["max"] = 15, -- defines the highest note degree
+    ["pool"] = {}, -- gets filled with the constructed hill's notes
+    ["active"] = {} -- tracks whether the note should play
+  }
+  construct(i,j)
 end
 
 return m
