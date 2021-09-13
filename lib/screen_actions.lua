@@ -58,7 +58,7 @@ function screen_actions.draw()
         if key1_hold then
           screen.level(15)
           screen.move(0,64)
-          screen.text("K2: RE-GEN ("..util.round(seg.population*100).."%)")
+          screen.text("K2: SEED ("..util.round(seg.population*100).."%)")
           screen.move(128,64)
           screen.text_right("K3: QUANT "..params:string("hill "..hf.." quant value"))
         end
