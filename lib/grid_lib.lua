@@ -7,6 +7,45 @@ local dirs = {["L"] = false,["R"] = false,["U"] = false,["D"] = false}
 held_dirs_clocks = {["L"] = nil,["R"] = nil,["U"] = nil,["D"] = nil}
 held_dirs_iters = {["L"] = 0,["R"] = 0,["U"] = 0,["D"] = 0}
 
+function grid_lib.pattern_execute(data)
+  if data.event == "start" then
+    _a.start(data.x,data.y,true)
+    screen_dirty = true
+    hills[data.x][data.y].perf_led = true
+    grid_dirty = true
+  elseif data.event == "stop" then
+    stop(data.x,true)
+    screen_dirty = true
+    hills[data.x][data.y].perf_led = true
+    grid_dirty = true
+  end
+end
+
+grid_pattern = {}
+for i = 1,16 do
+  grid_pattern[i] = pt.new()
+  grid_pattern[i].process = grid_lib.pattern_execute
+end
+
+function grid_lib.handle_grid_pat(i,alt)
+  if not alt then
+    if grid_pattern[i].rec == 1 then -- if we're recording...
+      grid_pattern[i]:rec_stop() -- stop recording
+      grid_pattern[i]:start() -- start playing
+    elseif grid_pattern[i].count == 0 then -- otherwise, if there are no events recorded..
+      grid_pattern[i]:rec_start() -- start recording
+    elseif grid_pattern[i].play == 1 then -- if we're playing...
+      grid_pattern[i]:stop() -- stop playing
+    else -- if by this point, we're not playing...
+      grid_pattern[i]:start() -- start playing
+    end
+  else
+    grid_pattern[i]:rec_stop() -- stops recording
+    grid_pattern[i]:stop() -- stops playback
+    grid_pattern[i]:clear() -- clears the pattern
+  end
+end
+
 function grid_lib.init()
   clock.run(function()
     while true do
@@ -27,8 +66,8 @@ function grid_lib.init()
   grid_dirty = true
 end
 
-mods = {["hill"] = false,["bound"] = false,["notes"] = false,["loop"] = false,["playmode"] = false,[6] = false,["copy"] = false,["stop"] = false}
-local modkeys = {"hill","bound","notes","loop","playmode",6,"copy","stop"}
+mods = {["hill"] = false,["bound"] = false,["notes"] = false,["loop"] = false,["playmode"] = false,["copy"] = false,[7] = false,["alt"] = false}
+local modkeys = {"hill","bound","notes","loop","playmode","copy",7,"alt"}
 function g.key(x,y,z)
   if x == 1 then
     if y >= 1 and y <= 4 and z == 1 then
@@ -46,7 +85,7 @@ function g.key(x,y,z)
       else
         ui.control_set = "play"
       end
-    elseif y == 5 or y == 7 or y == 8 then
+    elseif y == 5 or y == 6 or y == 8 then
       for i = 1,#modkeys do
         if i ~= y then
           mods[modkeys[i]] = false
@@ -71,6 +110,15 @@ function g.key(x,y,z)
       screen_dirty = true
       hills[x-1][y].perf_led = true
       grid_dirty = true
+      for i = 1,16 do
+        grid_pattern[i]:watch(
+          {
+            ["event"] = "start",
+            ["x"] = x-1,
+            ["y"] = y
+          }
+        )
+      end
     end
     if z == 0 then
       if hills[x-1][y].playmode == "momentary" and hills[x-1].segment == y then
@@ -79,9 +127,18 @@ function g.key(x,y,z)
         hills[x-1][y].perf_led = true
         grid_dirty = true
       end
+      for i = 1,16 do
+        grid_pattern[i]:watch(
+          {
+            ["event"] = "stop",
+            ["x"] = x-1,
+            ["y"] = y
+          }
+        )
+      end
     end
   elseif x > 1 and x <= 9 and mod_held then
-    if mods["stop"] and z == 1 then
+    if mods["alt"] and z == 1 then
       stop(x-1,true)
     elseif mods["hill"] or mods["bound"] or mods["notes"] or mods["loop"] then
       ui.hill_focus = x-1
@@ -99,8 +156,12 @@ function g.key(x,y,z)
         clipboard = nil
       end
     end
+  elseif x>=13 and y<=4 and z == 1 then
+    local target = (x-12)+(4*(y-1))
+    grid_lib.handle_grid_pat(target,mods.alt)
+    grid_dirty = true
   end
-  if mod_held and not mods["stop"] and not mods["copy"] then
+  if mod_held and not mods["alt"] and not mods["copy"] then
     if x == 14 and y == 8 then
       if z == 1 then
         start_dir_clock("L",2,-1)
@@ -152,7 +213,7 @@ function grid_redraw()
               g:led(i,j,0)
             end
           end
-          if mods["stop"] then
+          if mods["alt"] then
             if hills[i-1].segment == j then
               g:led(i,j,hills[i-1][j].perf_led and 15 or (hills[i-1][j].iterated and 6 or 15))
             else
@@ -190,7 +251,7 @@ function grid_redraw()
   for i = 1,8 do
     g:led(1,i,mods[modkeys[i]] and 15 or 0)
   end
-  if mod_held and not mods["playmode"] and not mods["stop"] and not mods["copy"] then
+  if mod_held and not mods["playmode"] and not mods["alt"] and not mods["copy"] then
     g:led(14,8,dirs["L"] and 15 or 8)
     g:led(15,7,dirs["U"] and 15 or 8)
     g:led(15,8,dirs["D"] and 15 or 8)
@@ -223,6 +284,19 @@ function grid_redraw()
   end
   if mod_held and mods["playmode"] then
 
+  end
+  for i = 1,16 do
+    local led_level
+    if grid_pattern[i].count == 0 and grid_pattern[i].rec == 0 then
+      led_level = 3
+    elseif grid_pattern[i].rec == 1 then
+      led_level = 10
+    elseif grid_pattern[i].play == 1 then
+      led_level = 15
+    else
+      led_level = 8
+    end
+    g:led(index_to_grid_pos(i,4)[1]+12,index_to_grid_pos(i,4)[2],led_level)
   end
   g:refresh()
 end

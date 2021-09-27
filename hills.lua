@@ -34,6 +34,7 @@ end
 
 engine.name = "PolyPerc"
 
+pt = require 'pattern_time'
 curves = include 'lib/easing'
 prms = include 'lib/parameters'
 _t = include 'lib/transformations'
