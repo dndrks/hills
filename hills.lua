@@ -15,9 +15,9 @@ if util.file_exists(_path.code.."thebangs") then
 end
 
 kildare = nil
-if util.file_exists(_path.code.."kildare") then
-  kildare = include('kildare/lib/kildare')
-end
+-- if util.file_exists(_path.code.."kildare") then
+--   kildare = include('kildare/lib/kildare')
+-- end
 
 engine_options = {"PolyPerc"}
 if mxsamples ~= nil then
