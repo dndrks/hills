@@ -7,13 +7,16 @@
 local mxsamples=nil
 if util.file_exists(_path.code.."mx.samples") then
   mxsamples=include("mx.samples/lib/mx.samples")
-  -- engine.name = "MxSamples"
 end
 
 thebangs = nil
 if util.file_exists(_path.code.."thebangs") then
   thebangs = include('thebangs/lib/thebangs_engine')
-  -- engine.name = "Thebangs"
+end
+
+kildare = nil
+if util.file_exists(_path.code.."kildare") then
+  kildare = include('kildare/lib/kildare')
 end
 
 engine_options = {"PolyPerc"}
@@ -27,9 +30,27 @@ else
 end
 if thebangs ~= nil then
   table.insert(engine_options,"Thebangs")
-  -- params:add_group("THEBANGS",6)
-  -- thebangs.add_additional_synth_params()
-  -- thebangs.add_voicer_params()
+end
+if kildare ~= nil then
+  table.insert(engine_options,"Kildare")
+  clock.run(
+    function()
+      clock.sleep(0.1)
+      kildare.init(true)
+      kildare_loaded = true
+      local drums = {"bd","sd","tm","cp","rs","cb","hh"}
+      for j = 1,#drums do
+        local k = drums[j]
+        params:hide(k)
+      end
+      for i = 1,8 do
+        params:show("hill "..i.." kildare_state")
+        params:hide("hill "..i.." kildare_notes")
+      end
+      params:hide("lfos")
+    end
+  )
+  -- kildare.init(true)
 end
 
 engine.name = "PolyPerc"
@@ -87,7 +108,9 @@ function init()
   for i = 1,#mu.SCALES do
     table.insert(scale_names,mu.SCALES[i].name)
   end
+
   prms.init()
+  prms.reload_engine(params:string("global engine"),true)
 
   for i = 1,8 do
     ui.edit_note[i] = {}
@@ -138,7 +161,7 @@ function init()
         ["mode"] = "phase",
         ["clock_time"] = 0
       }
-      hills[i][j].playmode = "latch"
+      hills[i][j].playmode = "momentary"
       hills[i][j].counter_div = 1
       hills[i][j].perf_led = false
       hills[i][j].iterated = true
@@ -475,6 +498,14 @@ pass_note = function(i,j,seg,note_val,index,destination)
       engine.release(params:get("hill "..i.." thebangs_release"))
       engine.cutoff(params:get("hill "..i.." thebangs_cut"))
       engine.hz(midi_to_hz(played_note))
+    elseif engine.name == "Kildare" then
+      if i <= 7 then
+        local drums = {"bd","sd","tm","cp","rs","cb","hh"}
+        if params:string("hill "..i.." kildare_notes") == "yes" then
+          engine.set_param(drums[i],"carHz",midi_to_hz(played_note))
+        end
+        engine.trig(drums[i])
+      end
     end
     if params:string("hill "..i.." MIDI output") == "yes" then
       local ch = params:get("hill "..i.." MIDI note channel")

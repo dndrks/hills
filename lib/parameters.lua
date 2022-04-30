@@ -21,11 +21,11 @@ function parameters.init()
   params:add_trigger("reload engine","reload engine")
   params:set_action("reload engine",
     function()
-      parameters.reload_engine(params:get("global engine"))
+      parameters.reload_engine(params:string("global engine"))
     end
   )
   for i = 1,8 do
-    params:add_group(hill_names[i],76)
+    params:add_group(hill_names[i],79)
 
     params:add_separator("note management ["..hill_names[i].."]")
     params:add_option("hill "..i.." scale","scale",scale_names,1)
@@ -179,6 +179,11 @@ function parameters.init()
     params:hide("hill "..i.." thebangs_cut")
     params:hide("hill "..i.." thebangs_amp")
     params:hide("hill "..i.." thebangs_pan")
+
+    params:add_separator("Kildare management ["..hill_names[i].."]")
+    params:add_text("hill "..i.." kildare_state","not selected, no params")
+    params:add_option("hill "..i.." kildare_notes","send MIDI pitches?",{"no","yes"},1)
+    params:hide("hill "..i.." kildare_notes")
 
     params:add_separator("MIDI management ["..hill_names[i].."]")
     params:add_option("hill "..i.." MIDI output", "MIDI output?",{"no","yes"},1)
@@ -417,7 +422,7 @@ function parameters.init()
 end
 
 function parameters.reload_engine(id,silent)
-  if id ~= 1 then
+  if id ~= "PolyPerc" then
     for i = 1,8 do
       params:hide("hill "..i.." pp_amp")
       params:hide("hill "..i.." pp_pw")
@@ -426,7 +431,7 @@ function parameters.reload_engine(id,silent)
       params:show("hill "..i.." pp_state")
     end
   end
-  if id == 1 then
+  if id == "PolyPerc" then
     for i = 1,8 do
       params:show("hill "..i.." pp_amp")
       params:show("hill "..i.." pp_pw")
@@ -435,7 +440,7 @@ function parameters.reload_engine(id,silent)
       params:hide("hill "..i.." pp_state")
     end
   end
-  if id ~= 2 then
+  if id ~= "MxSamples" then
     for i = 1,8 do
       params:hide("hill "..i.." mx_voice")
       params:hide("hill "..i.." mx_velocity")
@@ -446,7 +451,7 @@ function parameters.reload_engine(id,silent)
       params:show("hill "..i.." mx_state")
     end
   end
-  if id == 2 then
+  if id == "MxSamples" then
     for i = 1,8 do
       params:show("hill "..i.." mx_voice")
       params:show("hill "..i.." mx_velocity")
@@ -457,7 +462,7 @@ function parameters.reload_engine(id,silent)
       params:hide("hill "..i.." mx_state")
     end
   end
-  if id ~= 3 then
+  if id ~= "Thebangs" then
     for i = 1,8 do
       params:hide("hill "..i.." thebangs_algo")
       params:hide("hill "..i.." thebangs_pw")
@@ -469,7 +474,7 @@ function parameters.reload_engine(id,silent)
       params:show("hill "..i.." thebangs_state")
     end
   end
-  if id == 3 then
+  if id == "Thebangs" then
     for i = 1,8 do
       params:show("hill "..i.." thebangs_algo")
       params:show("hill "..i.." thebangs_pw")
@@ -481,6 +486,36 @@ function parameters.reload_engine(id,silent)
       params:hide("hill "..i.." thebangs_state")
     end
   end
+
+  if id ~= "Kildare" then
+    if kildare and kildare_loaded then
+      local drums = {"bd","sd","tm","cp","rs","cb","hh"}
+      for j = 1,#drums do
+        local k = drums[j]
+        params:hide(k)
+      end
+      for i = 1,8 do
+        params:show("hill "..i.." kildare_state")
+        params:hide("hill "..i.." kildare_notes")
+      end
+      params:hide("lfos")
+    end
+  elseif id == "Kildare" then
+    params:hide("no_kildare")
+    local drums = {"bd","sd","tm","cp","rs","cb","hh"}
+    for j = 1,#drums do
+      local k = drums[j]
+      params:show(k)
+    end
+    for i = 1,8 do
+      params:hide("hill "..i.." kildare_state")
+      params:show("hill "..i.." kildare_notes")
+    end
+    params:show("lfos")
+  end
+
+  print("selected engine: "..id)
+
   if not silent then
     local was_playing = {0,0,0,0,0,0,0,0}
     clock.run(

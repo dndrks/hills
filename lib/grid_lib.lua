@@ -7,16 +7,20 @@ local dirs = {["L"] = false,["R"] = false,["U"] = false,["D"] = false}
 held_dirs_clocks = {["L"] = nil,["R"] = nil,["U"] = nil,["D"] = nil}
 held_dirs_iters = {["L"] = 0,["R"] = 0,["U"] = 0,["D"] = 0}
 
+active_voices = {false,false,false,false,false,false,false,false}
+
 function grid_lib.pattern_execute(data)
   if data.event == "start" then
     _a.start(data.x,data.y,true)
+    active_voices[data.x] = true
     screen_dirty = true
     hills[data.x][data.y].perf_led = true
     grid_dirty = true
-  elseif data.event == "stop" then
+  elseif data.event == "stop" and hills[data.x][data.y].playmode == "momentary" then
     stop(data.x,true)
+    active_voices[data.x] = false
     screen_dirty = true
-    hills[data.x][data.y].perf_led = true
+    hills[data.x][data.y].perf_led = false
     grid_dirty = true
   end
 end
@@ -36,12 +40,24 @@ function grid_lib.handle_grid_pat(i,alt)
       grid_pattern[i]:rec_start() -- start recording
     elseif grid_pattern[i].play == 1 then -- if we're playing...
       grid_pattern[i]:stop() -- stop playing
+      for j = 1,#active_voices do
+        if active_voices[j] then
+          stop(j,true)
+          active_voices[j] = false
+        end
+      end
     else -- if by this point, we're not playing...
       grid_pattern[i]:start() -- start playing
     end
   else
     grid_pattern[i]:rec_stop() -- stops recording
     grid_pattern[i]:stop() -- stops playback
+    for j = 1,#active_voices do
+      if active_voices[j] then
+        stop(j,true)
+        active_voices[j] = false
+      end
+    end
     grid_pattern[i]:clear() -- clears the pattern
   end
 end
@@ -124,7 +140,8 @@ function g.key(x,y,z)
       if hills[x-1][y].playmode == "momentary" and hills[x-1].segment == y then
         stop(x-1,true)
         screen_dirty = true
-        hills[x-1][y].perf_led = true
+        -- hills[x-1][y].perf_led = true
+        hills[x-1][y].perf_led = false
         grid_dirty = true
       end
       for i = 1,16 do
