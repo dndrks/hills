@@ -106,7 +106,6 @@ function enc_actions.parse(n,d)
       end
     end
   end
-  screen_dirty = true
 end
 
 return enc_actions

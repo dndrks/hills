@@ -319,9 +319,7 @@ function grid_redraw()
 end
 
 function start_dir_clock(dir,n,d)
-  if not mods["hill"] then
-    d = d
-  else
+  if mods["hill"] and n == 3 then
     d = d * -1
   end
   _e.parse(n,d)

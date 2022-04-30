@@ -54,7 +54,6 @@ function key_actions.parse(n,z)
       key1_hold = false
     end
   end
-  screen_dirty = true
 end
 
 return key_actions

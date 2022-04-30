@@ -1,7 +1,6 @@
 local screen_actions = {}
 
 function screen_actions.draw()
-  screen.clear()
   local hf = ui.hill_focus
   local h = hills[hf]
   screen.level(15)
@@ -162,8 +161,6 @@ function screen_actions.draw()
       end
     end
   end
-  screen.update()
-  screen_dirty = false
 end
 
 return screen_actions
