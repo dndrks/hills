@@ -7,18 +7,24 @@ local dirs = {["L"] = false,["R"] = false,["U"] = false,["D"] = false}
 held_dirs_clocks = {["L"] = nil,["R"] = nil,["U"] = nil,["D"] = nil}
 held_dirs_iters = {["L"] = 0,["R"] = 0,["U"] = 0,["D"] = 0}
 
-active_voices = {false,false,false,false,false,false,false,false}
+active_voices = {}
+for i = 1,16 do
+  active_voices[i] = {}
+  for j = 1,8 do
+    active_voices[i][j] = false
+  end
+end
 
 function grid_lib.pattern_execute(data)
   if data.event == "start" then
     _a.start(data.x,data.y,true)
-    active_voices[data.x] = true
+    active_voices[data.id][data.x] = true
     screen_dirty = true
     hills[data.x][data.y].perf_led = true
     grid_dirty = true
   elseif data.event == "stop" and hills[data.x][data.y].playmode == "momentary" then
     stop(data.x,true)
-    active_voices[data.x] = false
+    active_voices[data.id][data.x] = false
     screen_dirty = true
     hills[data.x][data.y].perf_led = false
     grid_dirty = true
@@ -39,26 +45,30 @@ function grid_lib.handle_grid_pat(i,alt)
     elseif grid_pattern[i].count == 0 then -- otherwise, if there are no events recorded..
       grid_pattern[i]:rec_start() -- start recording
     elseif grid_pattern[i].play == 1 then -- if we're playing...
-      grid_pattern[i]:stop() -- stop playing
-      for j = 1,#active_voices do
-        if active_voices[j] then
-          stop(j,true)
-          active_voices[j] = false
-        end
-      end
+      grid_lib.stop_pattern_playback(i)
     else -- if by this point, we're not playing...
       grid_pattern[i]:start() -- start playing
     end
   else
     grid_pattern[i]:rec_stop() -- stops recording
     grid_pattern[i]:stop() -- stops playback
-    for j = 1,#active_voices do
-      if active_voices[j] then
+    for j = 1,#active_voices[i] do
+      if active_voices[i][j] then
         stop(j,true)
-        active_voices[j] = false
+        active_voices[i][j] = false
       end
     end
     grid_pattern[i]:clear() -- clears the pattern
+  end
+end
+
+function grid_lib.stop_pattern_playback(i)
+  grid_pattern[i]:stop() -- stop playing
+  for j = 1,#active_voices[i] do
+    if active_voices[i][j] then
+      stop(j,true)
+      active_voices[i][j] = false
+    end
   end
 end
 
@@ -96,10 +106,14 @@ function g.key(x,y,z)
         end
       end
       if mod_held then
-        ui.control_set = "edit"
+        if ui.control_set ~= "song" then
+          ui.control_set = "edit"
+        end
         ui.menu_focus = y
       else
-        ui.control_set = "play"
+        if ui.control_set ~= "song" then
+          ui.control_set = "play"
+        end
       end
     elseif y == 5 or y == 6 or y == 8 then
       for i = 1,#modkeys do
@@ -110,7 +124,9 @@ function g.key(x,y,z)
           mod_held = mods[modkeys[y]]
         end
       end
-      ui.control_set = "play"
+      if ui.control_set ~= "song" then
+        ui.control_set = "play"
+      end
       if not mods["copy"] and clipboard then
         clipboard = nil
         copied = nil
@@ -131,7 +147,8 @@ function g.key(x,y,z)
           {
             ["event"] = "start",
             ["x"] = x-1,
-            ["y"] = y
+            ["y"] = y,
+            ["id"] = i
           }
         )
       end
@@ -149,7 +166,8 @@ function g.key(x,y,z)
           {
             ["event"] = "stop",
             ["x"] = x-1,
-            ["y"] = y
+            ["y"] = y,
+            ["id"] = i
           }
         )
       end
@@ -163,11 +181,12 @@ function g.key(x,y,z)
     elseif mods["playmode"] and z == 0 then
       hills[x-1][y].playmode = hills[x-1][y].playmode == "momentary" and "latch" or "momentary"
     elseif mods["copy"] and z == 1 then
-      print("copying...")
       if not clipboard then
+        print("copied...")
         clipboard = _t.deep_copy(hills[x-1][y])
         copied = {x-1,y}
       else
+        print("pasted!")
         hills[x-1][y] = _t.deep_copy(clipboard)
         copied = nil
         clipboard = nil
@@ -277,22 +296,22 @@ function grid_redraw()
   if mod_held and mods["copy"] then
     if not clipboard then
       for i = 12,14 do
-        for j = 3,6 do
-          if j == 3 or j == 6 then
+        for j = 5,8 do
+          if j == 5 or j == 8 then
             g:led(i,j,15)
-          elseif (j == 4 or j == 5) and i == 12 then
+          elseif (j == 6 or j == 7) and i == 12 then
             g:led(i,j,15)
           end
         end
       end
     elseif clipboard then
       for i = 12,14 do
-        for j = 3,6 do
-          if j == 3 or j == 5 then
+        for j = 5,8 do
+          if j == 5 or j == 7 then
             g:led(i,j,15)
-          elseif j == 4 and (i == 12 or i == 14) then
+          elseif j == 6 and (i == 12 or i == 14) then
             g:led(i,j,15)
-          elseif j == 6 and i == 12 then
+          elseif j == 8 and i == 12 then
             g:led(i,j,15)
           end
         end

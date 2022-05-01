@@ -19,10 +19,15 @@ _k = include 'lib/key_actions'
 _s = include 'lib/screen_actions'
 _flow = include 'lib/flow'
 _song = include 'lib/song'
+_ca = include 'lib/clip'
 mu = require 'musicutil'
 
 r = function()
   norns.script.load("code/hills/hills.lua")
+end
+
+function grid.add(dev)
+  grid_dirty = true
 end
 
 for i = 1,3 do
@@ -35,11 +40,24 @@ end
 
 function init()
   kildare.init()
+  _ca.init()
   _flow.init()
   _song.init()
   math.randomseed(os.time())
   _g.init()
   key1_hold = false
+  key2_hold = false
+
+  key2_hold_counter = metro.init()
+  key2_hold_counter.time = 0.25
+  key2_hold_counter.count = 1
+  key2_hold_counter.event =
+    function()
+      key2_hold = true
+      print("K2 held!")
+      screen_dirty = true
+    end
+
   
   ui = {}
   ui.control_set = "play"
@@ -170,7 +188,9 @@ function init()
       end
     end
     for j = 1,16 do
-      grid_pattern[j]:stop()
+      if grid_pattern[j].play == 1 then
+        _g.stop_pattern_playback(j)
+      end
       local to_inherit = tab.load(_path.data.."hills/"..params.name.."/patterns/"..j..".txt")
       grid_pattern[j].event = to_inherit.event
       grid_pattern[j].count = #grid_pattern[j].event
@@ -436,6 +456,12 @@ pass_note = function(i,j,seg,note_val,index,destination)
         engine.set_param(drums[i],"carHz",midi_to_hz(played_note))
       end
       engine.trig(drums[i])
+    else
+      -- TRIGGER SOFTCUT
+      -- TODO: softcut.loop_end
+      -- TODO: all 6 softcut voices are distributed on the channel
+      -- TODO: we can also just assign a drum voice to do the same manipulation...!
+      softcut.position(5,(util.linlin(1,16,softcut_offsets[5],sample_track[5].end_point,util.wrap(played_note,1,16))))
     end
     if params:string("hill "..i.." MIDI output") == "yes" then
       local ch = params:get("hill "..i.." MIDI note channel")
@@ -508,7 +534,7 @@ pass_note = function(i,j,seg,note_val,index,destination)
 end
 
 function enc(n,d)
-  if not song_menu then
+  if ui.control_set ~= "song" then
     _e.parse(n,d)
   else
     _flow.process_encoder(n,d)
@@ -517,7 +543,7 @@ function enc(n,d)
 end
 
 function key(n,z)
-  if not song_menu then
+  if ui.control_set ~= "song" then
     _k.parse(n,z)
   else
     _flow.process_key(n,z)
@@ -527,7 +553,7 @@ end
 
 redraw = function()
   screen.clear()
-  if not song_menu then
+  if ui.control_set ~= "song" then
     _s.draw()
   else
     _flow.draw_menu()

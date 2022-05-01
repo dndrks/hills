@@ -11,6 +11,9 @@ function key_actions.parse(n,z)
       if not key1_hold then
         if ui.control_set == "edit" then
           ui.control_set = "play"
+        elseif ui.control_set == "play" then
+          ui.control_set = "song"
+          ignore_key2_up = true
         end
       else
         if ui.control_set == "edit" then
