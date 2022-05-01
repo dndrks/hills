@@ -86,7 +86,6 @@ function ca.load_sample(file,sample,summed)
     sample_track[sample].end_point = (clip[sample].sample_length-0.01) + softcut_offsets[sample]
     softcut.loop_end(sample,sample_track[sample].end_point)
     softcut.position(sample,softcut_offsets[sample])
-    params:set("speed_voice_"..sample,9)
     softcut.rate(sample,ca.get_total_pitch_offset(sample))
     clear[sample] = 0
     sample_track[sample].rec_limit = 0

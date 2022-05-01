@@ -8,7 +8,7 @@ kildare = include('kildare/lib/kildare')
 
 engine.name = "Kildare"
 
-pt = require 'pattern_time'
+pt = include 'lib/hills_pt'
 curves = include 'lib/easing'
 prms = include 'lib/parameters'
 _t = include 'lib/transformations'
@@ -20,6 +20,7 @@ _s = include 'lib/screen_actions'
 _flow = include 'lib/flow'
 _song = include 'lib/song'
 _ca = include 'lib/clip'
+sc_lfos = include 'lib/sc_lfos'
 mu = require 'musicutil'
 
 r = function()
@@ -196,6 +197,9 @@ function init()
       grid_pattern[j].count = #grid_pattern[j].event
       grid_pattern[j].time = to_inherit.time
     end
+    for j = 1,#song_atoms do
+      song_atoms[j] = tab.load(_path.data.."hills/"..params.name.."/song/"..j..".txt")
+    end
     params:bang()
     grid_dirty = true
   end
@@ -203,11 +207,15 @@ function init()
   params.action_write = function(filename,name)
     os.execute("mkdir -p ".._path.data.."hills/"..name.."/data")
     os.execute("mkdir -p ".._path.data.."hills/"..name.."/patterns")
+    os.execute("mkdir -p ".._path.data.."hills/"..name.."/song")
     for i = 1,8 do
       tab.save(hills[i],_path.data.."hills/"..name.."/data/"..i..".txt")
     end
     for i = 1,16 do
       tab.save(grid_pattern[i],_path.data.."hills/"..name.."/patterns/"..i..".txt")
+    end
+    for i = 1,#song_atoms do
+      tab.save(song_atoms[i],_path.data.."hills/"..name.."/song/"..i..".txt")
     end
   end
 

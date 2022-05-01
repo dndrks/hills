@@ -1,4 +1,5 @@
 local parameters = {}
+local frm = require 'formatters'
 
 local vports = {}
 
@@ -368,7 +369,7 @@ function parameters.init()
     end
   -- / MULTI group
 
-  params:add_group("SAMPLES",26)
+  params:add_group("SAMPLES",74)
   for i = 1,6 do
     params:add_separator("["..i.."]")
     params:add_file("clip "..i.." sample", "sample", _path.audio)
@@ -393,6 +394,25 @@ function parameters.init()
         softcut.rate(i, _ca.get_total_pitch_offset(i))
       end
     )
+    params:add_control("vol_"..i,"level",controlspec.new(0,5,'lin',0,1,''))
+    params:set_action("vol_"..i, function(x) softcut.level(i, x) end)
+    
+    params:add_control("pan_"..i,"pan",controlspec.new(-1,1,'lin',0.01,0,''),frm.bipolar_as_pan_widget)
+    params:set_action("pan_"..i, function(x) softcut.pan(i, x) end)
+
+    params:add_control("post_filter_fc_"..i,"filter cutoff",controlspec.new(20,12000,'exp',0.01,12000,''))
+    params:set_action("post_filter_fc_"..i, function(x) softcut.post_filter_fc(i,x) end)
+    params:add_control("post_filter_lp_"..i,"lopass",controlspec.new(0,1,'lin',0.01,0,''))
+    params:set_action("post_filter_lp_"..i, function(x) softcut.post_filter_lp(i,x) end)
+    params:add_control("post_filter_hp_"..i,"hipass",controlspec.new(0,1,'lin',0.01,0,''))
+    params:set_action("post_filter_hp_"..i, function(x) softcut.post_filter_hp(i,x) end)
+    params:add_control("post_filter_bp_"..i,"bandpass",controlspec.new(0,1,'lin',0.01,0,''))
+    params:set_action("post_filter_bp_"..i, function(x) softcut.post_filter_bp(i,x) end)
+    params:add_control("post_filter_dry_"..i,"dry",controlspec.new(0,1,'lin',0.01,1,''))
+    params:set_action("post_filter_dry_"..i, function(x) softcut.post_filter_dry(i,x) end)
+    params:add_control("post_filter_rq_"..i,"resonance (0 = high)",controlspec.new(0.01,2,'lin',0.01,2,''))
+    params:set_action("post_filter_rq_"..i, function(x) softcut.post_filter_rq(i,x) end)
+
   end
   params:add_separator("global")
   params:add_control("pitch_control","pitch control",controlspec.new(-12,12,'lin',0,0,'%'))
@@ -401,6 +421,10 @@ function parameters.init()
       softcut.rate(i,_ca.get_total_pitch_offset(i))
     end
   end)
+
+  sc_lfos.add_params("vol_")
+  sc_lfos.add_params("pan_")
+  sc_lfos.add_params("post_filter_fc_")
 
   _menu.rebuild_params()
   clock.run(function() clock.sleep(1) params:bang() end)

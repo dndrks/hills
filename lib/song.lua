@@ -103,6 +103,11 @@ song.stop = function()
     song_atoms[i].runner = 1
     -- song_atoms[i].current = song_atoms[i].start_point
   end
+  for i = 1,16 do
+    if grid_pattern[i].play == 1 then
+      _g.stop_pattern_playback(i)
+    end
+  end
   -- should probably kill running patterns...
 end
 
@@ -141,13 +146,13 @@ song.remove_line = function(b,loc)
 end
 
 song.save = function(collection)
-  for i = 1,4 do
+  for i = 1,#song_atoms do
     tab.save(song_atoms[i],_path.data .. "cheat_codes_yellow/collection-"..collection.."/song/"..i..".data")
   end
 end
 
 song.load = function(collection)
-  for i = 1,4 do
+  for i = 1,#song_atoms do
     song_atoms[i] = tab.load(_path.data .. "cheat_codes_yellow/collection-"..collection.."/song/"..i..".data")
   end
 end
