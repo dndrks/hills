@@ -27,6 +27,7 @@ function ca.init()
     clip[i].waveform_rendered = false
     clip[i].channel = 1
     clip[i].collage = false
+    clip[i].fade_time = 0.01
 
     softcut.enable(i, 1)
     softcut.rec(i, 0)
@@ -34,8 +35,10 @@ function ca.init()
     softcut.loop(i,0)
     softcut.level(i,1)
     softcut.loop_start(i,softcut_offsets[i])
+    softcut.fade_time(i,clip[i].fade_time)
 
     sample_track[i] = {}
+    sample_track[i].reverse = false
   end
 end
 
@@ -74,11 +77,17 @@ function ca.load_sample(file,sample,summed)
       {1,softcut_offsets[5],clip[sample].sample_length + 0.05 + softcut_offsets[5]},
       {2,softcut_offsets[6],clip[sample].sample_length + 0.05 + softcut_offsets[6]},
     }
+    if sample_track[sample].playing then
+      softcut.play(sample,0)
+      sample_track[sample].playing = false
+    end
     softcut.buffer_clear_region_channel(scaled[sample][1],scaled[sample][2],max_sample_duration)
     softcut.buffer_read_mono(file, 0, scaled[sample][2], clip[sample].sample_length + 0.05, im_ch, scaled[sample][1])
     sample_track[sample].end_point = (clip[sample].sample_length-0.01) + softcut_offsets[sample]
     softcut.loop_end(sample,sample_track[sample].end_point)
     softcut.position(sample,softcut_offsets[sample])
+    params:set("speed_voice_"..sample,9)
+    softcut.rate(sample,ca.get_total_pitch_offset(sample))
     clear[sample] = 0
     sample_track[sample].rec_limit = 0
   end
@@ -123,6 +132,24 @@ function ca.get_total_pitch_offset(_t)
     return (total_offset + (total_offset * (params:get("pitch_control")/100)))
   else
     return (total_offset)
+  end
+end
+
+function ca.calculate_sc_positions(i,played_note)
+  local slice = util.wrap(played_note - params:get("hill "..i.." base note"),0,15) + 1
+  local sample = params:get("hill "..i.." softcut slot")
+  if params:get("clip "..sample.." sample") ~= "/home/we/dust/audio/" then
+    if not sample_track[sample].playing then
+      softcut.play(sample,1)
+      sample_track[sample].playing = true
+    end
+    local duration = sample_track[sample].end_point - softcut_offsets[sample]
+    local s_p = softcut_offsets[sample]
+    local sc_start_point_base = (s_p+(duration/16) * (slice-1))
+    local sc_end_point_base = (s_p+(duration/16) * (slice)) - clip[sample].fade_time
+    softcut.loop_start(sample,sc_start_point_base)
+    softcut.loop_end(sample,sc_end_point_base)
+    softcut.position(sample,sample_track[sample].reverse and sc_end_point_base or sc_start_point_base)
   end
 end
 

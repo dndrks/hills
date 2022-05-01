@@ -15,7 +15,7 @@ function parameters.init()
 
   params:add_separator("hills")
   for i = 1,8 do
-    params:add_group(hill_names[i],55)
+    params:add_group(hill_names[i],59)
 
     params:add_separator("note management ["..hill_names[i].."]")
     params:add_option("hill "..i.." scale","scale",scale_names,1)
@@ -79,7 +79,25 @@ function parameters.init()
     params:add_option("hill "..i.." quant value","quant value",{"1/4", "1/4d", "1/4t", "1/8", "1/8d", "1/8t", "1/16", "1/16d", "1/16t", "1/32", "1/32d", "1/32t"},7)
 
     params:add_separator("Kildare management ["..hill_names[i].."]")
-    params:add_option("hill "..i.." kildare_notes","send MIDI pitches?",{"no","yes"},1)
+    params:add_option("hill "..i.." kildare_notes","send pitches?",{"no","yes"},1)
+
+    params:add_separator("softcut management ["..hill_names[i].."]")
+    params:add_option("hill "..i.." softcut output","softcut output?",{"no","yes"},1)
+    params:set_action("hill "..i.." softcut output",
+      function(x)
+        if x == 1 then
+          params:hide("hill "..i.." softcut slot")
+          params:hide("hill "..i.." softcut probability")
+          _menu.rebuild_params()
+        elseif x == 2 then
+          params:show("hill "..i.." softcut slot")
+          params:show("hill "..i.." softcut probability")-- show
+          _menu.rebuild_params()
+        end
+      end
+    )
+    params:add_number("hill "..i.." softcut slot", "sample slot",1,6,1)
+    params:add_number("hill "..i.." softcut probability", "playback probability",0,100,100, function(param) return(param:get().."%") end)
 
     params:add_separator("MIDI management ["..hill_names[i].."]")
     params:add_option("hill "..i.." MIDI output", "MIDI output?",{"no","yes"},1)
@@ -234,7 +252,7 @@ function parameters.init()
     params:hide("hill "..i.." JF output id")
   end
 
-  params:add_group("MULTI",26)
+  params:add_group("MULTI",31)
   -- indent for readability:
     params:add_separator("note management")
     params:add_option("multi kildare note","send pitches to kildare?",{"no","yes"},1)
@@ -278,6 +296,37 @@ function parameters.init()
         end
       end
     )
+
+    params:add_separator("softcut management")
+    params:add_option("multi softcut output","softcut output?",{"no","yes"},1)
+    params:set_action("multi softcut output",
+      function(x)
+        if x == 1 then
+          params:hide("multi softcut slot")
+          params:hide("multi softcut probability")
+          _menu.rebuild_params()
+        elseif x == 2 then
+          params:show("multi softcut slot")
+          params:show("multi softcut probability")
+          _menu.rebuild_params()
+        end
+      end
+    )
+    params:add_number("multi softcut slot", "sample slot",1,6,1)
+    params:add_number("multi softcut probability", "playback probability",0,100,100, function(param) return(param:get().."%") end)
+    params:add_trigger("send multi softcut management","send to multiple (see below)")
+    params:set_action("send multi softcut management",
+      function()
+        for i = 1,8 do
+          if params:string("send to "..i) == "yes" then
+            params:set("hill "..i.." softcut output",params:get("multi softcut output"))
+            params:set("hill "..i.." softcut slot",params:get("multi softcut slot"))
+            params:set("hill "..i.." softcut probability",params:get("multi softcut probability"))
+          end
+        end
+      end
+    )
+
     params:add_separator("MIDI management")
     params:add_option("multi MIDI output", "MIDI output?",{"no","yes"},1)
     params:set_action("multi MIDI output",
@@ -315,22 +364,16 @@ function parameters.init()
     )
     params:add_separator("send to...")
     for i = 1,8 do
-      params:add_option("send to "..i,hill_names[i],{"no","yes"},1)
+      params:add_option("send to "..i,hill_names[i],{"no","yes"},2)
     end
   -- / MULTI group
 
+  params:add_group("SAMPLES",26)
   for i = 1,6 do
-    params:add_file("clip "..i.." sample", "sample ["..i.."]", _path.audio)
+    params:add_separator("["..i.."]")
+    params:add_file("clip "..i.." sample", "sample", _path.audio)
     params:set_action("clip "..i.." sample", function(file) if file ~= _path.audio then _ca.load_sample(file,i) end end)
-  end
-  params:add_control("pitch_control","pitch control (global)",controlspec.new(-12,12,'lin',0,0,'%'))
-  params:set_action("pitch_control",function(x)
-    for i = 1,6 do
-      softcut.rate(i,_ca.get_total_pitch_offset(i))
-    end
-  end)
-  for i = 1,6 do
-    params:add_option("speed_voice_"..i,"speed voice "..i, sample_speedlist[1])
+    params:add_option("speed_voice_"..i,"speed", sample_speedlist[1])
     params:set("speed_voice_"..i, 9)
     params:set_action("speed_voice_"..i,
       function(x)
@@ -343,9 +386,7 @@ function parameters.init()
         end
       end
     )
-  end
-  for i = 1,6 do
-    params:add_number("semitone_offset_"..i, "offset voice "..i, -24,24,0, function(param) return (param:get().." st") end)
+    params:add_number("semitone_offset_"..i, "offset", -24,24,0, function(param) return (param:get().." st") end)
     params:set_action("semitone_offset_"..i,
       function(value)
         sample_offset[i] = math.pow(0.5, -value / 12)
@@ -353,6 +394,13 @@ function parameters.init()
       end
     )
   end
+  params:add_separator("global")
+  params:add_control("pitch_control","pitch control",controlspec.new(-12,12,'lin',0,0,'%'))
+  params:set_action("pitch_control",function(x)
+    for i = 1,6 do
+      softcut.rate(i,_ca.get_total_pitch_offset(i))
+    end
+  end)
 
   _menu.rebuild_params()
   clock.run(function() clock.sleep(1) params:bang() end)

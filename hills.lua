@@ -456,12 +456,20 @@ pass_note = function(i,j,seg,note_val,index,destination)
         engine.set_param(drums[i],"carHz",midi_to_hz(played_note))
       end
       engine.trig(drums[i])
+      if params:string("hill "..i.." softcut output") == "yes" then
+        if params:get("hill "..i.." softcut probability") >= math.random(100) then
+          _ca.calculate_sc_positions(i,played_note)
+        end
+      end
     else
       -- TRIGGER SOFTCUT
-      -- TODO: softcut.loop_end
       -- TODO: all 6 softcut voices are distributed on the channel
       -- TODO: we can also just assign a drum voice to do the same manipulation...!
-      softcut.position(5,(util.linlin(1,16,softcut_offsets[5],sample_track[5].end_point,util.wrap(played_note,1,16))))
+      if params:string("hill "..i.." softcut output") == "yes" then
+        if params:get("hill "..i.." softcut probability") >= math.random(100) then
+          _ca.calculate_sc_positions(i,played_note)
+        end
+      end
     end
     if params:string("hill "..i.." MIDI output") == "yes" then
       local ch = params:get("hill "..i.." MIDI note channel")
