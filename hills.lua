@@ -20,6 +20,7 @@ _s = include 'lib/screen_actions'
 _flow = include 'lib/flow'
 _song = include 'lib/song'
 _ca = include 'lib/clip'
+_snapshots = include 'lib/snapshot'
 sc_lfos = include 'lib/sc_lfos'
 mu = require 'musicutil'
 
@@ -41,6 +42,8 @@ end
 
 function init()
   kildare.init()
+  kildare_drums = {"bd","sd","tm","cp","rs","cb","hh"}
+  _snapshots.init()
   _ca.init()
   _flow.init()
   _song.init()
@@ -99,6 +102,12 @@ function init()
     hills[i].note_scale = mu.generate_scale_of_length(60,1,28)
     hills[i].segment = 1
     hills[i].looper = {["clock"] = nil}
+
+    hills[i].snapshot = {["partial_restore"] = false}
+    hills[i].snapshot.restore_times = {["beats"] = {1,2,4,8,16,32,64,128}, ["time"] = {1,2,4,8,16,32,64,128}, ["mode"] = "beats"}
+    hills[i].snapshot.mod_index = 0
+    hills[i].snapshot.focus = 0
+    
     ui.seq_controls[i] =
     {
       ["seq"] = {["focus"] = 1}
@@ -459,11 +468,10 @@ pass_note = function(i,j,seg,note_val,index,destination)
   local played_note = get_random_offset(i,midi_notes[note_val])
   if played_note ~= nil and hills[i][j].note_num.active[index] then
     if i <= 7 then
-      local drums = {"bd","sd","tm","cp","rs","cb","hh"}
       if params:string("hill "..i.." kildare_notes") == "yes" then
-        engine.set_param(drums[i],"carHz",midi_to_hz(played_note))
+        engine.set_param(kildare_drums[i],"carHz",midi_to_hz(played_note))
       end
-      engine.trig(drums[i])
+      engine.trig(kildare_drums[i])
       if params:string("hill "..i.." softcut output") == "yes" then
         if params:get("hill "..i.." softcut probability") >= math.random(100) then
           _ca.calculate_sc_positions(i,played_note)

@@ -83,7 +83,7 @@ function parameters.init()
     params:add_option("hill "..i.." kildare_notes","send pitches?",{"no","yes"},1)
 
     params:add_separator("softcut management ["..hill_names[i].."]")
-    params:add_option("hill "..i.." softcut output","softcut output?",{"no","yes"},1)
+    params:add_option("hill "..i.." softcut output","softcut output?",{"no","yes"},2)
     params:set_action("hill "..i.." softcut output",
       function(x)
         if x == 1 then
