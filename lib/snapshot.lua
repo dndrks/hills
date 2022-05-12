@@ -9,6 +9,7 @@ function snapshot.init()
       snapshots[j][coll] = {}
     end
   end
+  snapshots.mod = {["index"] = 0, ["held"] = {false,false,false,false,false,false}}
 end
 
 function snapshot.pack(voice,coll)
@@ -44,6 +45,8 @@ function snapshot.unpack(voice, coll)
     end
   end
 
+  print("restored snapshot", voice, coll)
+
   -- TODO: ADD OPTIONAL SHIT?
   
   screen_dirty = true
@@ -55,8 +58,7 @@ function snapshot.save_to_slot(_t,slot)
   clock.sleep(0.25)
   hills[_t].snapshot.saver_active = true
   if hills[_t].snapshot.saver_active then
-    if not grid_alt then
-      print("saved snap",_t,slot)
+    if not mods.alt then
       snapshot.pack(_t,slot)
     else
       snapshot.clear(_t,slot)
@@ -102,7 +104,7 @@ snapshot.funnel_done_action = function(voice,coll)
 end
 
 
-function try_it(voice,coll,sec,style)
+function snapshot.route_funnel(voice,coll,sec,style)
   if hills[voice].snapshot.partial_restore then
     clock.cancel(hills[voice].snapshot.fnl)
     print("partial restore try_it",voice,coll)

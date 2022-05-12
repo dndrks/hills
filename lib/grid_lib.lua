@@ -28,6 +28,9 @@ function grid_lib.pattern_execute(data)
     screen_dirty = true
     hills[data.x][data.y].perf_led = false
     grid_dirty = true
+  elseif data.event == "snapshot_restore" then
+    _snapshots.route_funnel(data.x,data.y,snapshots.mod.index,"time")
+    hills[data.x].snapshot.focus = data.y
   end
 end
 
@@ -109,8 +112,8 @@ function grid_lib.init()
   grid_dirty = true
 end
 
-mods = {["hill"] = false,["bound"] = false,["notes"] = false,["loop"] = false,["playmode"] = false,["copy"] = false,[7] = false,["alt"] = false}
-local modkeys = {"hill","bound","notes","loop","playmode","copy",7,"alt"}
+mods = {["hill"] = false,["bound"] = false,["notes"] = false,["loop"] = false,["playmode"] = false,["copy"] = false,["snapshots"] = false,["alt"] = false}
+local modkeys = {"hill","bound","notes","loop","playmode","copy","snapshots","alt"}
 function g.key(x,y,z)
   if x == 1 then
     if y >= 1 and y <= 4 and z == 1 then
@@ -132,13 +135,54 @@ function g.key(x,y,z)
           ui.control_set = "play"
         end
       end
-    elseif y == 5 or y == 6 or y == 8 then
+    elseif y == 5 or y == 6 then
       for i = 1,#modkeys do
         if i ~= y then
           mods[modkeys[i]] = false
         else
           mods[modkeys[y]] = not mods[modkeys[y]]
           mod_held = mods[modkeys[y]]
+        end
+      end
+      if ui.control_set ~= "song" then
+        ui.control_set = "play"
+      end
+      if not mods["copy"] and clipboard then
+        clipboard = nil
+        copied = nil
+      end
+    elseif y == 7 and z == 1 then
+      for i = 1,#modkeys do
+        if i ~= y then
+          if modkeys[i] ~= "alt" then
+            mods[modkeys[i]] = false
+          end
+        else
+          mods[modkeys[y]] = not mods[modkeys[y]]
+          if not mods["alt"] then
+            mod_held = mods[modkeys[y]]
+          end
+        end
+      end
+      if ui.control_set ~= "song" then
+        ui.control_set = "play"
+      end
+      if not mods["copy"] and clipboard then
+        clipboard = nil
+        copied = nil
+      end
+    end
+    if y == 8 then
+      for i = 1,#modkeys do
+        if i ~= y then
+          if modkeys[i] ~= "snapshots" then
+            mods[modkeys[i]] = false
+          end
+        else
+          mods[modkeys[y]] = not mods[modkeys[y]]
+          if not mods["snapshots"] then
+            mod_held = mods[modkeys[y]]
+          end
         end
       end
       if ui.control_set ~= "song" then
@@ -190,7 +234,7 @@ function g.key(x,y,z)
       end
     end
   elseif x > 1 and x <= 9 and mod_held then
-    if mods["alt"] and z == 1 then
+    if mods["alt"] and z == 1 and not mods.snapshots then
       stop(x-1,true)
     elseif mods["hill"] or mods["bound"] or mods["notes"] or mods["loop"] then
       ui.hill_focus = x-1
@@ -207,6 +251,35 @@ function g.key(x,y,z)
         hills[x-1][y] = _t.deep_copy(clipboard)
         copied = nil
         clipboard = nil
+      end
+    elseif mods["snapshots"] then
+      x = x - 1
+      if z == 1 then
+        if tab.count(snapshots[x][y]) == 0 then
+          hills[x].snapshot.saver_clock = clock.run(_snapshots.save_to_slot,x,y)
+          hills[x].snapshot.focus = y
+        elseif not mods.alt then
+          _snapshots.route_funnel(x,y,snapshots.mod.index,"time")
+          hills[x].snapshot.focus = y
+        else
+          hills[x].snapshot.saver_clock = clock.run(_snapshots.save_to_slot,x,y)
+        end
+      else
+        if hills[x].snapshot.saver_clock ~= nil then
+          clock.cancel(hills[x].snapshot.saver_clock)
+        end
+      end
+      if z == 1 and tab.count(snapshots[x][y]) > 0 then
+        for i = 1,16 do
+          grid_pattern[i]:watch(
+            {
+              ["event"] = "snapshot_restore",
+              ["x"] = x,
+              ["y"] = y,
+              ["id"] = i
+            }
+          )
+        end
       end
     end
   elseif x>=13 and y<=4 and z == 1 then
@@ -259,7 +332,7 @@ function grid_redraw()
   for i = 2,9 do
     for j = 1,8 do
       if mod_held then
-        if not mods["playmode"] and not mods["copy"] then
+        if not mods["playmode"] and not mods["copy"] and not mods["snapshots"] then
           if i-1 == ui.hill_focus and hills[ui.hill_focus].screen_focus == j then
             g:led(i,j,15)
           else
@@ -277,7 +350,7 @@ function grid_redraw()
             end
             -- g:led(i,j,hills[i-1].screen_focus == j and 15 or 4)
           end
-        elseif not mods["playmode"] then
+        elseif mods["copy"] then
           if hills[i-1].segment == j then
             g:led(i,j,10)
           end
@@ -287,13 +360,27 @@ function grid_redraw()
             end
           end
         elseif mods["playmode"] then
-          -- local display_level = 4
+          local display_level;
           if hills[i-1][j].playmode == "momentary" then
             display_level = 4
           else
             display_level = 15
           end
           g:led(i,j,display_level)
+        elseif mods["snapshots"] then
+          local display_level;
+          if i-1 < 8 then
+            if tab.count(snapshots[i-1][j]) == 0 then
+              display_level = 3
+            else
+              if hills[i-1].snapshot.focus == j then
+                display_level = 12
+              else
+                display_level = 6
+              end
+            end
+            g:led(i,j,display_level)
+          end
         end
       else
         if hills[i-1].segment == j then
@@ -307,7 +394,7 @@ function grid_redraw()
   for i = 1,8 do
     g:led(1,i,mods[modkeys[i]] and 15 or 0)
   end
-  if mod_held and not mods["playmode"] and not mods["alt"] and not mods["copy"] then
+  if mod_held and not mods["playmode"] and not mods["alt"] and not mods["copy"] and not mods["snapshots"] then
     g:led(14,8,dirs["L"] and 15 or 8)
     g:led(15,7,dirs["U"] and 15 or 8)
     g:led(15,8,dirs["D"] and 15 or 8)
