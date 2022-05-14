@@ -72,7 +72,11 @@ function screen_actions.draw()
         screen.level(key1_hold == true and 3 or 15)
         screen.move(40,10)
         local note_number = seg.note_ocean[seg.note_num.pool[s_c["notes"]["focus"]]]
-        screen.text("note: "..note_number.." / "..mu.note_num_to_name(note_number)..(hills[hf][focus].note_num.active[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["notes"]["focus"]] and "" or " (muted)"))
+        screen.text(
+          note_number.."/"..mu.note_num_to_name(note_number)..
+          (hills[hf][focus].note_num.active[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["notes"]["focus"]] and "" or " (m)")
+          .." | slice: "..(util.wrap(note_number - params:get("hill "..hf.." base note"),0,15) + 1)
+        )
         if key1_hold then
           screen.level(key1_hold == true and 15 or 3)
           screen.move(0,64)

@@ -36,7 +36,13 @@ function key_actions.parse(n,z)
         end
       elseif ui.control_set == "edit" then
         if not key1_hold then
-          _a.start(i,j,true)
+          if ui.menu_focus ~= 3 then
+            _a.start(i,j,true)
+          else
+            local h = hills[i]
+            local seg = h[h.segment]
+            pass_note(i,h.segment,seg,seg.note_num.pool[seg.index],seg.index)
+          end
         else
           if ui.menu_focus == 1 then
             _t.quantize(i,j,params:string("hill "..i.." quant value"),hills[i][j].low_bound.note,hills[i][j].high_bound.note)

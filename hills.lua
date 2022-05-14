@@ -159,6 +159,12 @@ function init()
         ["active"] = {} -- tracks whether the note should play
       }
 
+      hills[i][j].softcut_controls = -- this is where we track the slices for the constructed hill
+      {
+        ["loop"] = {}, -- gets filled with the constructed hill's loop states
+        ["rate"] = {} -- gets filled with the constructed hill's rates
+      }
+
       hills[i][j].note_timestamp = {}
       hills[i][j].note_timedelta = {}
 
@@ -209,6 +215,7 @@ function init()
     for j = 1,#song_atoms do
       song_atoms[j] = tab.load(_path.data.."hills/"..params.name.."/song/"..j..".txt")
     end
+    snapshots = tab.load(_path.data.."hills/"..params.name.."/snapshots/all.txt")
     params:bang()
     grid_dirty = true
   end
@@ -217,6 +224,7 @@ function init()
     os.execute("mkdir -p ".._path.data.."hills/"..name.."/data")
     os.execute("mkdir -p ".._path.data.."hills/"..name.."/patterns")
     os.execute("mkdir -p ".._path.data.."hills/"..name.."/song")
+    os.execute("mkdir -p ".._path.data.."hills/"..name.."/snapshots")
     for i = 1,8 do
       tab.save(hills[i],_path.data.."hills/"..name.."/data/"..i..".txt")
     end
@@ -226,6 +234,7 @@ function init()
     for i = 1,#song_atoms do
       tab.save(song_atoms[i],_path.data.."hills/"..name.."/song/"..i..".txt")
     end
+    tab.save(snapshots,_path.data.."hills/"..name.."/snapshots/all.txt")
   end
 
 end
@@ -278,6 +287,9 @@ pass_data_into_storage = function(i,j,index,data)
   hills[i][j].note_timestamp[index] = data[2]
   hills[i][j].high_bound.note = #hills[i][j].note_num.pool
   hills[i][j].note_num.active[index] = true
+
+  hills[i][j].softcut_controls.loop[index] = false
+  hills[i][j].softcut_controls.rate[index] = 9 -- mirrors ("speed_voice_"..i) in parameters
 end
 
 calculate_timedeltas = function(i,j)
@@ -474,7 +486,8 @@ pass_note = function(i,j,seg,note_val,index,destination)
       engine.trig(kildare_drums[i])
       if params:string("hill "..i.." softcut output") == "yes" then
         if params:get("hill "..i.." softcut probability") >= math.random(100) then
-          _ca.calculate_sc_positions(i,played_note)
+          -- print("489",i,j,played_note)
+          _ca.calculate_sc_positions(i,j,played_note)
         end
       end
     else
@@ -483,7 +496,7 @@ pass_note = function(i,j,seg,note_val,index,destination)
       -- TODO: we can also just assign a drum voice to do the same manipulation...!
       if params:string("hill "..i.." softcut output") == "yes" then
         if params:get("hill "..i.." softcut probability") >= math.random(100) then
-          _ca.calculate_sc_positions(i,played_note)
+          _ca.calculate_sc_positions(i,j,played_note)
         end
       end
     end

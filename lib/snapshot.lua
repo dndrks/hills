@@ -105,13 +105,6 @@ end
 
 
 function snapshot.route_funnel(voice,coll,sec,style)
-  if hills[voice].snapshot.partial_restore then
-    clock.cancel(hills[voice].snapshot.fnl)
-    print("partial restore try_it",voice,coll)
-    snapshot.funnel_done_action(voice,coll)
-  end
-  print("doing try it for "..voice)
-  hills[voice].snapshot.partial_restore = true
   if style ~= nil then
     if style == "beats" then
       sec = clock.get_beat_sec()*sec
@@ -119,38 +112,50 @@ function snapshot.route_funnel(voice,coll,sec,style)
       sec = sec
     end
   end
-
-  local original_srcs = _t.deep_copy(snapshots[voice][coll])
-  local d_voice = kildare_drums[voice]
-  for i = 1, #kildare_drum_params[d_voice] do
-    local d = kildare_drum_params[d_voice][i]
-    if d.type ~= 'separator' then
-      original_srcs[d.id] = params:get(d_voice.."_"..d.id)
+  if sec == 0 then
+    if hills[voice].snapshot.partial_restore then
+      clock.cancel(hills[voice].snapshot.fnl)
+      print("partial restore try_it",voice,coll)
+      snapshot.funnel_done_action(voice,coll)
+    else
+      snapshot.funnel_done_action(voice,coll)
     end
-  end
-  
-  hills[voice].snapshot.fnl = snapshot.fnl(
-    function(r_val)
-      hills[voice].snapshot.current_value = r_val
+  else
+    print("doing try it for "..voice)
+    hills[voice].snapshot.partial_restore = true
 
-      local d_voice = kildare_drums[voice]
-      for i = 1, #kildare_drum_params[d_voice] do
-        local d = kildare_drum_params[d_voice][i]
-        if d.type ~= 'separator' then
-          params:set(d_voice.."_"..d.id, util.linlin(0,1,original_srcs[d.id],snapshots[voice][coll][d.id],r_val))
+    local original_srcs = _t.deep_copy(snapshots[voice][coll])
+    local d_voice = kildare_drums[voice]
+    for i = 1, #kildare_drum_params[d_voice] do
+      local d = kildare_drum_params[d_voice][i]
+      if d.type ~= 'separator' then
+        original_srcs[d.id] = params:get(d_voice.."_"..d.id)
+      end
+    end
+    
+    hills[voice].snapshot.fnl = snapshot.fnl(
+      function(r_val)
+        hills[voice].snapshot.current_value = r_val
+
+        local d_voice = kildare_drums[voice]
+        for i = 1, #kildare_drum_params[d_voice] do
+          local d = kildare_drum_params[d_voice][i]
+          if d.type ~= 'separator' then
+            params:set(d_voice.."_"..d.id, util.linlin(0,1,original_srcs[d.id],snapshots[voice][coll][d.id],r_val))
+          end
         end
-      end
 
-      screen_dirty = true
-      grid_dirty = true
-      if hills[voice].snapshot.current_value ~= nil and util.round(hills[voice].snapshot.current_value,0.001) == 1 then
-        snapshot.funnel_done_action(voice,coll)
-      end
-    end,
-    0,
-    {{1,sec}},
-    60
-  )
+        screen_dirty = true
+        grid_dirty = true
+        if hills[voice].snapshot.current_value ~= nil and util.round(hills[voice].snapshot.current_value,0.001) == 1 then
+          snapshot.funnel_done_action(voice,coll)
+        end
+      end,
+      0,
+      {{1,sec}},
+      60
+    )
+  end
 end
 
 return snapshot

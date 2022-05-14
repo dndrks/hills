@@ -16,6 +16,7 @@ function pattern.new(id)
   i.time = {}
   i.count = 0
   i.step = 0
+  i.loop = 1
   i.time_factor = 1
   i.name = id
 
@@ -117,14 +118,24 @@ end
 --- process next event
 function pattern:next_event()
   self.prev_time = util.time()
-  if self.step == self.count then self.step = 1
-  else self.step = self.step + 1 end
-  --print("next step "..self.step)
-  --event_exec(self.event[self.step])
+  self.step = util.wrap(self.step+1,1,self.count)
+  -- if self.step == self.count and self.loop == 1 then
+  --   self.step = 1
+  -- elseif self.step > self.count and self.loop == 1 then
+  --   self.step = 1
+  -- else
+  --   self.step = self.step + 1
+  -- end
   self.process(self.event[self.step])
   self.metro.time = self.time[self.step] * self.time_factor
-  --print("next time "..self.metro.time)
-  self.metro:start()
+  if self.step == self.count and self.loop == 0 then
+    if self.play == 1 then
+      self.play = 0
+      self.metro:stop()
+    end
+  else
+    self.metro:start()
+  end
 end
 
 --- stop this pattern

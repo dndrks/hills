@@ -116,7 +116,7 @@ function ca.derive_bpm(source)
   end
 end
 
-function ca.get_total_pitch_offset(_t)
+function ca.get_total_pitch_offset(_t,i,j)
   local total_offset;
   total_offset = params:get("semitone_offset_".._t)
   local sample_rate_compensation;
@@ -127,14 +127,29 @@ function ca.get_total_pitch_offset(_t)
   end
   total_offset = total_offset + sample_rate_compensation
   total_offset = math.pow(0.5, -total_offset / 12) * sample_speedlist[_t][params:get("speed_voice_".._t)]
+  -- if i ~= nil and j ~= nil then
+  --   total_offset = math.pow(0.5, -total_offset / 12) * sample_speedlist[_t][hills[i][j].softcut_controls.rate[hills[i][j].index]]
+  -- else
+  --   total_offset = math.pow(0.5, -total_offset / 12) * sample_speedlist[_t][params:get("speed_voice_".._t)]
+  -- end
   if params:get("pitch_control") ~= 0 then
+    -- if total_offset < 0 then
+    --   sample_track[_t].reverse = true
+    -- end
     return (total_offset + (total_offset * (params:get("pitch_control")/100)))
   else
+    -- print(total_offset)
+    -- if total_offset < 0 then
+    --   sample_track[_t].reverse = true
+    -- else
+    --   sample_track[_t].reverse = false
+    -- end
     return (total_offset)
   end
 end
 
-function ca.calculate_sc_positions(i,played_note)
+function ca.calculate_sc_positions(i,j,played_note)
+  -- print(i,j,played_note)
   local slice = util.wrap(played_note - params:get("hill "..i.." base note"),0,15) + 1
   local sample = params:get("hill "..i.." softcut slot")
   if params:get("clip "..sample.." sample") ~= "/home/we/dust/audio/" then
@@ -146,6 +161,7 @@ function ca.calculate_sc_positions(i,played_note)
     local s_p = softcut_offsets[sample]
     local sc_start_point_base = (s_p+(duration/16) * (slice-1))
     local sc_end_point_base = (s_p+(duration/16) * (slice)) - clip[sample].fade_time
+    softcut.rate(sample,ca.get_total_pitch_offset(sample,i,j))
     softcut.loop_start(sample,sc_start_point_base)
     softcut.loop_end(sample,sc_end_point_base)
     softcut.position(sample,sample_track[sample].reverse and sc_end_point_base or sc_start_point_base)

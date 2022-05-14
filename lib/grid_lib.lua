@@ -56,7 +56,7 @@ for i = 1,16 do
 end
 
 function grid_lib.handle_grid_pat(i,alt)
-  if not overdub_toggle and not alt then
+  if not overdub_toggle and not loop_toggle and not alt then
     if grid_pattern[i].rec == 1 then -- if we're recording...
       grid_pattern[i]:rec_stop() -- stop recording
       grid_pattern[i]:start() -- start playing
@@ -79,6 +79,8 @@ function grid_lib.handle_grid_pat(i,alt)
     grid_pattern[i]:clear() -- clears the pattern
   elseif overdub_toggle then
     grid_pattern[i]:set_overdub(grid_pattern[i].overdub == 0 and 1 or 0)
+  elseif loop_toggle then
+    grid_pattern[i].loop = grid_pattern[i].loop == 1 and 0 or 1
   end
 end
 
@@ -286,8 +288,11 @@ function g.key(x,y,z)
     local target = (x-12)+(4*(y-1))
     grid_lib.handle_grid_pat(target,mods.alt)
     grid_dirty = true
-  elseif x == 12 and y == 5 and not mod_held then
+  elseif x == 12 and y == 5 then
     overdub_toggle = z == 1 and true or false
+    grid_dirty = true
+  elseif x == 12 and y == 6 then
+    loop_toggle = z == 1 and true or false
     grid_dirty = true
   end
   if mod_held and not mods["alt"] and not mods["copy"] then
@@ -402,6 +407,7 @@ function grid_redraw()
   end
   
   g:led(12,5,overdub_toggle and 15 or 6)
+  g:led(12,6,loop_toggle and 15 or 6)
 
   if mod_held and mods["copy"] then
     if not clipboard then
@@ -446,6 +452,9 @@ function grid_redraw()
       else
         led_level = 8
       end
+    end
+    if loop_toggle then
+      led_level = grid_pattern[i].loop == 1 and 12 or 3
     end
     g:led(index_to_grid_pos(i,4)[1]+12,index_to_grid_pos(i,4)[2],led_level)
   end
