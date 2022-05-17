@@ -10,27 +10,27 @@ lfos.lfo_progress = {}
 lfos.lfo_values = {}
 
 local lfo_rates = {1/16,1/8,1/4,5/16,1/3,3/8,1/2,3/4,1,1.5,2,3,4,6,8,16,32,64,128,256,512,1024}
-local scaled_output = {["vol_"] = {0,1,0.5}, ["pan_"] = {-1,1,0}, ["post_filter_fc_"] = {900,4000,1550}}
-local ivals = {["vol_"] = {1,3}, ["pan_"] = {4,6}, ["post_filter_fc_"] = {7,9}}
+local scaled_output = {["vol_clip_"] = {0,1,0.5}, ["pan_clip_"] = {-1,1,0}, ["post_filter_fc_"] = {900,4000,1550}}
+local ivals = {["vol_clip_"] = {1,3}, ["pan_clip_"] = {4,6}, ["post_filter_fc_"] = {7,9}}
 local min_specs = {
-  ["vol_"] = {0,5,'lin',0.01,0,'',0.01}, --min, max, warp, step, default, units, quantum, wrap
-  ["pan_"] = {-1,1,'lin',0.01,-1,'',0.01},
+  ["vol_clip_"] = {0,5,'lin',0.01,0,'',0.01}, --min, max, warp, step, default, units, quantum, wrap
+  ["pan_clip_"] = {-1,1,'lin',0.01,-1,'',0.01},
   ["post_filter_fc_"] = {20,12000,'exp',0.01,20,'',0.01}
 }
 local max_specs = {
-  ["vol_"] = {0,5,'lin',0.01,1,'',0.01}, --min, max, warp, step, default, units, quantum, wrap
-  ["pan_"] = {-1,1,'lin',0.01,1,'',0.01},
+  ["vol_clip_"] = {0,5,'lin',0.01,1,'',0.01}, --min, max, warp, step, default, units, quantum, wrap
+  ["pan_clip_"] = {-1,1,'lin',0.01,1,'',0.01},
   ["post_filter_fc_"] = {20,12000,'exp',0.01,12000,'',0.01}
 }
 
--- lfos 1-4: vol_
--- lfos 5-8: pan_
+-- lfos 1-4: vol_clip_
+-- lfos 5-8: pan_clip_
 -- lfos 9-12: post_filter_fc_
 
 function lfos.add_params(style)
-  if style == "pan_" then
+  if style == "pan_clip_" then
     params:add_group("    SAMPLE PAN LFOS",27)
-  elseif style == "vol_" then
+  elseif style == "vol_clip_" then
     params:add_group("    SAMPLE LEVEL LFOS",27)
   elseif style == "post_filter_fc_" then
     params:add_group("    SAMPLE FILTER LFOS",27)
@@ -99,10 +99,10 @@ function lfos.add_params(style)
     params:add_trigger("lfo_reset_"..style..i, "reset lfo")
     params:set_action("lfo_reset_"..style..i, function(x) lfos.reset_phase(i) end)
     params:hide("lfo_free_"..style..i)
-    if style == "vol_" then
-      vol_lfos_loaded = true
-    elseif style == "pan_" then
-      pan_lfos_loaded = true
+    if style == "vol_clip_" then
+      vol_clip_lfos_loaded = true
+    elseif style == "pan_clip_" then
+      pan_clip_lfos_loaded = true
     elseif style == "post_filter_fc_" then
       post_filter_fc_lfos_loaded = true
     end
@@ -141,12 +141,12 @@ function lfos.sync_lfos(i,style)
   end
 end
 
-function lfos.lfo_update() -- 'pan_' or 'vol_'
-  if pan_lfos_loaded then
-    lfos.small("pan_")
+function lfos.lfo_update() -- 'pan_clip_' or 'vol_clip_'
+  if pan_clip_lfos_loaded then
+    lfos.small("pan_clip_")
   end
-  if vol_lfos_loaded then
-    lfos.small("vol_")
+  if vol_clip_lfos_loaded then
+    lfos.small("vol_clip_")
   end
   if post_filter_fc_lfos_loaded then
     lfos.small("post_filter_fc_")

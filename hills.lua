@@ -303,7 +303,7 @@ pass_data_into_storage = function(i,j,index,data)
   hills[i][j].note_num.active[index] = true
 
   hills[i][j].softcut_controls.loop[index] = false
-  hills[i][j].softcut_controls.rate[index] = 9 -- mirrors ("speed_voice_"..i) in parameters
+  hills[i][j].softcut_controls.rate[index] = 9 -- mirrors ("speed_clip_"..i) in parameters
 end
 
 calculate_timedeltas = function(i,j)

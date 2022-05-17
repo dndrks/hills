@@ -18,8 +18,10 @@ function snapshot.init()
   end
   snapshots.mod = {["index"] = 0, ["held"] = {false,false,false,false,false,false}}
   softcut_params = {
-    "vol_",
-    "pan_",
+    "speed_clip_",
+    "semitone_offset_",
+    "vol_clip_",
+    "pan_clip_",
     "post_filter_fc_",
     "post_filter_lp_",
     "post_filter_hp_",
@@ -27,6 +29,7 @@ function snapshot.init()
     "post_filter_dry_",
     "post_filter_rq_"
   }
+  softcut_lfo_ids = {["vol_clip_"] = {1,2,3}, ["pan_clip_"] = {4,5,6}, ["post_filter_fc_"] = {7,8,9}}
 end
 
 function snapshot.pack(voice,coll)
@@ -153,6 +156,10 @@ function snapshot.route_funnel(voice,coll,sec,style)
     end
   else
     print("doing try it for "..voice)
+    if hills[voice].snapshot.partial_restore then
+      clock.cancel(hills[voice].snapshot.fnl)
+      print("interrupted, canceling previous journey")
+    end
     hills[voice].snapshot.partial_restore = true
 
     local original_srcs = _t.deep_copy(snapshots[voice][coll])
@@ -187,7 +194,13 @@ function snapshot.route_funnel(voice,coll,sec,style)
         else
           local sc_target = voice - 7
           for i = 1,#softcut_params do
-            params:set(softcut_params[i]..sc_target, util.linlin(0,1,original_srcs[softcut_params[i]..sc_target],snapshots[voice][coll][softcut_params[i]..sc_target],r_val))
+            if softcut_params[i] == "vol_clip_" or softcut_params[i] == "pan_clip_" or softcut_params[i] == "post_filter_fc_" then
+              if params:string("lfo_"..softcut_params[i]..softcut_lfo_ids[softcut_params[i]][sc_target]) == "off" then
+                params:set(softcut_params[i]..sc_target, util.linlin(0,1,original_srcs[softcut_params[i]..sc_target],snapshots[voice][coll][softcut_params[i]..sc_target],r_val))
+              end
+            else
+              params:set(softcut_params[i]..sc_target, util.linlin(0,1,original_srcs[softcut_params[i]..sc_target],snapshots[voice][coll][softcut_params[i]..sc_target],r_val))
+            end
           end
         end
 

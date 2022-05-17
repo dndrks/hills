@@ -296,7 +296,7 @@ function g.key(x,y,z)
     loop_toggle = z == 1 and true or false
     grid_dirty = true
   end
-  if mod_held and not mods["alt"] and not mods["copy"] then
+  if mod_held and not mods["alt"] and not mods["copy"] and not mods["snapshots"] then
     if x == 14 and y == 8 then
       if z == 1 then
         start_dir_clock("L",2,-1)
@@ -320,6 +320,18 @@ function g.key(x,y,z)
         start_dir_clock("U",3,1)
       elseif z == 0 then
         stop_dir_clock("U")
+      end
+    end
+  elseif mod_held and mods["snapshots"] then
+    if x >=14 then
+      if z == 1 then
+        if y == 7 then
+          snapshots.mod.index = x - 13
+        elseif y == 8 then
+          snapshots.mod.index = (x+3) - 13
+        end
+      else
+        snapshots.mod.index = 0
       end
     end
   end
@@ -375,7 +387,7 @@ function grid_redraw()
           g:led(i,j,display_level)
         elseif mods["snapshots"] then
           local display_level;
-          if i-1 < 8 then
+          if i-1 < number_of_hills+1 then
             if tab.count(snapshots[i-1][j]) == 0 then
               display_level = 3
             else
@@ -405,6 +417,11 @@ function grid_redraw()
     g:led(15,7,dirs["U"] and 15 or 8)
     g:led(15,8,dirs["D"] and 15 or 8)
     g:led(16,8,dirs["R"] and 15 or 8)
+  elseif mod_held and mods["snapshots"] then
+    for i = 14,16 do
+      g:led(i,7,snapshots.mod.index == (i - 13) and 15 or 6)
+      g:led(i,8,snapshots.mod.index == ((i+3) - 13) and 15 or 6)
+    end
   end
   
   g:led(12,5,overdub_toggle and 15 or 6)

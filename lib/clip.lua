@@ -123,13 +123,19 @@ function ca.start_playback(sample)
 end
 
 function ca.set_position(sample,pos)
-  softcut.position(sample,pos)
-  softcut.position(sample+3,pos)
+  -- softcut.position(sample,pos)
+  softcut.position(sample,ca.offset_loop_start(sample,pos,"L"))
+  softcut.position(sample+3,ca.offset_loop_start(sample,pos,"R"))
 end
 
 function ca.set_loop_start(sample,pos)
-  softcut.loop_start(sample,pos)
-  softcut.loop_start(sample+3,pos)
+  -- softcut.loop_start(sample,pos)
+  softcut.loop_start(sample,ca.offset_loop_start(sample,pos,"L"))
+  softcut.loop_start(sample+3,ca.offset_loop_start(sample,pos,"R"))
+end
+
+function ca.offset_loop_start(sample,pos,side)
+  return (pos + (params:get("playhead_distance_"..side.."_"..sample)/1000))
 end
 
 function ca.set_loop_end(sample,pos)
@@ -143,15 +149,15 @@ function ca.set_rate(sample,r)
 end
 
 function ca.set_level(sample,l)
-  local R_distributed = util.linlin(-1,1,0,l,params:get("pan_"..sample))
+  local R_distributed = util.linlin(-1,1,0,l,params:get("pan_clip_"..sample))
   local L_distributed = util.linlin(0,l,l,0,R_distributed)
   softcut.level(sample, L_distributed)
   softcut.level(sample+3, R_distributed)
 end
 
 function ca.set_pan(sample,p)
-  local R_distributed = util.linlin(-1,1,0,params:get("vol_"..sample),p)
-  local L_distributed = util.linlin(0,params:get("vol_"..sample),params:get("vol_"..sample),0,R_distributed)
+  local R_distributed = util.linlin(-1,1,0,params:get("vol_clip_"..sample),p)
+  local L_distributed = util.linlin(0,params:get("vol_clip_"..sample),params:get("vol_clip_"..sample),0,R_distributed)
   softcut.level(sample, L_distributed)
   softcut.level(sample+3, R_distributed)
 end
@@ -192,11 +198,11 @@ function ca.get_total_pitch_offset(_t,i,j)
     sample_rate_compensation = ((1200 * math.log(clip[_t].sample_rate/48000,2))/100)
   end
   total_offset = total_offset + sample_rate_compensation
-  total_offset = math.pow(0.5, -total_offset / 12) * sample_speedlist[_t][params:get("speed_voice_".._t)]
+  total_offset = math.pow(0.5, -total_offset / 12) * sample_speedlist[_t][params:get("speed_clip_".._t)]
   -- if i ~= nil and j ~= nil then
   --   total_offset = math.pow(0.5, -total_offset / 12) * sample_speedlist[_t][hills[i][j].softcut_controls.rate[hills[i][j].index]]
   -- else
-  --   total_offset = math.pow(0.5, -total_offset / 12) * sample_speedlist[_t][params:get("speed_voice_".._t)]
+  --   total_offset = math.pow(0.5, -total_offset / 12) * sample_speedlist[_t][params:get("speed_clip_".._t)]
   -- end
   if params:get("pitch_control") ~= 0 then
     -- if total_offset < 0 then

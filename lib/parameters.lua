@@ -381,7 +381,7 @@ function parameters.init()
     end
   -- / MULTI group
 
-  params:add_group("SAMPLES",(3 * 13) + 2)
+  params:add_group("SAMPLES",(3 * 14) + 2)
   for i = 1,3 do
     params:add_separator("s"..i)
     params:add_file("clip "..i.." sample", "sample", _path.audio)
@@ -389,10 +389,12 @@ function parameters.init()
       function(file)
         if file ~= _path.audio then
           _ca.load_sample(file,i)
-          params:show("speed_voice_"..i)
+          params:show("speed_clip_"..i)
           params:show("semitone_offset_"..i)
-          params:show("vol_"..i)
-          params:show("pan_"..i)
+          params:show("playhead_distance_L_"..i)
+          params:show("playhead_distance_R_"..i)
+          params:show("vol_clip_"..i)
+          params:show("pan_clip_"..i)
           params:show("post_filter_fc_"..i)
           params:show("post_filter_lp_"..i)
           params:show("post_filter_hp_"..i)
@@ -401,10 +403,12 @@ function parameters.init()
           params:show("post_filter_rq_"..i)
           _menu.rebuild_params()
         else
-          params:hide("speed_voice_"..i)
+          params:hide("speed_clip_"..i)
           params:hide("semitone_offset_"..i)
-          params:hide("vol_"..i)
-          params:hide("pan_"..i)
+          params:hide("playhead_distance_L_"..i)
+          params:hide("playhead_distance_R_"..i)
+          params:hide("vol_clip_"..i)
+          params:hide("pan_clip_"..i)
           params:hide("post_filter_fc_"..i)
           params:hide("post_filter_lp_"..i)
           params:hide("post_filter_hp_"..i)
@@ -415,11 +419,11 @@ function parameters.init()
         end
       end
     )
-    params:add_option("speed_voice_"..i,"speed", sample_speedlist[1])
-    params:set("speed_voice_"..i, 9)
-    params:set_action("speed_voice_"..i,
+    params:add_option("speed_clip_"..i,"speed", sample_speedlist[1])
+    params:set("speed_clip_"..i, 9)
+    params:set_action("speed_clip_"..i,
       function(x)
-        -- softcut.rate(i, speedlist[i][params:get("speed_voice_"..i)]*offset[i])
+        -- softcut.rate(i, speedlist[i][params:get("speed_clip_"..i)]*offset[i])
         softcut.rate(i, _ca.get_total_pitch_offset(i))
         if x < 6 then
           if not sample_track[i].reverse then sample_track[i].reverse = true end
@@ -435,13 +439,29 @@ function parameters.init()
         softcut.rate(i, _ca.get_total_pitch_offset(i))
       end
     )
-    params:add_control("vol_"..i,"level",controlspec.new(0,5,'lin',0,1,''))
-    params:set_action("vol_"..i, function(x)
+    params:add_number(
+      "playhead_distance_L_"..i,
+      "playhead distance (L)",
+      -1000,
+      1000,
+      0,
+      function(param) return (param:get().."ms") end
+    )
+    params:add_number(
+      "playhead_distance_R_"..i,
+      "playhead distance (R)",
+      -1000,
+      1000,
+      0,
+      function(param) return (param:get().."ms") end
+    )
+    params:add_control("vol_clip_"..i,"level",controlspec.new(0,5,'lin',0,1,''))
+    params:set_action("vol_clip_"..i, function(x)
       _ca.set_level(i, x)
     end)
     
-    params:add_control("pan_"..i,"pan",controlspec.new(-1,1,'lin',0.01,0,''),frm.bipolar_as_pan_widget)
-    params:set_action("pan_"..i, function(x)
+    params:add_control("pan_clip_"..i,"pan",controlspec.new(-1,1,'lin',0.01,0,''),frm.bipolar_as_pan_widget)
+    params:set_action("pan_clip_"..i, function(x)
       _ca.set_pan(i, x)
     end)
 
@@ -458,14 +478,6 @@ function parameters.init()
     params:add_control("post_filter_rq_"..i,"resonance (0 = high)",controlspec.new(0.01,2,'lin',0.01,2,''))
     params:set_action("post_filter_rq_"..i, function(x) _ca.set_filter("post_filter_rq",i,x) end)
 
-    params:add_number(
-      "playhead_distance_"..i,
-      "playhead distance",
-      0,
-      1000,
-      0,
-      function(param) return (param:get().."ms") end
-    )
   end
   params:add_separator("global")
   params:add_control("pitch_control","pitch control",controlspec.new(-12,12,'lin',0,0,'%'))
@@ -475,8 +487,8 @@ function parameters.init()
     end
   end)
 
-  sc_lfos.add_params("vol_")
-  sc_lfos.add_params("pan_")
+  sc_lfos.add_params("vol_clip_")
+  sc_lfos.add_params("pan_clip_")
   sc_lfos.add_params("post_filter_fc_")
 
   _menu.rebuild_params()
