@@ -1,6 +1,6 @@
 local lfos = {}
 
-lfos.NUM_LFOS = 12
+lfos.NUM_LFOS = 9
 lfos.LFO_MIN_TIME = 1 -- Secs
 lfos.LFO_MAX_TIME = 60 * 60 * 24
 lfos.LFO_UPDATE_FREQ = 128
@@ -11,7 +11,7 @@ lfos.lfo_values = {}
 
 local lfo_rates = {1/16,1/8,1/4,5/16,1/3,3/8,1/2,3/4,1,1.5,2,3,4,6,8,16,32,64,128,256,512,1024}
 local scaled_output = {["vol_"] = {0,1,0.5}, ["pan_"] = {-1,1,0}, ["post_filter_fc_"] = {900,4000,1550}}
-local ivals = {["vol_"] = {1,4}, ["pan_"] = {5,8}, ["post_filter_fc_"] = {9,12}}
+local ivals = {["vol_"] = {1,3}, ["pan_"] = {4,6}, ["post_filter_fc_"] = {7,9}}
 local min_specs = {
   ["vol_"] = {0,5,'lin',0.01,0,'',0.01}, --min, max, warp, step, default, units, quantum, wrap
   ["pan_"] = {-1,1,'lin',0.01,-1,'',0.01},
@@ -29,22 +29,22 @@ local max_specs = {
 
 function lfos.add_params(style)
   if style == "pan_" then
-    params:add_group("    SAMPLE PAN LFOS",36)
+    params:add_group("    SAMPLE PAN LFOS",27)
   elseif style == "vol_" then
-    params:add_group("    SAMPLE LEVEL LFOS",36)
+    params:add_group("    SAMPLE LEVEL LFOS",27)
   elseif style == "post_filter_fc_" then
-    params:add_group("    SAMPLE FILTER LFOS",36)
+    params:add_group("    SAMPLE FILTER LFOS",27)
   end
   for i = ivals[style][1],ivals[style][2] do
-    local _di = util.wrap(i,1,4)
+    local _di = util.wrap(i,1,3)
     params:add_separator("[".._di.."]")
     params:add_option("lfo_"..style..i,"lfo",{"off","on"},1)
     params:set_action("lfo_"..style..i,function(x)
       lfos.sync_lfos(i,style)
       if x == 1 then
-        local default_value = params.params[params.lookup[style..util.wrap(i,1,4)]].controlspec.default
+        local default_value = params.params[params.lookup[style..util.wrap(i,1,3)]].controlspec.default
         -- local default_value = max_specs[style][5]
-        params:set(style..util.wrap(i,1,4),default_value)
+        params:set(style..util.wrap(i,1,3),default_value)
       end
     end)
     params:add_option("lfo_mode_"..style..i, "lfo mode", {"beats","free"},1)
@@ -156,7 +156,7 @@ end
 function lfos.small(style)
   local delta = (1 / lfos.LFO_UPDATE_FREQ) * 2 * math.pi
   for i = ivals[style][1],ivals[style][2] do
-    local _t = util.round(util.linlin(ivals[style][1],ivals[style][2],1,4,i))
+    local _t = util.round(util.linlin(ivals[style][1],ivals[style][2],1,3,i))
     lfos.lfo_progress[i] = lfos.lfo_progress[i] + delta * lfos.lfo_freqs[i]
     local min = params:get("lfo_min_"..style..i)
     local max = params:get("lfo_max_"..style..i)

@@ -10,7 +10,7 @@ held_dirs_iters = {["L"] = 0,["R"] = 0,["U"] = 0,["D"] = 0}
 active_voices = {}
 for i = 1,16 do
   active_voices[i] = {}
-  for j = 1,8 do
+  for j = 1,number_of_hills do
     active_voices[i][j] = false
   end
 end
@@ -101,7 +101,7 @@ function grid_lib.init()
       if grid_dirty or overdubbing_pattern then
         grid_redraw()
         grid_dirty = false
-        for i = 1,8 do
+        for i = 1,number_of_hills do
           for j = 1,8 do
             if hills[i][j].perf_led then
               hills[i][j].perf_led = false
@@ -116,6 +116,7 @@ end
 
 mods = {["hill"] = false,["bound"] = false,["notes"] = false,["loop"] = false,["playmode"] = false,["copy"] = false,["snapshots"] = false,["alt"] = false}
 local modkeys = {"hill","bound","notes","loop","playmode","copy","snapshots","alt"}
+
 function g.key(x,y,z)
   if x == 1 then
     if y >= 1 and y <= 4 and z == 1 then
@@ -198,7 +199,7 @@ function g.key(x,y,z)
     grid_dirty = true
     screen_dirty = true
   end
-  if x > 1 and x <= 9 and not mod_held then
+  if x > 1 and x <= number_of_hills+1 and not mod_held then
     if z == 1 then
       _a.start(x-1,y,true)
       hills[x-1].screen_focus = y
@@ -235,7 +236,7 @@ function g.key(x,y,z)
         )
       end
     end
-  elseif x > 1 and x <= 9 and mod_held then
+  elseif x > 1 and x <= number_of_hills+1 and mod_held then
     if mods["alt"] and z == 1 and not mods.snapshots then
       stop(x-1,true)
     elseif mods["hill"] or mods["bound"] or mods["notes"] or mods["loop"] then
@@ -334,7 +335,7 @@ end
 
 function grid_redraw()
   g:all(0)
-  for i = 2,9 do
+  for i = 1+1,number_of_hills+1 do
     for j = 1,8 do
       if mod_held then
         if not mods["playmode"] and not mods["copy"] and not mods["snapshots"] then

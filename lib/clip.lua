@@ -1,8 +1,9 @@
 local ca = {}
 
 function ca.init()
-  max_sample_duration = 60
-  softcut_offsets = {0,0,100,100,200,200}
+  max_sample_duration = 90
+  softcut_offsets = {0,100,200}
+  -- it'll be easiest to just do 1,2,3 and 1+3,2+3,3+3
   clip = {}
   sample_track = {}
   clear = {}
@@ -10,12 +11,9 @@ function ca.init()
     {-4, -2, -1, -0.5, -0.25, 0, 0.25, 0.5, 1, 2, 4},
     {-4, -2, -1, -0.5, -0.25, 0, 0.25, 0.5, 1, 2, 4},
     {-4, -2, -1, -0.5, -0.25, 0, 0.25, 0.5, 1, 2, 4},
-    {-4, -2, -1, -0.5, -0.25, 0, 0.25, 0.5, 1, 2, 4},
-    {-4, -2, -1, -0.5, -0.25, 0, 0.25, 0.5, 1, 2, 4},
-    {-4, -2, -1, -0.5, -0.25, 0, 0.25, 0.5, 1, 2, 4}
   }
   sample_offset = {1,1,1,1,1,1}
-  for i = 1,6 do
+  for i = 1,3 do
     clip[i] = {}
     clip[i].length = 90
     clip[i].sample_length = max_sample_duration
@@ -29,13 +27,27 @@ function ca.init()
     clip[i].collage = false
     clip[i].fade_time = 0.01
 
-    softcut.enable(i, 1)
-    softcut.rec(i, 0)
-    softcut.rec_level(i,0)
-    softcut.loop(i,0)
-    softcut.level(i,1)
-    softcut.loop_start(i,softcut_offsets[i])
-    softcut.fade_time(i,clip[i].fade_time)
+    -- softcut.enable(i, 1)
+    -- softcut.rec(i, 0)
+    -- softcut.rec_level(i,0)
+    -- softcut.loop(i,0)
+    -- softcut.level(i,1)
+    -- softcut.loop_start(i,softcut_offsets[i])
+    -- softcut.fade_time(i,clip[i].fade_time)
+
+    for j = i,i+3,3 do
+      softcut.enable(j, 1)
+      softcut.rec(j, 0)
+      softcut.rec_level(j,0)
+      softcut.loop(j,0)
+      -- softcut.level(j,0.5)
+      softcut.level(j,1)
+      -- okay, cool, if a sample has two channels then panning should just be stereo balance
+      -- otherwise, it's panning
+      softcut.pan(j,j == i and -1 or 1)
+      softcut.loop_start(j,softcut_offsets[i])
+      softcut.fade_time(j,clip[i].fade_time)
+    end
 
     sample_track[i] = {}
     sample_track[i].reverse = false
@@ -67,32 +79,86 @@ function ca.load_sample(file,sample,summed)
     clip[sample].original_length = len/48000
     clip[sample].original_bpm = ca.derive_bpm(clip[sample])
     clip[sample].original_samplerate = rate/1000
-    local im_ch = ch == 2 and clip[sample].channel-1 or 1
+    -- local im_ch = ch == 2 and clip[sample].channel-1 or 1
     local scaled = {
-      -- {buffer, start, end}
-      {1,0,clip[sample].sample_length + 0.05},
-      {2,0,clip[sample].sample_length + 0.05},
+      {1,softcut_offsets[1],clip[sample].sample_length + 0.05 + softcut_offsets[1]},
+      {1,softcut_offsets[2],clip[sample].sample_length + 0.05 + softcut_offsets[2]},
       {1,softcut_offsets[3],clip[sample].sample_length + 0.05 + softcut_offsets[3]},
-      {2,softcut_offsets[4],clip[sample].sample_length + 0.05 + softcut_offsets[4]},
-      {1,softcut_offsets[5],clip[sample].sample_length + 0.05 + softcut_offsets[5]},
-      {2,softcut_offsets[6],clip[sample].sample_length + 0.05 + softcut_offsets[6]},
+      {2,softcut_offsets[1],clip[sample].sample_length + 0.05 + softcut_offsets[1]},
+      {2,softcut_offsets[2],clip[sample].sample_length + 0.05 + softcut_offsets[2]},
+      {2,softcut_offsets[3],clip[sample].sample_length + 0.05 + softcut_offsets[3]},
     }
     if sample_track[sample].playing then
-      softcut.play(sample,0)
-      sample_track[sample].playing = false
+      -- softcut.play(sample,0)
+      -- sample_track[sample].playing = false
+      ca.stop_playback(sample)
     end
-    softcut.buffer_clear_region_channel(scaled[sample][1],scaled[sample][2],max_sample_duration)
-    softcut.buffer_read_mono(file, 0, scaled[sample][2], clip[sample].sample_length + 0.05, im_ch, scaled[sample][1])
+    -- softcut.buffer_clear_region(softcut_offsets[sample],clip[sample].sample_length + 0.05)
+    -- softcut.buffer_read_stereo(file, 0, softcut_offsets[sample], clip[sample].sample_length + 0.05) -- TODO: verify if preserve could just be 0?
+    softcut.buffer_read_stereo(file, 0, softcut_offsets[sample], clip[sample].sample_length + 0.05, 0) -- TODO: verify if preserve could just be 0?
     sample_track[sample].end_point = (clip[sample].sample_length-0.01) + softcut_offsets[sample]
-    softcut.loop_end(sample,sample_track[sample].end_point)
-    softcut.position(sample,softcut_offsets[sample])
-    softcut.rate(sample,ca.get_total_pitch_offset(sample))
+    -- softcut.loop_end(sample,sample_track[sample].end_point) -- TODO: verify if i even need this cuz doesn't the hill just call it up?
+    -- softcut.position(sample,softcut_offsets[sample])
+    ca.set_position(sample,softcut_offsets[sample])
+    -- softcut.rate(sample,ca.get_total_pitch_offset(sample))
+    ca.set_rate(sample,ca.get_total_pitch_offset(sample))
     clear[sample] = 0
     sample_track[sample].rec_limit = 0
   end
   if params:get("clip "..sample.." sample") ~= file then
     params:set("clip "..sample.." sample", file, 1)
   end
+end
+
+function ca.stop_playback(sample)
+  softcut.play(sample,0)
+  softcut.play(sample+3,0)
+  sample_track[sample].playing = false
+end
+
+function ca.start_playback(sample)
+  softcut.play(sample,1)
+  softcut.play(sample+3,1)
+  sample_track[sample].playing = true
+end
+
+function ca.set_position(sample,pos)
+  softcut.position(sample,pos)
+  softcut.position(sample+3,pos)
+end
+
+function ca.set_loop_start(sample,pos)
+  softcut.loop_start(sample,pos)
+  softcut.loop_start(sample+3,pos)
+end
+
+function ca.set_loop_end(sample,pos)
+  softcut.loop_end(sample,pos)
+  softcut.loop_end(sample+3,pos)
+end
+
+function ca.set_rate(sample,r)
+  softcut.rate(sample,r)
+  softcut.rate(sample+3,r)
+end
+
+function ca.set_level(sample,l)
+  local R_distributed = util.linlin(-1,1,0,l,params:get("pan_"..sample))
+  local L_distributed = util.linlin(0,l,l,0,R_distributed)
+  softcut.level(sample, L_distributed)
+  softcut.level(sample+3, R_distributed)
+end
+
+function ca.set_pan(sample,p)
+  local R_distributed = util.linlin(-1,1,0,params:get("vol_"..sample),p)
+  local L_distributed = util.linlin(0,params:get("vol_"..sample),params:get("vol_"..sample),0,R_distributed)
+  softcut.level(sample, L_distributed)
+  softcut.level(sample+3, R_distributed)
+end
+
+function ca.set_filter(param,sample,val)
+  softcut[param](sample,val)
+  softcut[param](sample+3,val)
 end
 
 function ca.derive_bpm(source)
@@ -154,17 +220,20 @@ function ca.calculate_sc_positions(i,j,played_note)
   local sample = params:get("hill "..i.." softcut slot")
   if params:get("clip "..sample.." sample") ~= "/home/we/dust/audio/" then
     if not sample_track[sample].playing then
-      softcut.play(sample,1)
-      sample_track[sample].playing = true
+      ca.start_playback(sample)
     end
     local duration = sample_track[sample].end_point - softcut_offsets[sample]
     local s_p = softcut_offsets[sample]
     local sc_start_point_base = (s_p+(duration/16) * (slice-1))
     local sc_end_point_base = (s_p+(duration/16) * (slice)) - clip[sample].fade_time
-    softcut.rate(sample,ca.get_total_pitch_offset(sample,i,j))
-    softcut.loop_start(sample,sc_start_point_base)
-    softcut.loop_end(sample,sc_end_point_base)
-    softcut.position(sample,sample_track[sample].reverse and sc_end_point_base or sc_start_point_base)
+    -- softcut.rate(sample,ca.get_total_pitch_offset(sample,i,j))
+    ca.set_rate(sample,ca.get_total_pitch_offset(sample,i,j))
+    -- softcut.loop_start(sample,sc_start_point_base)
+    ca.set_loop_start(sample,sc_start_point_base)
+    -- softcut.loop_end(sample,sc_end_point_base)
+    ca.set_loop_end(sample,sc_end_point_base)
+    -- softcut.position(sample,sample_track[sample].reverse and sc_end_point_base or sc_start_point_base)
+    ca.set_position(sample,sample_track[sample].reverse and sc_end_point_base or sc_start_point_base)
   end
 end
 

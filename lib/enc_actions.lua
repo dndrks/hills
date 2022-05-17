@@ -6,7 +6,7 @@ function enc_actions.parse(n,d)
   local j = hills[i].screen_focus
   local s_q = ui.seq_controls[i]
   if n == 1 then
-    ui.hill_focus = util.clamp(ui.hill_focus+d,1,8)
+    ui.hill_focus = util.clamp(ui.hill_focus+d,1,number_of_hills)
   elseif n == 2 then
     if ui.control_set == "play" then
       ui.menu_focus = util.clamp(ui.menu_focus+d,1,4)

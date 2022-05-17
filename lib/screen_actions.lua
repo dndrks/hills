@@ -5,10 +5,12 @@ function screen_actions.draw()
   local h = hills[hf]
   screen.level(15)
   screen.move(0,10)
-  screen.font_size(12)
-  local hill_names = {"A","B","C","D","E","F","G","H"}
+  screen.aa(1)
+  screen.font_size(10)
+  -- local hill_names = {"A","B","C","D","E","F","G","H"}
   screen.text(hill_names[ui.hill_focus])
   screen.fill()
+  screen.aa(0)
   if ui.control_set ~= "seq" then
     local focus = h.screen_focus
     local seg = h[focus]

@@ -9,16 +9,28 @@ local function refresh_params_vports()
   end
 end
 
-local hill_names = {"A","B","C","D","E","F","G","H"}
+-- local hill_names = {"A","B","C","D","E","F","G","H"}
+-- local hill_names = {
+--   "[1] (bd)",
+--   "[2] (sd)",
+--   "[3] (tm)",
+--   "[4] (cp)",
+--   "[5] (rs)",
+--   "[6] (cb)",
+--   "[7] (hh)",
+--   "[8] (s-1)",
+--   "[9] (s-2)",
+--   "[10] (s-3)"
+-- }
 
 function parameters.init()
   refresh_params_vports()
 
   params:add_separator("hills")
-  for i = 1,8 do
+  for i = 1,number_of_hills do
     params:add_group(hill_names[i],59)
 
-    params:add_separator("note management ["..hill_names[i].."]")
+    params:add_separator("note management "..hill_names[i])
     params:add_option("hill "..i.." scale","scale",scale_names,1)
     params:set_action("hill "..i.." scale",
     function(x)
@@ -79,10 +91,10 @@ function parameters.init()
     params:add_number("hill "..i.." random offset probability","random offset probability",0,100,0)
     params:add_option("hill "..i.." quant value","quant value",{"1/4", "1/4d", "1/4t", "1/8", "1/8d", "1/8t", "1/16", "1/16d", "1/16t", "1/32", "1/32d", "1/32t"},7)
 
-    params:add_separator("Kildare management ["..hill_names[i].."]")
+    params:add_separator("Kildare management "..hill_names[i])
     params:add_option("hill "..i.." kildare_notes","send pitches?",{"no","yes"},1)
 
-    params:add_separator("softcut management ["..hill_names[i].."]")
+    params:add_separator("softcut management "..hill_names[i])
     params:add_option("hill "..i.." softcut output","softcut output?",{"no","yes"},2)
     params:set_action("hill "..i.." softcut output",
       function(x)
@@ -97,10 +109,10 @@ function parameters.init()
         end
       end
     )
-    params:add_number("hill "..i.." softcut slot", "sample slot",1,6,1)
+    params:add_number("hill "..i.." softcut slot", "sample slot",1,3,1)
     params:add_number("hill "..i.." softcut probability", "playback probability",0,100,100, function(param) return(param:get().."%") end)
 
-    params:add_separator("MIDI management ["..hill_names[i].."]")
+    params:add_separator("MIDI management "..hill_names[i])
     params:add_option("hill "..i.." MIDI output", "MIDI output?",{"no","yes"},1)
     params:set_action("hill "..i.." MIDI output",
       function(x)
@@ -153,7 +165,7 @@ function parameters.init()
       params:hide("hill ["..i.."]["..j.."] population")
     end
 
-    params:add_separator("crow management ["..hill_names[i].."]")
+    params:add_separator("crow management "..hill_names[i])
     params:add_option("hill "..i.." crow output", "crow output?",{"no","yes"},1)
     params:set_action("hill "..i.." crow output",
       function(x)
@@ -232,7 +244,7 @@ function parameters.init()
     params:hide("hill "..i.." crow osc level")
     params:hide("hill "..i.." crow osc decay")
 
-    params:add_separator("JF management ["..hill_names[i].."]")
+    params:add_separator("JF management "..hill_names[i])
     params:add_option("hill "..i.." JF output", "JF output?",{"no","yes"},1)
     params:set_action("hill "..i.." JF output",
       function(x)
@@ -253,7 +265,7 @@ function parameters.init()
     params:hide("hill "..i.." JF output id")
   end
 
-  params:add_group("MULTI",31)
+  params:add_group("MULTI",33)
   -- indent for readability:
     params:add_separator("note management")
     params:add_option("multi kildare note","send pitches to kildare?",{"no","yes"},1)
@@ -284,7 +296,7 @@ function parameters.init()
     params:add_trigger("send multi note management","send to multiple (see below)")
     params:set_action("send multi note management",
       function()
-        for i = 1,8 do
+        for i = 1,number_of_hills do
           if params:string("send to "..i) == "yes" then
             params:set("hill "..i.." scale",params:get("multi scale"))
             params:set("hill "..i.." base note",params:get("multi base note"))
@@ -318,7 +330,7 @@ function parameters.init()
     params:add_trigger("send multi softcut management","send to multiple (see below)")
     params:set_action("send multi softcut management",
       function()
-        for i = 1,8 do
+        for i = 1,number_of_hills do
           if params:string("send to "..i) == "yes" then
             params:set("hill "..i.." softcut output",params:get("multi softcut output"))
             params:set("hill "..i.." softcut slot",params:get("multi softcut slot"))
@@ -353,7 +365,7 @@ function parameters.init()
     params:add_trigger("send multi MIDI management","send to multiple (see below)")
     params:set_action("send multi MIDI management",
       function()
-        for i = 1,8 do
+        for i = 1,number_of_hills do
           if params:string("send to "..i) == "yes" then
             params:set("hill "..i.." MIDI output",params:get("multi MIDI output"))
             params:set("hill "..i.." MIDI device",params:get("multi MIDI device"))
@@ -364,16 +376,45 @@ function parameters.init()
       end
     )
     params:add_separator("send to...")
-    for i = 1,8 do
+    for i = 1,number_of_hills do
       params:add_option("send to "..i,hill_names[i],{"no","yes"},2)
     end
   -- / MULTI group
 
-  params:add_group("SAMPLES",74)
-  for i = 1,6 do
-    params:add_separator("["..i.."]")
+  params:add_group("SAMPLES",(3 * 13) + 2)
+  for i = 1,3 do
+    params:add_separator("s"..i)
     params:add_file("clip "..i.." sample", "sample", _path.audio)
-    params:set_action("clip "..i.." sample", function(file) if file ~= _path.audio then _ca.load_sample(file,i) end end)
+    params:set_action("clip "..i.." sample",
+      function(file)
+        if file ~= _path.audio then
+          _ca.load_sample(file,i)
+          params:show("speed_voice_"..i)
+          params:show("semitone_offset_"..i)
+          params:show("vol_"..i)
+          params:show("pan_"..i)
+          params:show("post_filter_fc_"..i)
+          params:show("post_filter_lp_"..i)
+          params:show("post_filter_hp_"..i)
+          params:show("post_filter_bp_"..i)
+          params:show("post_filter_dry_"..i)
+          params:show("post_filter_rq_"..i)
+          _menu.rebuild_params()
+        else
+          params:hide("speed_voice_"..i)
+          params:hide("semitone_offset_"..i)
+          params:hide("vol_"..i)
+          params:hide("pan_"..i)
+          params:hide("post_filter_fc_"..i)
+          params:hide("post_filter_lp_"..i)
+          params:hide("post_filter_hp_"..i)
+          params:hide("post_filter_bp_"..i)
+          params:hide("post_filter_dry_"..i)
+          params:hide("post_filter_rq_"..i)
+          _menu.rebuild_params()
+        end
+      end
+    )
     params:add_option("speed_voice_"..i,"speed", sample_speedlist[1])
     params:set("speed_voice_"..i, 9)
     params:set_action("speed_voice_"..i,
@@ -395,29 +436,41 @@ function parameters.init()
       end
     )
     params:add_control("vol_"..i,"level",controlspec.new(0,5,'lin',0,1,''))
-    params:set_action("vol_"..i, function(x) softcut.level(i, x) end)
+    params:set_action("vol_"..i, function(x)
+      _ca.set_level(i, x)
+    end)
     
     params:add_control("pan_"..i,"pan",controlspec.new(-1,1,'lin',0.01,0,''),frm.bipolar_as_pan_widget)
-    params:set_action("pan_"..i, function(x) softcut.pan(i, x) end)
+    params:set_action("pan_"..i, function(x)
+      _ca.set_pan(i, x)
+    end)
 
     params:add_control("post_filter_fc_"..i,"filter cutoff",controlspec.new(20,12000,'exp',0.01,12000,''))
-    params:set_action("post_filter_fc_"..i, function(x) softcut.post_filter_fc(i,x) end)
+    params:set_action("post_filter_fc_"..i, function(x) _ca.set_filter("post_filter_fc",i,x) end)
     params:add_control("post_filter_lp_"..i,"lopass",controlspec.new(0,1,'lin',0.01,0,''))
-    params:set_action("post_filter_lp_"..i, function(x) softcut.post_filter_lp(i,x) end)
+    params:set_action("post_filter_lp_"..i, function(x) _ca.set_filter("post_filter_lp",i,x) end)
     params:add_control("post_filter_hp_"..i,"hipass",controlspec.new(0,1,'lin',0.01,0,''))
-    params:set_action("post_filter_hp_"..i, function(x) softcut.post_filter_hp(i,x) end)
+    params:set_action("post_filter_hp_"..i, function(x) _ca.set_filter("post_filter_hp",i,x) end)
     params:add_control("post_filter_bp_"..i,"bandpass",controlspec.new(0,1,'lin',0.01,0,''))
-    params:set_action("post_filter_bp_"..i, function(x) softcut.post_filter_bp(i,x) end)
+    params:set_action("post_filter_bp_"..i, function(x) _ca.set_filter("post_filter_bp",i,x) end)
     params:add_control("post_filter_dry_"..i,"dry",controlspec.new(0,1,'lin',0.01,1,''))
-    params:set_action("post_filter_dry_"..i, function(x) softcut.post_filter_dry(i,x) end)
+    params:set_action("post_filter_dry_"..i, function(x) _ca.set_filter("post_filter_dry",i,x) end)
     params:add_control("post_filter_rq_"..i,"resonance (0 = high)",controlspec.new(0.01,2,'lin',0.01,2,''))
-    params:set_action("post_filter_rq_"..i, function(x) softcut.post_filter_rq(i,x) end)
+    params:set_action("post_filter_rq_"..i, function(x) _ca.set_filter("post_filter_rq",i,x) end)
 
+    params:add_number(
+      "playhead_distance_"..i,
+      "playhead distance",
+      0,
+      1000,
+      0,
+      function(param) return (param:get().."ms") end
+    )
   end
   params:add_separator("global")
   params:add_control("pitch_control","pitch control",controlspec.new(-12,12,'lin',0,0,'%'))
   params:set_action("pitch_control",function(x)
-    for i = 1,6 do
+    for i = 1,3 do
       softcut.rate(i,_ca.get_total_pitch_offset(i))
     end
   end)

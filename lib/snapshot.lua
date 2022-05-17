@@ -2,22 +2,46 @@ local snapshot = {}
 
 function snapshot.init()
   selected_snapshot = {}
-  snapshots = {{},{},{},{},{},{},{}}
+  snapshots = {}
+  for i = 1,number_of_hills do
+    snapshots[i] = {}
+  end
   for j = 1,#kildare_drums do
-    local d_voice = kildare_drums[j]
     for coll = 1,8 do
       snapshots[j][coll] = {}
     end
   end
+  for j = 1,3 do
+    for coll = 1,8 do
+      snapshots[7+j][coll] = {}
+    end
+  end
   snapshots.mod = {["index"] = 0, ["held"] = {false,false,false,false,false,false}}
+  softcut_params = {
+    "vol_",
+    "pan_",
+    "post_filter_fc_",
+    "post_filter_lp_",
+    "post_filter_hp_",
+    "post_filter_bp_",
+    "post_filter_dry_",
+    "post_filter_rq_"
+  }
 end
 
 function snapshot.pack(voice,coll)
-  local d_voice = kildare_drums[voice]
-  for i = 1, #kildare_drum_params[d_voice] do
-    local d = kildare_drum_params[d_voice][i]
-    if d.type ~= 'separator' then
-      snapshots[voice][coll][d.id] = params:get(d_voice.."_"..d.id)
+  if voice <= 7 then
+    local d_voice = kildare_drums[voice]
+    for i = 1, #kildare_drum_params[d_voice] do
+      local d = kildare_drum_params[d_voice][i]
+      if d.type ~= 'separator' then
+        snapshots[voice][coll][d.id] = params:get(d_voice.."_"..d.id)
+      end
+    end
+  else
+    local sc_target = voice - 7
+    for i = 1,#softcut_params do
+      snapshots[voice][coll][softcut_params[i]..sc_target] = params:get(softcut_params[i]..sc_target)
     end
   end
   -- do i want other hill params? or just synthesis snapshots?
@@ -37,11 +61,18 @@ function snapshot.unpack(voice, coll)
     hills[voice].snapshot.partial_restore = false
   end
 
-  local d_voice = kildare_drums[voice]
-  for i = 1, #kildare_drum_params[d_voice] do
-    local d = kildare_drum_params[d_voice][i]
-    if d.type ~= 'separator' then
-      params:set(d_voice.."_"..d.id, snapshots[voice][coll][d.id])
+  if voice <= 7 then
+    local d_voice = kildare_drums[voice]
+    for i = 1, #kildare_drum_params[d_voice] do
+      local d = kildare_drum_params[d_voice][i]
+      if d.type ~= 'separator' then
+        params:set(d_voice.."_"..d.id, snapshots[voice][coll][d.id])
+      end
+    end
+  else
+    local sc_target = voice - 7
+    for i = 1,#softcut_params do
+      params:set(softcut_params[i]..sc_target, snapshots[voice][coll][softcut_params[i]..sc_target])
     end
   end
 
@@ -125,11 +156,19 @@ function snapshot.route_funnel(voice,coll,sec,style)
     hills[voice].snapshot.partial_restore = true
 
     local original_srcs = _t.deep_copy(snapshots[voice][coll])
-    local d_voice = kildare_drums[voice]
-    for i = 1, #kildare_drum_params[d_voice] do
-      local d = kildare_drum_params[d_voice][i]
-      if d.type ~= 'separator' then
-        original_srcs[d.id] = params:get(d_voice.."_"..d.id)
+
+    if voice <=7 then
+      local d_voice = kildare_drums[voice]
+      for i = 1, #kildare_drum_params[d_voice] do
+        local d = kildare_drum_params[d_voice][i]
+        if d.type ~= 'separator' then
+          original_srcs[d.id] = params:get(d_voice.."_"..d.id)
+        end
+      end
+    else
+      local sc_target = voice - 7
+      for i = 1,#softcut_params do
+        original_srcs[softcut_params[i]..sc_target] = params:get(softcut_params[i]..sc_target)
       end
     end
     
@@ -137,11 +176,18 @@ function snapshot.route_funnel(voice,coll,sec,style)
       function(r_val)
         hills[voice].snapshot.current_value = r_val
 
-        local d_voice = kildare_drums[voice]
-        for i = 1, #kildare_drum_params[d_voice] do
-          local d = kildare_drum_params[d_voice][i]
-          if d.type ~= 'separator' then
-            params:set(d_voice.."_"..d.id, util.linlin(0,1,original_srcs[d.id],snapshots[voice][coll][d.id],r_val))
+        if voice <=7 then
+          local d_voice = kildare_drums[voice]
+          for i = 1, #kildare_drum_params[d_voice] do
+            local d = kildare_drum_params[d_voice][i]
+            if d.type ~= 'separator' then
+              params:set(d_voice.."_"..d.id, util.linlin(0,1,original_srcs[d.id],snapshots[voice][coll][d.id],r_val))
+            end
+          end
+        else
+          local sc_target = voice - 7
+          for i = 1,#softcut_params do
+            params:set(softcut_params[i]..sc_target, util.linlin(0,1,original_srcs[softcut_params[i]..sc_target],snapshots[voice][coll][softcut_params[i]..sc_target],r_val))
           end
         end
 

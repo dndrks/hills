@@ -8,6 +8,20 @@ kildare = include('kildare/lib/kildare')
 
 engine.name = "Kildare"
 
+number_of_hills = 10
+hill_names = {
+  "[1] (bd)",
+  "[2] (sd)",
+  "[3] (tm)",
+  "[4] (cp)",
+  "[5] (rs)",
+  "[6] (cb)",
+  "[7] (hh)",
+  "[8] (s1)",
+  "[9] (s2)",
+  "[10] (s3)"
+}
+
 pt = include 'lib/hills_pt'
 curves = include 'lib/easing'
 prms = include 'lib/parameters'
@@ -43,8 +57,8 @@ end
 function init()
   kildare.init()
   kildare_drums = {"bd","sd","tm","cp","rs","cb","hh"}
+  _ca.init() -- initialize clips
   _snapshots.init()
-  _ca.init()
   _flow.init()
   _song.init()
   math.randomseed(os.time())
@@ -91,7 +105,7 @@ function init()
   prms.init()
   -- prms.reload_engine(params:string("global engine"),true)
 
-  for i = 1,8 do
+  for i = 1,number_of_hills do
     ui.edit_note[i] = {}
 
     hills[i] = {}
@@ -194,7 +208,7 @@ function init()
   end
 
   params.action_read = function(filename)
-    for i = 1,8 do
+    for i = 1,number_of_hills do
       if hills[i].active then
         stop(i,true)
       end
@@ -225,7 +239,7 @@ function init()
     os.execute("mkdir -p ".._path.data.."hills/"..name.."/patterns")
     os.execute("mkdir -p ".._path.data.."hills/"..name.."/song")
     os.execute("mkdir -p ".._path.data.."hills/"..name.."/snapshots")
-    for i = 1,8 do
+    for i = 1,number_of_hills do
       tab.save(hills[i],_path.data.."hills/"..name.."/data/"..i..".txt")
     end
     for i = 1,16 do
