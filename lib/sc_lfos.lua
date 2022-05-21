@@ -29,11 +29,11 @@ local max_specs = {
 
 function lfos.add_params(style)
   if style == "pan_clip_" then
-    params:add_group("    SAMPLE PAN LFOS",27)
+    params:add_group("    SAMPLE PAN LFOS",30)
   elseif style == "vol_clip_" then
-    params:add_group("    SAMPLE LEVEL LFOS",27)
+    params:add_group("    SAMPLE LEVEL LFOS",30)
   elseif style == "post_filter_fc_" then
-    params:add_group("    SAMPLE FILTER LFOS",27)
+    params:add_group("    SAMPLE FILTER LFOS",30)
   end
   for i = ivals[style][1],ivals[style][2] do
     local _di = util.wrap(i,1,3)
@@ -97,7 +97,8 @@ function lfos.add_params(style)
       controlspec=controlspec.new(max_specs[style][1],max_specs[style][2],max_specs[style][3],max_specs[style][4],max_specs[style][5],max_specs[style][6],max_specs[style][7])
     }
     params:add_trigger("lfo_reset_"..style..i, "reset lfo")
-    params:set_action("lfo_reset_"..style..i, function(x) lfos.reset_phase(i) end)
+    params:set_action("lfo_reset_"..style..i, function(x) lfos.reset_phase(i,style) end)
+    params:add_option("lfo_reset_target_"..style..i, "reset lfo to", {"floor","ceiling"}, 1)
     params:hide("lfo_free_"..style..i)
     if style == "vol_clip_" then
       vol_clip_lfos_loaded = true
@@ -119,13 +120,31 @@ function lfos.update_freqs()
   end
 end
 
-function lfos.reset_phase(which)
-  if which == nil then
-    for i = 1, lfos.NUM_LFOS do
-      lfos.lfo_progress[i] = math.pi * 1.5
+function lfos.reset_phase(which,style)
+  if style ~= nil then
+    if which == nil then
+      for i = 1, lfos.NUM_LFOS do
+        lfos.lfo_progress[i] = math.pi * (params:string("lfo_reset_target_"..style..i) == "floor" and 1.5 or 2.5)
+      end
+    else
+      lfos.lfo_progress[which] = math.pi * (params:string("lfo_reset_target_"..style..which) == "floor" and 1.5 or 2.5)
     end
   else
-    lfos.lfo_progress[which] = math.pi * 1.5
+    if which == nil then
+      for i = 1, lfos.NUM_LFOS do
+        lfos.lfo_progress[i] = math.pi * 1.5
+      end
+    else
+      lfos.lfo_progress[which] = math.pi * 1.5
+    end
+  end
+end
+
+function lfos.reset_phase_from_hill(which,style)
+  lfos.lfo_progress[which] = math.pi * (style == "floor" and 1.5 or 2.5)
+  if which <= 3 then
+    softcut.level(which,style == "floor" and 0 or params:get("vol_clip_"..which))
+    softcut.level(which+3,style == "floor" and 0 or params:get("vol_clip_"..which))
   end
 end
 

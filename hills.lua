@@ -510,6 +510,15 @@ pass_note = function(i,j,seg,note_val,index,destination)
       -- TODO: we can also just assign a drum voice to do the same manipulation...!
       if params:string("hill "..i.." softcut output") == "yes" then
         if params:get("hill "..i.." softcut probability") >= math.random(100) then
+          if params:string("hill "..i.." reset softcut level lfo") == "yes" then
+            sc_lfos.reset_phase_from_hill(i-7,params:string("hill "..i.." reset softcut level lfo style"))
+          end
+          -- if params:string("hill "..i.." reset softcut pan lfo") == "yes" then
+          --   sc_lfos.reset_phase_from_hill(i-4,params:string("hill "..i.." reset softcut pan lfo style"))
+          -- end
+          -- if params:string("hill "..i.." reset softcut filter lfo") == "yes" then
+          --   sc_lfos.reset_phase_from_hill(i-1,params:string("hill "..i.." reset softcut filter lfo style"))
+          -- end
           _ca.calculate_sc_positions(i,j,played_note)
         end
       end

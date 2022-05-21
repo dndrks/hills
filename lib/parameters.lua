@@ -91,11 +91,13 @@ function parameters.init()
     params:add_number("hill "..i.." random offset probability","random offset probability",0,100,0)
     params:add_option("hill "..i.." quant value","quant value",{"1/4", "1/4d", "1/4t", "1/8", "1/8d", "1/8t", "1/16", "1/16d", "1/16t", "1/32", "1/32d", "1/32t"},7)
 
-    params:add_separator("Kildare management "..hill_names[i])
-    params:add_option("hill "..i.." kildare_notes","send pitches?",{"no","yes"},1)
+    if i <= 7 then
+      params:add_separator("Kildare management "..hill_names[i])
+      params:add_option("hill "..i.." kildare_notes","send pitches?",{"no","yes"},1)
+    end
 
     params:add_separator("softcut management "..hill_names[i])
-    params:add_option("hill "..i.." softcut output","softcut output?",{"no","yes"},2)
+    params:add_option("hill "..i.." softcut output","softcut output?",{"no","yes"},i<= 7 and 1 or 2)
     params:set_action("hill "..i.." softcut output",
       function(x)
         if x == 1 then
@@ -109,8 +111,13 @@ function parameters.init()
         end
       end
     )
-    params:add_number("hill "..i.." softcut slot", "sample slot",1,3,1)
+    params:add_number("hill "..i.." softcut slot", "sample slot",1,3,i<= 7 and 1 or i-7)
     params:add_number("hill "..i.." softcut probability", "playback probability",0,100,100, function(param) return(param:get().."%") end)
+
+    if i > 7 then
+      params:add_option("hill "..i.." reset softcut level lfo", "reset level lfo on trig?", {"no","yes"}, 1)
+      params:add_option("hill "..i.." reset softcut level lfo style", "reset lfo to", {"floor","ceiling"}, 1)
+    end
 
     params:add_separator("MIDI management "..hill_names[i])
     params:add_option("hill "..i.." MIDI output", "MIDI output?",{"no","yes"},1)
@@ -381,7 +388,7 @@ function parameters.init()
     end
   -- / MULTI group
 
-  params:add_group("SAMPLES",(3 * 14) + 2)
+  params:add_group("SAMPLES",(3 * 15) + 2)
   for i = 1,3 do
     params:add_separator("s"..i)
     params:add_file("clip "..i.." sample", "sample", _path.audio)
@@ -389,6 +396,41 @@ function parameters.init()
       function(file)
         if file ~= _path.audio then
           _ca.load_sample(file,i)
+          params:show("speed_clip_"..i)
+          params:show("semitone_offset_"..i)
+          params:show("playhead_distance_L_"..i)
+          params:show("playhead_distance_R_"..i)
+          params:show("vol_clip_"..i)
+          params:show("pan_clip_"..i)
+          params:show("post_filter_fc_"..i)
+          params:show("post_filter_lp_"..i)
+          params:show("post_filter_hp_"..i)
+          params:show("post_filter_bp_"..i)
+          params:show("post_filter_dry_"..i)
+          params:show("post_filter_rq_"..i)
+          _menu.rebuild_params()
+        else
+          params:hide("speed_clip_"..i)
+          params:hide("semitone_offset_"..i)
+          params:hide("playhead_distance_L_"..i)
+          params:hide("playhead_distance_R_"..i)
+          params:hide("vol_clip_"..i)
+          params:hide("pan_clip_"..i)
+          params:hide("post_filter_fc_"..i)
+          params:hide("post_filter_lp_"..i)
+          params:hide("post_filter_hp_"..i)
+          params:hide("post_filter_bp_"..i)
+          params:hide("post_filter_dry_"..i)
+          params:hide("post_filter_rq_"..i)
+          _menu.rebuild_params()
+        end
+      end
+    )
+    params:add_file("clip "..i.." sample folder", "load folder", _path.audio)
+    params:set_action("clip "..i.." sample folder",
+      function(file)
+        if file ~= _path.audio then
+          _ca.folder_callback(file,i)
           params:show("speed_clip_"..i)
           params:show("semitone_offset_"..i)
           params:show("playhead_distance_L_"..i)
@@ -475,8 +517,8 @@ function parameters.init()
     params:set_action("post_filter_bp_"..i, function(x) _ca.set_filter("post_filter_bp",i,x) end)
     params:add_control("post_filter_dry_"..i,"dry",controlspec.new(0,1,'lin',0.01,1,''))
     params:set_action("post_filter_dry_"..i, function(x) _ca.set_filter("post_filter_dry",i,x) end)
-    params:add_control("post_filter_rq_"..i,"resonance (0 = high)",controlspec.new(0.01,2,'lin',0.01,2,''))
-    params:set_action("post_filter_rq_"..i, function(x) _ca.set_filter("post_filter_rq",i,x) end)
+    params:add_number("post_filter_rq_"..i,"filter q",0,100,50,function(param) return (util.round(param:get(),0.01).."%") end)
+    params:set_action("post_filter_rq_"..i, function(x) _ca.set_filter("post_filter_rq",i,util.linlin(0,100,2.0,0.001,x)) end)
 
   end
   params:add_separator("global")

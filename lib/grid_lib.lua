@@ -97,7 +97,7 @@ end
 function grid_lib.init()
   clock.run(function()
     while true do
-      clock.sleep(1/15)
+      clock.sleep(1/30)
       if grid_dirty or overdubbing_pattern then
         grid_redraw()
         grid_dirty = false

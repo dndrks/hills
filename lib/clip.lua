@@ -1,7 +1,7 @@
 local ca = {}
 
 function ca.init()
-  max_sample_duration = 90
+  max_sample_duration = 96
   softcut_offsets = {0,100,200}
   -- it'll be easiest to just do 1,2,3 and 1+3,2+3,3+3
   clip = {}
@@ -15,7 +15,6 @@ function ca.init()
   sample_offset = {1,1,1,1,1,1}
   for i = 1,3 do
     clip[i] = {}
-    clip[i].length = 90
     clip[i].sample_length = max_sample_duration
     clip[i].sample_rate = 48000
     clip[i].start_point = nil
@@ -26,6 +25,11 @@ function ca.init()
     clip[i].channel = 1
     clip[i].collage = false
     clip[i].fade_time = 0.01
+    clip[i].collaged_rates = {}
+    clip[i].slice = {}
+    for j = 1,16 do
+      clip[i].slice[j] = {start_point = 0, end_point = 0}
+    end
 
     -- softcut.enable(i, 1)
     -- softcut.rec(i, 0)
@@ -42,6 +46,7 @@ function ca.init()
       softcut.loop(j,0)
       -- softcut.level(j,0.5)
       softcut.level(j,1)
+      softcut.level_slew_time(j,0.005) -- TODO: CONFIRM GOOD
       -- okay, cool, if a sample has two channels then panning should just be stereo balance
       -- otherwise, it's panning
       softcut.pan(j,j == i and -1 or 1)
@@ -64,7 +69,7 @@ end
 function ca.load_sample(file,sample,summed)
   local old_min = clip[sample].min
   local old_max = clip[sample].max
-  if file ~= "-" and file ~= "" then
+  if file ~= "-" and file ~= "" and file ~= "collaged audio" then
     local ch, len, rate = audio.file_info(file)
     clip[sample].sample_rate = rate
     if clip[sample].sample_rate ~= 48000 then
@@ -109,7 +114,77 @@ function ca.load_sample(file,sample,summed)
     params:set("clip "..sample.." sample", file, 1)
   end
 end
+---
+function ca.folder_callback(file,dest)
+  
+  local split_at = string.match(file, "^.*()/")
+  local folder = string.sub(file, 1, split_at)
+  file = string.sub(file, split_at + 1)
+  
+  ca.collage(folder,dest,1)
+  
+  _norns.key(1,1)
+  _norns.key(1,0)
+  key1_hold = false
+end
 
+function ca.collage(folder,dest)
+  local wavs = util.scandir(folder)
+  local clean_wavs = {}
+  local sample_id = 0
+  for index, data in ipairs(wavs) do
+    if string.match(data, ".wav") then
+      table.insert(clean_wavs, data)
+      sample_id = sample_id + 1
+    end
+  end
+  print(sample_id)
+  tab.print(clean_wavs)
+  
+  if sample_track[dest].playing then
+    ca.stop_playback(dest)
+  end
+
+  -- ok what are the desireable behaviors??
+  -- STYLE 1, load whole folder sequentially
+
+  local import_length = {}
+  sample_track[dest].end_point = 0 + softcut_offsets[dest]
+  for i = 1,(sample_id <=16 and sample_id or 16) do
+    local samp = folder .. clean_wavs[i]
+    local ch, len, rate = audio.file_info(samp)
+    import_length[i] = len/rate >= 6 and 6 or len/rate
+
+    --okay, each time one is imported in:
+    clip[dest].collaged_rates[i] = rate
+    clip[dest].slice[i].start_point = i == 1 and softcut_offsets[dest] or clip[dest].slice[i-1].end_point
+    clip[dest].slice[i].end_point = clip[dest].slice[i].start_point + import_length[i]
+
+    softcut.buffer_read_stereo(samp, 0, clip[dest].slice[i].start_point, import_length[i], 0)
+    print(samp,i,clip[dest].slice[i].start_point, import_length[i])
+    
+    sample_track[dest].end_point = sample_track[dest].end_point + import_length[i]
+  end
+  
+  sample_track[dest].end_point = sample_track[dest].end_point - 0.01
+  ca.set_position(dest,softcut_offsets[dest])
+  ca.set_rate(dest,ca.get_total_pitch_offset(dest))
+  clear[dest] = 0
+  sample_track[dest].rec_limit = 0
+
+  if params:get("clip "..dest.." sample") ~= "collaged audio" then
+    params:set("clip "..dest.." sample", "collaged audio", 1)
+  end
+
+  clip[dest].sample_length = sample_track[dest].end_point
+  clip[dest].original_length = 96
+  clip[dest].original_bpm = 120
+  clip[dest].original_samplerate = 48000
+  clip[dest].collage = true
+  clip[dest].slice_count = sample_id
+  
+end
+---
 function ca.stop_playback(sample)
   softcut.play(sample,0)
   softcut.play(sample+3,0)
@@ -192,6 +267,7 @@ function ca.get_total_pitch_offset(_t,i,j)
   local total_offset;
   total_offset = params:get("semitone_offset_".._t)
   local sample_rate_compensation;
+  -- if clip[_t].collage then
   if (48000/clip[_t].sample_rate) > 1 then
     sample_rate_compensation = ((1200 * math.log(48000/clip[_t].sample_rate,2))/-100)
   else
@@ -222,16 +298,28 @@ end
 
 function ca.calculate_sc_positions(i,j,played_note)
   -- print(i,j,played_note)
-  local slice = util.wrap(played_note - params:get("hill "..i.." base note"),0,15) + 1
   local sample = params:get("hill "..i.." softcut slot")
+  local slice_count;
+    if clip[sample].collage then
+      slice_count = clip[sample].slice_count <= 16 and clip[sample].slice_count or 16
+    else
+      slice_count = 16
+    end
+  local slice = util.wrap(played_note - params:get("hill "..i.." base note"),0,slice_count-1) + 1
   if params:get("clip "..sample.." sample") ~= "/home/we/dust/audio/" then
     if not sample_track[sample].playing then
       ca.start_playback(sample)
     end
     local duration = sample_track[sample].end_point - softcut_offsets[sample]
     local s_p = softcut_offsets[sample]
-    local sc_start_point_base = (s_p+(duration/16) * (slice-1))
-    local sc_end_point_base = (s_p+(duration/16) * (slice)) - clip[sample].fade_time
+    local sc_start_point_base, sc_end_point_base;
+    if clip[sample].collage then
+      sc_start_point_base = clip[sample].slice[slice].start_point
+      sc_end_point_base = clip[sample].slice[slice].end_point - clip[sample].fade_time
+    else
+      sc_start_point_base = (s_p+(duration/slice_count) * (slice-1))
+      sc_end_point_base = (s_p+(duration/slice_count) * (slice)) - clip[sample].fade_time
+    end
     -- softcut.rate(sample,ca.get_total_pitch_offset(sample,i,j))
     ca.set_rate(sample,ca.get_total_pitch_offset(sample,i,j))
     -- softcut.loop_start(sample,sc_start_point_base)
@@ -240,6 +328,7 @@ function ca.calculate_sc_positions(i,j,played_note)
     ca.set_loop_end(sample,sc_end_point_base)
     -- softcut.position(sample,sample_track[sample].reverse and sc_end_point_base or sc_start_point_base)
     ca.set_position(sample,sample_track[sample].reverse and sc_end_point_base or sc_start_point_base)
+    -- print("sample pos: "..(sample_track[sample].reverse and sc_end_point_base or sc_start_point_base))
   end
 end
 
