@@ -1,4 +1,5 @@
 local lfos = {}
+local frm = require 'formatters'
 
 lfos.NUM_LFOS = 9
 lfos.LFO_MIN_TIME = 1 -- Secs
@@ -15,17 +16,39 @@ local ivals = {["vol_clip_"] = {1,3}, ["pan_clip_"] = {4,6}, ["post_filter_fc_"]
 local min_specs = {
   ["vol_clip_"] = {0,5,'lin',0.01,0,'',0.01}, --min, max, warp, step, default, units, quantum, wrap
   ["pan_clip_"] = {-1,1,'lin',0.01,-1,'',0.01},
-  ["post_filter_fc_"] = {20,12000,'exp',0.01,20,'',0.01}
+  ["post_filter_fc_"] = {20,12000,'exp',0.01,20,'hz',0.01}
 }
 local max_specs = {
   ["vol_clip_"] = {0,5,'lin',0.01,1,'',0.01}, --min, max, warp, step, default, units, quantum, wrap
   ["pan_clip_"] = {-1,1,'lin',0.01,1,'',0.01},
-  ["post_filter_fc_"] = {20,12000,'exp',0.01,12000,'',0.01}
+  ["post_filter_fc_"] = {20,12000,'exp',0.01,12000,'hz',0.01}
 }
 
 -- lfos 1-4: vol_clip_
 -- lfos 5-8: pan_clip_
 -- lfos 9-12: post_filter_fc_
+
+function lfos.params_visiblity(state, i, style)
+  params[state](params, "lfo_mode_"..style..i)
+  if state == "show" then
+    if params:get("lfo_mode_"..style..i) == 1 then
+      params:hide("lfo_free_"..style..i)
+      params:show("lfo_beats_"..style..i)
+    elseif params:get("lfo_mode_"..style..i) == 2 then
+      params:hide("lfo_beats_"..style..i)
+      params:show("lfo_free_"..style..i)
+    end
+  else
+    params:hide("lfo_beats_"..style..i)
+    params:hide("lfo_free_"..style..i)
+  end
+  params[state](params, "lfo_shape_"..style..i)
+  params[state](params, "lfo_min_"..style..i)
+  params[state](params, "lfo_max_"..style..i)
+  params[state](params, "lfo_reset_"..style..i)
+  params[state](params, "lfo_reset_target_"..style..i)
+  _menu.rebuild_params()
+end
 
 function lfos.add_params(style)
   if style == "pan_clip_" then
@@ -45,16 +68,19 @@ function lfos.add_params(style)
         local default_value = params.params[params.lookup[style..util.wrap(i,1,3)]].controlspec.default
         -- local default_value = max_specs[style][5]
         params:set(style..util.wrap(i,1,3),default_value)
+        lfos.params_visiblity("hide", i, style)
+      elseif x == 2 then
+        lfos.params_visiblity("show", i, style)
       end
     end)
     params:add_option("lfo_mode_"..style..i, "lfo mode", {"beats","free"},1)
     params:set_action("lfo_mode_"..style..i,
       function(x)
-        if x == 1 then
+        if x == 1 and params:string("lfo_"..style..i) == "on" then
           params:hide("lfo_free_"..style..i)
           params:show("lfo_beats_"..style..i)
           lfos.lfo_freqs[i] = 1/(lfos.get_the_beats() * lfo_rates[params:get("lfo_beats_"..style..i)] * 4)
-        elseif x == 2 then
+        elseif x == 2 and params:string("lfo_"..style..i) == "on" then
           params:hide("lfo_beats_"..style..i)
           params:show("lfo_free_"..style..i)
           lfos.lfo_freqs[i] = params:get("lfo_free_"..style..i)
@@ -88,13 +114,15 @@ function lfos.add_params(style)
       type='control',
       id="lfo_min_"..style..i,
       name="lfo min",
-      controlspec=controlspec.new(min_specs[style][1],min_specs[style][2],min_specs[style][3],min_specs[style][4],min_specs[style][5],min_specs[style][6],min_specs[style][7])
+      controlspec=controlspec.new(min_specs[style][1],min_specs[style][2],min_specs[style][3],min_specs[style][4],min_specs[style][5],min_specs[style][6],min_specs[style][7]),
+      formatter = style == "pan_clip_" and frm.bipolar_as_pan_widget or nil
     }
     params:add{
       type='control',
       id="lfo_max_"..style..i,
       name="lfo max",
-      controlspec=controlspec.new(max_specs[style][1],max_specs[style][2],max_specs[style][3],max_specs[style][4],max_specs[style][5],max_specs[style][6],max_specs[style][7])
+      controlspec=controlspec.new(max_specs[style][1],max_specs[style][2],max_specs[style][3],max_specs[style][4],max_specs[style][5],max_specs[style][6],max_specs[style][7]),
+      formatter = style == "pan_clip_" and frm.bipolar_as_pan_widget or nil
     }
     params:add_trigger("lfo_reset_"..style..i, "reset lfo")
     params:set_action("lfo_reset_"..style..i, function(x) lfos.reset_phase(i,style) end)

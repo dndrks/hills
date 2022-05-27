@@ -31,14 +31,6 @@ function ca.init()
       clip[i].slice[j] = {start_point = 0, end_point = 0}
     end
 
-    -- softcut.enable(i, 1)
-    -- softcut.rec(i, 0)
-    -- softcut.rec_level(i,0)
-    -- softcut.loop(i,0)
-    -- softcut.level(i,1)
-    -- softcut.loop_start(i,softcut_offsets[i])
-    -- softcut.fade_time(i,clip[i].fade_time)
-
     for j = i,i+3,3 do
       softcut.enable(j, 1)
       softcut.rec(j, 0)
@@ -52,7 +44,11 @@ function ca.init()
       softcut.pan(j,j == i and -1 or 1)
       softcut.loop_start(j,softcut_offsets[i])
       softcut.fade_time(j,clip[i].fade_time)
+      softcut.position(j,-1)
     end
+
+    softcut.play(i,1)
+    softcut.play(i+3,1)
 
     sample_track[i] = {}
     sample_track[i].reverse = false
@@ -69,7 +65,7 @@ end
 function ca.load_sample(file,sample,summed)
   local old_min = clip[sample].min
   local old_max = clip[sample].max
-  if file ~= "-" and file ~= "" and file ~= "collaged audio" then
+  if file ~= "-" and file ~= "" and file ~= "distributed" then
     local ch, len, rate = audio.file_info(file)
     clip[sample].sample_rate = rate
     if clip[sample].sample_rate ~= 48000 then
@@ -98,14 +94,10 @@ function ca.load_sample(file,sample,summed)
       -- sample_track[sample].playing = false
       ca.stop_playback(sample)
     end
-    -- softcut.buffer_clear_region(softcut_offsets[sample],clip[sample].sample_length + 0.05)
-    -- softcut.buffer_read_stereo(file, 0, softcut_offsets[sample], clip[sample].sample_length + 0.05) -- TODO: verify if preserve could just be 0?
+
     softcut.buffer_read_stereo(file, 0, softcut_offsets[sample], clip[sample].sample_length + 0.05, 0) -- TODO: verify if preserve could just be 0?
     sample_track[sample].end_point = (clip[sample].sample_length-0.01) + softcut_offsets[sample]
-    -- softcut.loop_end(sample,sample_track[sample].end_point) -- TODO: verify if i even need this cuz doesn't the hill just call it up?
-    -- softcut.position(sample,softcut_offsets[sample])
     ca.set_position(sample,softcut_offsets[sample])
-    -- softcut.rate(sample,ca.get_total_pitch_offset(sample))
     ca.set_rate(sample,ca.get_total_pitch_offset(sample))
     clear[sample] = 0
     sample_track[sample].rec_limit = 0
@@ -126,6 +118,10 @@ function ca.folder_callback(file,dest)
   _norns.key(1,1)
   _norns.key(1,0)
   key1_hold = false
+end
+
+function getParentPath(_path)
+  return string.match(_path, "^(.+)/")
 end
 
 function ca.collage(folder,dest)
@@ -153,18 +149,27 @@ function ca.collage(folder,dest)
   for i = 1,(sample_id <=16 and sample_id or 16) do
     local samp = folder .. clean_wavs[i]
     local ch, len, rate = audio.file_info(samp)
-    import_length[i] = len/rate >= 6 and 6 or len/rate
+    import_length[i] = len/rate >= 6 and 6 or len/rate -- FIXME: does this need to be len/48000??
 
     --okay, each time one is imported in:
     clip[dest].collaged_rates[i] = rate
     clip[dest].slice[i].start_point = i == 1 and softcut_offsets[dest] or clip[dest].slice[i-1].end_point
     clip[dest].slice[i].end_point = clip[dest].slice[i].start_point + import_length[i]
 
-    softcut.buffer_read_stereo(samp, 0, clip[dest].slice[i].start_point, import_length[i], 0)
+    if ch == 2 then
+      softcut.buffer_read_stereo(samp, 0, clip[dest].slice[i].start_point, import_length[i], 0)
+    elseif ch == 1 then
+      softcut.buffer_read_mono(samp, 0, clip[dest].slice[i].start_point, import_length[i], 1, 1, 0, 0.5)
+      softcut.buffer_read_mono(samp, 0, clip[dest].slice[i].start_point, import_length[i], 1, 2, 0, 0.5)
+    else
+      print("samples can't be multichannel, need to either be mono or stereo")
+    end
     print(samp,i,clip[dest].slice[i].start_point, import_length[i])
     
     sample_track[dest].end_point = sample_track[dest].end_point + import_length[i]
   end
+
+  -- print(string.sub(getParentPath(folder), 21))
   
   sample_track[dest].end_point = sample_track[dest].end_point - 0.01
   ca.set_position(dest,softcut_offsets[dest])
@@ -172,8 +177,8 @@ function ca.collage(folder,dest)
   clear[dest] = 0
   sample_track[dest].rec_limit = 0
 
-  if params:get("clip "..dest.." sample") ~= "collaged audio" then
-    params:set("clip "..dest.." sample", "collaged audio", 1)
+  if params:get("clip "..dest.." sample") ~= "distributed" then
+    params:set("clip "..dest.." sample", "distributed", 1)
   end
 
   clip[dest].sample_length = sample_track[dest].end_point
