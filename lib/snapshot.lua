@@ -143,7 +143,8 @@ function snapshot.route_funnel(voice,coll,sec,style)
     if style == "beats" then
       sec = clock.get_beat_sec()*sec
     elseif style == "time" then
-      sec = sec
+      -- sec = sec
+      sec = clock.get_beat_sec()*sec
     end
   end
   if sec == 0 then

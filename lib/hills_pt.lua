@@ -152,8 +152,8 @@ end
 function pattern:duplicate()
   if self.count > 0 then
     for i = 1,self.count do
-      self.event[i+self.count] = deep_copy(self.event[i])
-      self.time[i+self.count] = deep_copy(self.time[i])
+      self.event[i+self.count] = self.deep_copy(self.event[i])
+      self.time[i+self.count] = self.deep_copy(self.time[i])
     end
     self.count = self.count * 2
   end
@@ -171,15 +171,15 @@ function pattern:set_overdub(s)
   end
 end
 
-local function deep_copy(orig)
+function pattern.deep_copy(orig)
   local orig_type = type(orig)
   local copy
   if orig_type == "table" then
     copy = {}
     for orig_key, orig_value in next, orig, nil do
-        copy[m.deep_copy(orig_key)] = m.deep_copy(orig_value)
+      copy[pattern.deep_copy(orig_key)] = pattern.deep_copy(orig_value)
     end
-    setmetatable(copy, m.deep_copy(getmetatable(orig)))
+    setmetatable(copy, pattern.deep_copy(getmetatable(orig)))
   else
     copy = orig
   end

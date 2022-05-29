@@ -38,6 +38,10 @@ grid_pattern = {}
 grid_overdub_state = {}
 overdubbing_pattern = false
 overdub_toggle = false
+duplicate_toggle = false
+copy_toggle = false
+pattern_clipboard = {event = {}, time = {}, count = 0}
+
 for i = 1,16 do
   grid_pattern[i] = pt.new(i)
   grid_pattern[i].process = grid_lib.pattern_execute
@@ -56,7 +60,7 @@ for i = 1,16 do
 end
 
 function grid_lib.handle_grid_pat(i,alt)
-  if not overdub_toggle and not loop_toggle and not alt then
+  if not overdub_toggle and not loop_toggle and not duplicate_toggle and not copy_toggle and not alt then
     if grid_pattern[i].rec == 1 then -- if we're recording...
       grid_pattern[i]:rec_stop() -- stop recording
       grid_pattern[i]:start() -- start playing
@@ -79,8 +83,23 @@ function grid_lib.handle_grid_pat(i,alt)
     grid_pattern[i]:clear() -- clears the pattern
   elseif overdub_toggle then
     grid_pattern[i]:set_overdub(grid_pattern[i].overdub == 0 and 1 or 0)
+  elseif duplicate_toggle then
+    grid_pattern[i]:duplicate()
   elseif loop_toggle then
     grid_pattern[i].loop = grid_pattern[i].loop == 1 and 0 or 1
+  elseif copy_toggle then
+    if #pattern_clipboard.event == 0 and grid_pattern[i].count > 0 then
+      pattern_clipboard.event = grid_pattern[i].deep_copy(grid_pattern[i].event)
+      pattern_clipboard.time = grid_pattern[i].deep_copy(grid_pattern[i].time)
+      pattern_clipboard.count = grid_pattern[i].count
+    elseif #pattern_clipboard.event > 0 then
+      grid_pattern[i].event = grid_pattern[i].deep_copy(pattern_clipboard.event)
+      grid_pattern[i].time = grid_pattern[i].deep_copy(pattern_clipboard.time)
+      grid_pattern[i].count = pattern_clipboard.count
+      pattern_clipboard.event = {}
+      pattern_clipboard.time = {}
+      pattern_clipboard.count = 0
+    end
   end
 end
 
@@ -288,13 +307,14 @@ function g.key(x,y,z)
   elseif x>=13 and y<=4 and z == 1 then
     local target = (x-12)+(4*(y-1))
     grid_lib.handle_grid_pat(target,mods.alt)
-    grid_dirty = true
   elseif x == 12 and y == 5 then
     overdub_toggle = z == 1 and true or false
-    grid_dirty = true
   elseif x == 12 and y == 6 then
     loop_toggle = z == 1 and true or false
-    grid_dirty = true
+  elseif x == 12 and y == 7 then
+    duplicate_toggle = z == 1 and true or false
+  elseif x == 12 and y == 8 then
+    copy_toggle = z == 1 and true or false
   end
   if mod_held and not mods["alt"] and not mods["copy"] and not mods["snapshots"] then
     if x == 14 and y == 8 then
@@ -426,6 +446,8 @@ function grid_redraw()
   
   g:led(12,5,overdub_toggle and 15 or 6)
   g:led(12,6,loop_toggle and 15 or 6)
+  g:led(12,7,duplicate_toggle and 15 or 6)
+  g:led(12,8,copy_toggle and 15 or 6)
 
   if mod_held and mods["copy"] then
     if not clipboard then
@@ -452,6 +474,69 @@ function grid_redraw()
       end
     end
   end
+
+  if copy_toggle then
+    if #pattern_clipboard.event == 0 then
+      for i = 14,16 do
+        for j = 5,8 do
+          if j == 5 or j == 8 then
+            g:led(i,j,15)
+          elseif (j == 6 or j == 7) and i == 14 then
+            g:led(i,j,15)
+          end
+        end
+      end
+    elseif #pattern_clipboard.event > 0 then
+      for i = 14,16 do
+        for j = 5,8 do
+          if j == 5 or j == 7 then
+            g:led(i,j,15)
+          elseif j == 6 and (i == 14 or i == 16) then
+            g:led(i,j,15)
+          elseif j == 8 and i == 14 then
+            g:led(i,j,15)
+          end
+        end
+      end
+    end
+  elseif duplicate_toggle then
+    for i = 14,16 do
+      for j = 5,8 do
+        if (j == 5 and (i == 14 or i == 15)) or (j == 8 and (i == 14 or i == 15)) then
+          g:led(i,j,15)
+        elseif (j == 6 or j == 7) then
+          if i == 14 or i == 16 then
+            g:led(i,j,15)
+          end
+        end
+      end
+    end
+  elseif overdub_toggle then
+    for i = 14,16 do
+      for j = 5,8 do
+        if j == 5 or j == 8 then
+          g:led(i,j,15)
+        elseif (j == 6 or j == 7) then
+          if i == 14 or i == 16 then
+            g:led(i,j,15)
+          end
+        end
+      end
+    end
+  elseif loop_toggle then
+    for i = 14,16 do
+      for j = 5,8 do
+        if j == 8 then
+          g:led(i,j,15)
+        else
+          if i == 14 then
+            g:led(i,j,15)
+          end
+        end
+      end
+    end
+  end
+
   if mod_held and mods["playmode"] then
 
   end

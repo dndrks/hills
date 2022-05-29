@@ -25,11 +25,13 @@ function screen_actions.draw()
     for i = hills[hf][focus].low_bound.note,hills[hf][focus].high_bound.note do
       local horizontal = util.linlin(hills[hf][focus].note_timestamp[hills[hf][focus].low_bound.note], hills[hf][focus].note_timestamp[hills[hf][focus].high_bound.note],40,120,hills[hf][focus].note_timestamp[i])
       local vertical = util.linlin(hills[hf][focus].note_ocean[1],hills[hf][focus].note_ocean[peak_pitch],55,15,hills[hf][focus].note_ocean[hills[hf][focus].note_num.pool[i]])
-      if ui.control_set == "edit" and (ui.menu_focus == 1 or ui.menu_focus == 3) then
+      if ui.control_set == "edit" and (ui.menu_focus == 1 or ui.menu_focus == 3 or ui.menu_focus == 5) then
         if ui.menu_focus == 1 then
           screen.level(s_c["hills"]["focus"] == i and 15 or (seg.index-1 == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0)))
         elseif ui.menu_focus == 3 then
           screen.level(s_c["notes"]["focus"] == i and 15 or (seg.index-1 == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0)))
+        elseif ui.menu_focus == 5 then
+          screen.level(s_c["softcut"]["focus"] == i and 15 or (seg.index-1 == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0)))
         end
       else
         screen.level(seg.index-1 == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0))
@@ -98,18 +100,35 @@ function screen_actions.draw()
           screen.move(128,64)
           screen.text_right("RESET: "..(seg.looper.mode == "phase" and "PHASE" or "CLOCK ("..seg.looper.clock_time.." beats)"))
         end
+      elseif ui.menu_focus == 5 then
+        screen.level(key1_hold == true and 3 or 15)
+        screen.move(40,10)
+        local note_number = seg.softcut_controls.rate[s_c["softcut"]["focus"]]
+        local slice_number = seg.note_ocean[seg.note_num.pool[s_c["notes"]["focus"]]]
+        screen.text(
+          sample_speedlist[hf-7][note_number].."x"..
+          (hills[hf][focus].note_num.active[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["softcut"]["focus"]] and "" or " (m)")
+          .." | slice: "..(util.wrap(slice_number - params:get("hill "..hf.." base note"),0,15) + 1)
+        )
+        if key1_hold then
+          screen.level(key1_hold == true and 15 or 3)
+          screen.move(0,64)
+          screen.text("K2: "..(hills[hf][focus].note_num.active[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["softcut"]["focus"]] and "mute" or "un-mute"))
+          screen.move(128,64)
+          screen.text_right("K3: "..ui.screen_controls[hf][focus]["softcut"]["transform"])
+        end
       end
     end
-    local menus = {"hill: "..focus,"bound","notes","loop"}
+    local menus = {"hill: "..focus,"bound","notes","loop","softcut"}
     screen.font_size(8)
     if ui.control_set == "edit" and ui.menu_focus ~= 1 then
       screen.move(0,25)
       screen.level(3)
       screen.text("hill: "..focus)
     end
-    for i = 1,4 do
+    for i = 1,ui.hill_focus <= 7 and 4 or 5 do
       screen.level(ui.menu_focus == i and 15 or 3)
-      screen.move(0,15+(10*i))
+      screen.move(0,12+(10*i))
       if ui.control_set == "edit" and ui.menu_focus == i then
         screen.text("["..menus[i].."]")
       elseif ui.control_set ~= "edit" then

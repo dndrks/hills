@@ -19,6 +19,10 @@ m.transpose = function(i,j,pos,delta)
   hills[i][j].note_num.pool[pos] = util.clamp(hills[i][j].note_num.pool[pos]+delta,1,hills[i][j].note_num.max)
 end
 
+m.sc_transpose = function(i,j,pos,delta)
+  hills[i][j].softcut_controls.rate[pos] = util.clamp(hills[i][j].softcut_controls.rate[pos]+delta,1,#sample_speedlist[i-7])
+end
+
 -- 2. REVERSAL
 m.reverse = function(i,j,start_point,end_point)
 	local rev = {}

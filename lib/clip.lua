@@ -52,6 +52,7 @@ function ca.init()
 
     sample_track[i] = {}
     sample_track[i].reverse = false
+    sample_track[i].changed_direction = false
   end
 end
 
@@ -205,6 +206,7 @@ end
 function ca.set_position(sample,pos)
   -- softcut.position(sample,pos)
   softcut.position(sample,ca.offset_loop_start(sample,pos,"L"))
+  print(ca.offset_loop_start(sample,pos,"L"), ca.offset_loop_start(sample,pos,"R"))
   softcut.position(sample+3,ca.offset_loop_start(sample,pos,"R"))
 end
 
@@ -279,10 +281,23 @@ function ca.get_total_pitch_offset(_t,i,j,pitched)
     sample_rate_compensation = ((1200 * math.log(clip[_t].sample_rate/48000,2))/100)
   end
   total_offset = total_offset + sample_rate_compensation
+  local step_rate;
+  if i and j then
+    step_rate = hills[i][j].softcut_controls.rate[hills[i][hills[i].segment].index]
+    print(i,j,step_rate)
+  end
   if not pitched then
-    total_offset = math.pow(0.5, -total_offset / 12) * sample_speedlist[_t][params:get("speed_clip_".._t)]
+    if step_rate and step_rate ~= params:get("speed_clip_".._t) then
+      total_offset = math.pow(0.5, -total_offset / 12) * sample_speedlist[_t][step_rate]  
+    else
+      total_offset = math.pow(0.5, -total_offset / 12) * sample_speedlist[_t][params:get("speed_clip_".._t)]
+    end
   else
-    total_offset = math.pow(0.5, -total_offset / 12) * pitched * sample_speedlist[_t][params:get("speed_clip_".._t)]
+    if step_rate and step_rate ~= params:get("speed_clip_".._t) then
+      total_offset = math.pow(0.5, -total_offset / 12) * pitched * sample_speedlist[_t][step_rate]
+    else
+      total_offset = math.pow(0.5, -total_offset / 12) * pitched * sample_speedlist[_t][params:get("speed_clip_".._t)]
+    end
   end
   -- if i ~= nil and j ~= nil then
   --   total_offset = math.pow(0.5, -total_offset / 12) * sample_speedlist[_t][hills[i][j].softcut_controls.rate[hills[i][j].index]]
@@ -290,17 +305,33 @@ function ca.get_total_pitch_offset(_t,i,j,pitched)
   --   total_offset = math.pow(0.5, -total_offset / 12) * sample_speedlist[_t][params:get("speed_clip_".._t)]
   -- end
   if params:get("pitch_control") ~= 0 then
-    -- if total_offset < 0 then
-    --   sample_track[_t].reverse = true
-    -- end
-    return (total_offset + (total_offset * (params:get("pitch_control")/100)))
+    total_offset = total_offset + (total_offset * (params:get("pitch_control")/100))
+    if total_offset < 0 then
+      if not sample_track[_t].reverse then
+        sample_track[_t].changed_direction = true
+      else
+        sample_track[_t].changed_direction = false
+      end
+      sample_track[_t].reverse = true
+    end
+    return (total_offset)
   else
     -- print(total_offset)
-    -- if total_offset < 0 then
-    --   sample_track[_t].reverse = true
-    -- else
-    --   sample_track[_t].reverse = false
-    -- end
+    if total_offset < 0 then
+      if not sample_track[_t].reverse then
+        sample_track[_t].changed_direction = true
+      else
+        sample_track[_t].changed_direction = false
+      end
+      sample_track[_t].reverse = true
+    else
+      if sample_track[_t].reverse then
+        sample_track[_t].changed_direction = true
+      else
+        sample_track[_t].changed_direction = false
+      end
+      sample_track[_t].reverse = false
+    end
     return (total_offset)
   end
 end
@@ -363,16 +394,24 @@ function ca.calculate_sc_positions(i,j,played_note)
     else
       ca.set_rate(sample,ca.get_total_pitch_offset(sample,i,j))
     end
-    -- softcut.loop_start(sample,sc_start_point_base)
+    local changed_direction = sample_track[sample].changed_direction
     if params:get("clip "..sample.." sample") ~= "playthrough" then
       ca.set_loop_start(sample,sc_start_point_base)
       ca.set_loop_end(sample,sc_end_point_base)
-      ca.set_position(sample,sample_track[sample].reverse and sc_end_point_base or sc_start_point_base)
+      ca.set_position(sample,sample_track[sample].reverse and sc_end_point_base-0.001 or sc_start_point_base)
     elseif params:get("clip "..sample.." sample") == "playthrough" then
       ca.set_loop_start(sample,softcut_offsets[sample])
       ca.set_loop_end(sample,sample_track[sample].end_point)
-      ca.set_position(sample,sample_track[sample].reverse and sample_track[sample].end_point or softcut_offsets[sample])
+      -- print("reverse: "..tostring(sample_track[sample].reverse), "was reversed: "..tostring(changed_direction))
+      if changed_direction then
+        -- TODO: account for offset_loop_start...
+        ca.set_position(sample,sample_track[sample].reverse and sample_track[sample].end_point-0.001 or softcut_offsets[sample]+0.001)
+      else
+        ca.set_position(sample,sample_track[sample].reverse and sample_track[sample].end_point or softcut_offsets[sample])
+      end
     end
+    -- softcut.loop_start(sample,sc_start_point_base)
+    
   end
 end
 

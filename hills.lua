@@ -191,6 +191,7 @@ function init()
       , ["bounds"] = {["focus"] = 1, ["max"] = 2}
       , ["notes"] = {["focus"] = 1, ["max"] = 12, ["transform"] = "shuffle"}
       , ["loop"] = {["focus"] = 1, ["max"] = 2}
+      , ["softcut"] = {["focus"] = 1, ["max"] = 12, ["transform"] = "shuffle"}
       }
     end
 

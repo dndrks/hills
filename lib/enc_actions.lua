@@ -9,7 +9,7 @@ function enc_actions.parse(n,d)
     ui.hill_focus = util.clamp(ui.hill_focus+d,1,number_of_hills)
   elseif n == 2 then
     if ui.control_set == "play" then
-      ui.menu_focus = util.clamp(ui.menu_focus+d,1,4)
+      ui.menu_focus = util.clamp(ui.menu_focus+d,1,ui.hill_focus <= 7 and 4 or 5)
     elseif ui.control_set == "edit" then
       if ui.menu_focus == 1 then
         if not key1_hold then
@@ -23,6 +23,8 @@ function enc_actions.parse(n,d)
         s_c["notes"]["focus"] = util.clamp(s_c["notes"]["focus"]+d,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
       elseif ui.menu_focus == 4 then
         s_c["loop"]["focus"] = util.clamp(s_c["loop"]["focus"]+d,1,s_c["loop"]["max"])
+      elseif ui.menu_focus == 5 then
+        s_c["softcut"]["focus"] = util.clamp(s_c["softcut"]["focus"]+d,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
       end
     elseif ui.control_set == "seq" then
       if ui.seq_menu_layer == "nav" then
@@ -85,6 +87,16 @@ function enc_actions.parse(n,d)
             else
               hills[i][j].looper.mode = "clock"
             end
+          end
+        end
+      elseif ui.menu_focus == 5 then
+        if ui.control_set == "edit" then
+          if not key1_hold then
+            _t.sc_transpose(i,j,s_c["softcut"]["focus"],d)
+          else
+            local note_adjustments = {"shuffle","reverse","rotate","rand fill","static"}
+            local current_adjustment = tab.key(note_adjustments,s_c["notes"]["transform"])
+            s_c["notes"]["transform"] = note_adjustments[util.clamp(current_adjustment+d,1,#note_adjustments)]
           end
         end
       end
