@@ -21,6 +21,8 @@ function key_actions.parse(n,z)
             _t.reseed(i,j,0.1)
           elseif ui.menu_focus == 3 then
             _t.mute(i,j,s_c.notes.focus)
+          elseif ui.menu_focus == 5 then
+            _t.toggle_loop(i,j,s_c.softcut.focus)
           end
         end
       end
@@ -48,6 +50,8 @@ function key_actions.parse(n,z)
             _t.quantize(i,j,params:string("hill "..i.." quant value"),hills[i][j].low_bound.note,hills[i][j].high_bound.note)
           elseif ui.menu_focus == 3 then
             _t[s_c["notes"]["transform"]](i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note,s_c.notes.focus)
+          elseif ui.menu_focus == 5 then
+            _t[s_c["softcut"]["transform"]](i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note,s_c.softcut.focus,true)
           end
         end
       elseif ui.control_set == "seq" then

@@ -28,7 +28,7 @@ function parameters.init()
 
   params:add_separator("hills")
   for i = 1,number_of_hills do
-    params:add_group(hill_names[i],60)
+    params:add_group(hill_names[i],61)
 
     params:add_separator("note management "..hill_names[i])
     params:add_option("hill "..i.." scale","scale",scale_names,1)
@@ -103,10 +103,14 @@ function parameters.init()
         if x == 1 then
           params:hide("hill "..i.." softcut slot")
           params:hide("hill "..i.." softcut probability")
+          params:hide("hill "..i.." softcut repitch")
+          params:hide("hill "..i.." softcut momentary")
           _menu.rebuild_params()
         elseif x == 2 then
           params:show("hill "..i.." softcut slot")
-          params:show("hill "..i.." softcut probability")-- show
+          params:show("hill "..i.." softcut probability")
+          params:show("hill "..i.." softcut repitch")
+          params:show("hill "..i.." softcut momentary")
           _menu.rebuild_params()
         end
       end
@@ -114,6 +118,7 @@ function parameters.init()
     params:add_number("hill "..i.." softcut slot", "sample slot",1,3,i<= 7 and 1 or i-7)
     params:add_number("hill "..i.." softcut probability", "playback probability",0,100,100, function(param) return(param:get().."%") end)
     params:add_option("hill "..i.." softcut repitch", "send pitches?",{"no","yes"},1)
+    params:add_option("hill "..i.." softcut momentary", "stop when released?", {"no","yes"},1)
 
     if i > 7 then
       params:add_option("hill "..i.." reset softcut level lfo", "reset level lfo on trig?", {"no","yes"}, 1)
@@ -447,12 +452,17 @@ function parameters.init()
       end
     )
     
-    params:add_option("speed_clip_"..i,"speed", sample_speedlist[1])
+    params:add_option("speed_clip_"..i,"speed (all slices)", sample_speedlist[1])
     params:set("speed_clip_"..i, 9)
     params:set_action("speed_clip_"..i,
       function(x)
         -- softcut.rate(i, speedlist[i][params:get("speed_clip_"..i)]*offset[i])
         softcut.rate(i, _ca.get_total_pitch_offset(i))
+        for j = 1,8 do
+          for k = 1,#hills[i+7][j].softcut_controls.rate do
+            hills[i+7][j].softcut_controls.rate[k] = x
+          end
+        end
         if x < 6 then
           if not sample_track[i].reverse then sample_track[i].reverse = true end
         elseif x > 6 then

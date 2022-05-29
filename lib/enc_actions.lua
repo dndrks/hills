@@ -94,9 +94,9 @@ function enc_actions.parse(n,d)
           if not key1_hold then
             _t.sc_transpose(i,j,s_c["softcut"]["focus"],d)
           else
-            local note_adjustments = {"shuffle","reverse","rotate","rand fill","static"}
-            local current_adjustment = tab.key(note_adjustments,s_c["notes"]["transform"])
-            s_c["notes"]["transform"] = note_adjustments[util.clamp(current_adjustment+d,1,#note_adjustments)]
+            local rate_adjustments = {"shuffle","reverse","rotate","rand rate","rand loop","static loop"}
+            local current_adjustment = tab.key(rate_adjustments,s_c["softcut"]["transform"])
+            s_c["softcut"]["transform"] = rate_adjustments[util.clamp(current_adjustment+d,1,#rate_adjustments)]
           end
         end
       end

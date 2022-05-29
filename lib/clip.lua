@@ -45,6 +45,7 @@ function ca.init()
       softcut.loop_start(j,softcut_offsets[i])
       softcut.fade_time(j,clip[i].fade_time)
       softcut.position(j,-1)
+      softcut.rate_slew_time(j,0.005)
     end
 
     softcut.play(i,1)
@@ -197,6 +198,12 @@ function ca.stop_playback(sample)
   sample_track[sample].playing = false
 end
 
+function ca.zero_rate(sample)
+  softcut.rate(sample,0)
+  softcut.rate(sample+3,0)
+  -- sample_track[sample].playing = false
+end
+
 function ca.start_playback(sample)
   softcut.play(sample,1)
   softcut.play(sample+3,1)
@@ -205,9 +212,15 @@ end
 
 function ca.set_position(sample,pos)
   -- softcut.position(sample,pos)
-  softcut.position(sample,ca.offset_loop_start(sample,pos,"L"))
-  print(ca.offset_loop_start(sample,pos,"L"), ca.offset_loop_start(sample,pos,"R"))
-  softcut.position(sample+3,ca.offset_loop_start(sample,pos,"R"))
+  if sample_track[sample].reverse then
+    softcut.loop_end(sample,ca.offset_loop_start(sample,pos,"L"))
+    softcut.loop_end(sample+3,ca.offset_loop_start(sample,pos,"R"))
+    softcut.position(sample,ca.offset_loop_start(sample,pos,"L")-0.001)
+    softcut.position(sample+3,ca.offset_loop_start(sample,pos,"R")-0.001)
+  else
+    softcut.position(sample,ca.offset_loop_start(sample,pos,"L"))
+    softcut.position(sample+3,ca.offset_loop_start(sample,pos,"R"))
+  end
 end
 
 function ca.set_loop_start(sample,pos)
@@ -218,6 +231,17 @@ end
 
 function ca.offset_loop_start(sample,pos,side)
   return (pos + (params:get("playhead_distance_"..side.."_"..sample)/100))
+end
+
+function ca.set_loop_state(sample,state)
+  local set_to;
+  if state then
+    set_to = 1
+  else
+    set_to = 0
+  end
+  softcut.loop(sample,set_to)
+  softcut.loop(sample+3,set_to)
 end
 
 function ca.set_loop_end(sample,pos)
@@ -284,7 +308,7 @@ function ca.get_total_pitch_offset(_t,i,j,pitched)
   local step_rate;
   if i and j then
     step_rate = hills[i][j].softcut_controls.rate[hills[i][hills[i].segment].index]
-    print(i,j,step_rate)
+    -- print(i,j,step_rate)
   end
   if not pitched then
     if step_rate and step_rate ~= params:get("speed_clip_".._t) then
@@ -410,6 +434,7 @@ function ca.calculate_sc_positions(i,j,played_note)
         ca.set_position(sample,sample_track[sample].reverse and sample_track[sample].end_point or softcut_offsets[sample])
       end
     end
+    ca.set_loop_state(sample,hills[i][j].softcut_controls.loop[hills[i][j].index])
     -- softcut.loop_start(sample,sc_start_point_base)
     
   end

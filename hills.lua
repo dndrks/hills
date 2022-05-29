@@ -585,7 +585,7 @@ pass_note = function(i,j,seg,note_val,index,destination)
       end
       if params:string("hill "..i.." JF output style") == "sound" then
         crow.ii.jf.play_voice(ch,(played_note - 60)/12,5)
-        print(ch,(played_note - 60)/12,5)
+        -- print(ch,(played_note - 60)/12,5)
       elseif params:string("hill "..i.." JF output style") == "shape" then
         crow.ii.jf.trigger(ch,1)
       end

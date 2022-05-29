@@ -27,6 +27,9 @@ function grid_lib.pattern_execute(data)
     active_voices[data.id][data.x] = false
     screen_dirty = true
     hills[data.x][data.y].perf_led = false
+    if params:string("hill "..data.x.." softcut momentary") == "yes" then
+      _ca.zero_rate(params:get("hill "..data.x.." softcut slot"))
+    end
     grid_dirty = true
   elseif data.event == "snapshot_restore" then
     _snapshots.route_funnel(data.x,data.y,snapshots.mod.index,"time")
@@ -108,6 +111,7 @@ function grid_lib.stop_pattern_playback(i)
   for j = 1,#active_voices[i] do
     if active_voices[i][j] then
       stop(j,true)
+      _ca.zero_rate(params:get("hill "..i.." softcut slot"))
       active_voices[i][j] = false
     end
   end
@@ -243,6 +247,9 @@ function g.key(x,y,z)
         -- hills[x-1][y].perf_led = true
         hills[x-1][y].perf_led = false
         grid_dirty = true
+      end
+      if params:string("hill "..(x-1).." softcut momentary") == "yes" then
+        _ca.zero_rate(params:get("hill "..(x-1).." softcut slot"))
       end
       for i = 1,16 do
         grid_pattern[i]:watch(
