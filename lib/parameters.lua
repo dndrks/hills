@@ -28,7 +28,7 @@ function parameters.init()
 
   params:add_separator("hills")
   for i = 1,number_of_hills do
-    params:add_group(hill_names[i],59)
+    params:add_group(hill_names[i],60)
 
     params:add_separator("note management "..hill_names[i])
     params:add_option("hill "..i.." scale","scale",scale_names,1)
@@ -113,6 +113,7 @@ function parameters.init()
     )
     params:add_number("hill "..i.." softcut slot", "sample slot",1,3,i<= 7 and 1 or i-7)
     params:add_number("hill "..i.." softcut probability", "playback probability",0,100,100, function(param) return(param:get().."%") end)
+    params:add_option("hill "..i.." softcut repitch", "send pitches?",{"no","yes"},1)
 
     if i > 7 then
       params:add_option("hill "..i.." reset softcut level lfo", "reset level lfo on trig?", {"no","yes"}, 1)
@@ -388,10 +389,29 @@ function parameters.init()
     end
   -- / MULTI group
 
-  params:add_group("SAMPLES",(3 * 15) + 2)
+  params:add_group("SAMPLES",(3 * 17) + 2)
   for i = 1,3 do
     params:add_separator("s"..i)
-    params:add_file("clip "..i.." sample", "sample (chop)", _path.audio)
+    params:add_option("clip "..i.." sample mode", "mode", {"single (chop)", "single (playthrough)", "folder (distribute)"},1)
+    params:set_action("clip "..i.." sample mode",
+      function(x)
+        if x == 1 then
+          params:show("clip "..i.." sample")
+          params:hide("clip "..i.." sample folder")
+          params:hide("clip "..i.." playthrough sample")
+        elseif x == 2 then
+          params:show("clip "..i.." playthrough sample")
+          params:hide("clip "..i.." sample")
+          params:hide("clip "..i.." sample folder")
+        elseif x == 3 then
+          params:show("clip "..i.." sample folder")
+          params:hide("clip "..i.." sample")
+          params:hide("clip "..i.." playthrough sample")
+        end
+        _menu.rebuild_params()
+      end
+    )
+    params:add_file("clip "..i.." sample", "load", _path.audio)
     params:set_action("clip "..i.." sample",
       function(file)
         if file ~= _path.audio then
@@ -402,7 +422,7 @@ function parameters.init()
         end
       end
     )
-    params:add_file("clip "..i.." sample folder", "folder (distribute)", _path.audio)
+    params:add_file("clip "..i.." sample folder", "load", _path.audio)
     params:set_action("clip "..i.." sample folder",
       function(file)
         if file ~= _path.audio then
@@ -413,6 +433,20 @@ function parameters.init()
         end
       end
     )
+
+    params:add_file("clip "..i.." playthrough sample", "load", _path.audio)
+    params:set_action("clip "..i.." playthrough sample",
+      function(file)
+        if file ~= _path.audio then
+          params:set("clip "..i.." sample", "playthrough", 1)
+          _ca.load_sample(file,i)
+          parameters.toggle_softcut_params("show", i)
+        else
+          parameters.toggle_softcut_params("hide", i)
+        end
+      end
+    )
+    
     params:add_option("speed_clip_"..i,"speed", sample_speedlist[1])
     params:set("speed_clip_"..i, 9)
     params:set_action("speed_clip_"..i,
@@ -436,18 +470,32 @@ function parameters.init()
     params:add_number(
       "playhead_distance_L_"..i,
       "playhead distance (L)",
-      -1000,
-      1000,
+      -100,
+      100,
       0,
-      function(param) return (param:get().."ms") end
+      function(param) return ((param:get()*10).."ms") end
     )
     params:add_number(
       "playhead_distance_R_"..i,
       "playhead distance (R)",
-      -1000,
-      1000,
+      -100,
+      100,
       0,
-      function(param) return (param:get().."ms") end
+      function(param) return ((param:get()*10).."ms") end
+    )
+    params:set_action("playhead_distance_L_"..i,
+      function()
+        if params:get("clip "..i.." sample") == "playthrough" then
+          _ca.set_loop_start(i,softcut_offsets[i])
+        end
+      end
+    )
+    params:set_action("playhead_distance_R_"..i,
+      function()
+        if params:get("clip "..i.." sample") == "playthrough" then
+          _ca.set_loop_start(i,softcut_offsets[i])
+        end
+      end
     )
     params:add_control("vol_clip_"..i,"level",controlspec.new(0,5,'lin',0,1,''))
     params:set_action("vol_clip_"..i, function(x)

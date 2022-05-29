@@ -2,7 +2,7 @@ local ca = {}
 
 function ca.init()
   max_sample_duration = 96
-  softcut_offsets = {0,100,200}
+  softcut_offsets = {1,100,200}
   -- it'll be easiest to just do 1,2,3 and 1+3,2+3,3+3
   clip = {}
   sample_track = {}
@@ -95,6 +95,7 @@ function ca.load_sample(file,sample,summed)
       ca.stop_playback(sample)
     end
 
+    softcut.buffer_clear_region(softcut_offsets[sample], max_sample_duration, 0, 0)
     softcut.buffer_read_stereo(file, 0, softcut_offsets[sample], clip[sample].sample_length + 0.05, 0) -- TODO: verify if preserve could just be 0?
     sample_track[sample].end_point = (clip[sample].sample_length-0.01) + softcut_offsets[sample]
     ca.set_position(sample,softcut_offsets[sample])
@@ -102,9 +103,9 @@ function ca.load_sample(file,sample,summed)
     clear[sample] = 0
     sample_track[sample].rec_limit = 0
   end
-  if params:get("clip "..sample.." sample") ~= file then
-    params:set("clip "..sample.." sample", file, 1)
-  end
+  -- if params:get("clip "..sample.." sample") ~= file then
+  --   params:set("clip "..sample.." sample", file, 1)
+  -- end
 end
 ---
 function ca.folder_callback(file,dest)
@@ -114,10 +115,7 @@ function ca.folder_callback(file,dest)
   file = string.sub(file, split_at + 1)
   
   ca.collage(folder,dest,1)
-  
-  _norns.key(1,1)
-  _norns.key(1,0)
-  key1_hold = false
+
 end
 
 function getParentPath(_path)
@@ -140,6 +138,8 @@ function ca.collage(folder,dest)
   if sample_track[dest].playing then
     ca.stop_playback(dest)
   end
+
+  softcut.buffer_clear_region(softcut_offsets[dest], max_sample_duration, 0, 0)
 
   -- ok what are the desireable behaviors??
   -- STYLE 1, load whole folder sequentially
@@ -168,8 +168,6 @@ function ca.collage(folder,dest)
     
     sample_track[dest].end_point = sample_track[dest].end_point + import_length[i]
   end
-
-  -- print(string.sub(getParentPath(folder), 21))
   
   sample_track[dest].end_point = sample_track[dest].end_point - 0.01
   ca.set_position(dest,softcut_offsets[dest])
@@ -188,6 +186,8 @@ function ca.collage(folder,dest)
   clip[dest].collage = true
   clip[dest].slice_count = sample_id
   
+  -- local filepath_name = string.sub(getParentPath(folder), 21)
+  -- params:set("clip "..dest.." sample folder", filepath_name, 1)
 end
 ---
 function ca.stop_playback(sample)
@@ -215,7 +215,7 @@ function ca.set_loop_start(sample,pos)
 end
 
 function ca.offset_loop_start(sample,pos,side)
-  return (pos + (params:get("playhead_distance_"..side.."_"..sample)/1000))
+  return (pos + (params:get("playhead_distance_"..side.."_"..sample)/100))
 end
 
 function ca.set_loop_end(sample,pos)
@@ -268,7 +268,7 @@ function ca.derive_bpm(source)
   end
 end
 
-function ca.get_total_pitch_offset(_t,i,j)
+function ca.get_total_pitch_offset(_t,i,j,pitched)
   local total_offset;
   total_offset = params:get("semitone_offset_".._t)
   local sample_rate_compensation;
@@ -279,7 +279,11 @@ function ca.get_total_pitch_offset(_t,i,j)
     sample_rate_compensation = ((1200 * math.log(clip[_t].sample_rate/48000,2))/100)
   end
   total_offset = total_offset + sample_rate_compensation
-  total_offset = math.pow(0.5, -total_offset / 12) * sample_speedlist[_t][params:get("speed_clip_".._t)]
+  if not pitched then
+    total_offset = math.pow(0.5, -total_offset / 12) * sample_speedlist[_t][params:get("speed_clip_".._t)]
+  else
+    total_offset = math.pow(0.5, -total_offset / 12) * pitched * sample_speedlist[_t][params:get("speed_clip_".._t)]
+  end
   -- if i ~= nil and j ~= nil then
   --   total_offset = math.pow(0.5, -total_offset / 12) * sample_speedlist[_t][hills[i][j].softcut_controls.rate[hills[i][j].index]]
   -- else
@@ -305,11 +309,11 @@ function ca.calculate_sc_positions(i,j,played_note)
   -- print(i,j,played_note)
   local sample = params:get("hill "..i.." softcut slot")
   local slice_count;
-    if clip[sample].collage then
-      slice_count = clip[sample].slice_count <= 16 and clip[sample].slice_count or 16
-    else
-      slice_count = 16
-    end
+  if clip[sample].collage then
+    slice_count = clip[sample].slice_count <= 16 and clip[sample].slice_count or 16
+  else
+    slice_count = 16
+  end
   local slice = util.wrap(played_note - params:get("hill "..i.." base note"),0,slice_count-1) + 1
   if params:get("clip "..sample.." sample") ~= "/home/we/dust/audio/" then
     if not sample_track[sample].playing then
@@ -326,14 +330,49 @@ function ca.calculate_sc_positions(i,j,played_note)
       sc_end_point_base = (s_p+(duration/slice_count) * (slice)) - clip[sample].fade_time
     end
     -- softcut.rate(sample,ca.get_total_pitch_offset(sample,i,j))
-    ca.set_rate(sample,ca.get_total_pitch_offset(sample,i,j))
+    if params:string("hill "..i.." softcut repitch") == "yes" then
+      -- local note_distance = (played_note - params:get("hill "..i.." base note"))
+      local note_distance = (played_note - 60)
+      local rates_from_notes = {
+        1,
+        1.05946,
+        1.12246,
+        1.18920,
+        1.25992,
+        1.33484,
+        1.41421,
+        1.49830,
+        1.58740,
+        1.68179,
+        1.78179,
+        1.88774,
+      }
+      local octave_distance = 0
+      -- octave_distance = math.floor((played_note - params:get("hill "..i.." base note"))/12)
+      octave_distance = math.floor((played_note - 60)/12)
+      -- if played_note == (params:get("hill "..i.." base note") + ((octave_distance+1)*11) + octave_distance) then
+      if played_note == (60 + ((octave_distance+1)*11) + octave_distance) then
+        -- print("weird:", params:get("hill "..i.." base note"), played_note, note_distance, octave_distance, rates_from_notes[12] * (2^octave_distance))
+        -- ca.set_rate(sample,rates_from_notes[12] * (2^octave_distance))
+        ca.set_rate(sample,ca.get_total_pitch_offset(sample,i,j,rates_from_notes[12] * (2^octave_distance)))
+      else
+        -- print(params:get("hill "..i.." base note"), played_note, note_distance, octave_distance, rates_from_notes[util.wrap(note_distance+1,1,#rates_from_notes)] * (2^octave_distance))
+        -- ca.set_rate(sample,rates_from_notes[util.wrap(note_distance+1,1,#rates_from_notes)] * (2^octave_distance))
+        ca.set_rate(sample,ca.get_total_pitch_offset(sample,i,j,rates_from_notes[util.wrap(note_distance+1,1,#rates_from_notes)] * (2^octave_distance)))
+      end
+    else
+      ca.set_rate(sample,ca.get_total_pitch_offset(sample,i,j))
+    end
     -- softcut.loop_start(sample,sc_start_point_base)
-    ca.set_loop_start(sample,sc_start_point_base)
-    -- softcut.loop_end(sample,sc_end_point_base)
-    ca.set_loop_end(sample,sc_end_point_base)
-    -- softcut.position(sample,sample_track[sample].reverse and sc_end_point_base or sc_start_point_base)
-    ca.set_position(sample,sample_track[sample].reverse and sc_end_point_base or sc_start_point_base)
-    -- print("sample pos: "..(sample_track[sample].reverse and sc_end_point_base or sc_start_point_base))
+    if params:get("clip "..sample.." sample") ~= "playthrough" then
+      ca.set_loop_start(sample,sc_start_point_base)
+      ca.set_loop_end(sample,sc_end_point_base)
+      ca.set_position(sample,sample_track[sample].reverse and sc_end_point_base or sc_start_point_base)
+    elseif params:get("clip "..sample.." sample") == "playthrough" then
+      ca.set_loop_start(sample,softcut_offsets[sample])
+      ca.set_loop_end(sample,sample_track[sample].end_point)
+      ca.set_position(sample,sample_track[sample].reverse and sample_track[sample].end_point or softcut_offsets[sample])
+    end
   end
 end
 

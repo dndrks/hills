@@ -148,6 +148,17 @@ function pattern:stop()
   end
 end
 
+-- duplicate the pattern 
+function pattern:duplicate()
+  if self.count > 0 then
+    for i = 1,self.count do
+      self.event[i+self.count] = deep_copy(self.event[i])
+      self.time[i+self.count] = deep_copy(self.time[i])
+    end
+    self.count = self.count * 2
+  end
+end
+
 --- set overdub
 function pattern:set_overdub(s)
   if s==1 and self.play == 1 and self.rec == 0 then
@@ -158,6 +169,21 @@ function pattern:set_overdub(s)
   if self.overdub_action ~= nil then
     self.overdub_action(self.name,self.overdub == 1 and true or false)
   end
+end
+
+local function deep_copy(orig)
+  local orig_type = type(orig)
+  local copy
+  if orig_type == "table" then
+    copy = {}
+    for orig_key, orig_value in next, orig, nil do
+        copy[m.deep_copy(orig_key)] = m.deep_copy(orig_value)
+    end
+    setmetatable(copy, m.deep_copy(getmetatable(orig)))
+  else
+    copy = orig
+  end
+  return copy
 end
 
 return pattern
