@@ -419,7 +419,7 @@ function parameters.init()
     params:add_file("clip "..i.." sample", "load", _path.audio)
     params:set_action("clip "..i.." sample",
       function(file)
-        if file ~= _path.audio then
+        if file ~= _path.audio and file ~= "playthrough" and file ~= "distributed" then
           _ca.load_sample(file,i)
           parameters.toggle_softcut_params("show", i)
         else

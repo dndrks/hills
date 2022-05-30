@@ -116,6 +116,7 @@ function screen_actions.draw()
           screen.move(128,64)
           if ui.screen_controls[hf][focus]["softcut"]["transform"] ~= "rand rate" and
           ui.screen_controls[hf][focus]["softcut"]["transform"] ~= "rand loop" and
+          ui.screen_controls[hf][focus]["softcut"]["transform"] ~= "static rate" and
           ui.screen_controls[hf][focus]["softcut"]["transform"] ~= "static loop" then
             screen.text_right("K3: "..ui.screen_controls[hf][focus]["softcut"]["transform"].." rate")
           else

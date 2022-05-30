@@ -57,12 +57,12 @@ function ca.init()
   end
 end
 
-function ca.sample_callback(path,i,summed)
-  if path ~= "cancel" and path ~= "" then
-    ca.load_sample(path,i,summed)
-    clip[i].collage = false
-  end
-end
+-- function ca.sample_callback(path,i,summed)
+--   if path ~= "cancel" and path ~= "" then
+--     ca.load_sample(path,i,summed)
+--     clip[i].collage = false
+--   end
+-- end
 
 function ca.load_sample(file,sample,summed)
   local old_min = clip[sample].min
@@ -72,7 +72,7 @@ function ca.load_sample(file,sample,summed)
     clip[sample].sample_rate = rate
     if clip[sample].sample_rate ~= 48000 then
       print("sample rate needs to be 48khz!")
-      print(len/48000, len/rate)
+      print(len/48000, len/rate, file)
     end
     if len/48000 < max_sample_duration then
       clip[sample].sample_length = len/48000

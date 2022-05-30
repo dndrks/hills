@@ -209,11 +209,14 @@ function init()
   end
 
   params.action_read = function(filename)
+    local pset_string = string.sub(filename,string.len(filename) - 6, -1)
+    local pset_number = pset_string:gsub(".pset","")
+    print("loading hills data for PSET: "..pset_number)
     for i = 1,number_of_hills do
       if hills[i].active then
         stop(i,true)
       end
-      hills[i] = tab.load(_path.data.."hills/"..params.name.."/data/"..i..".txt")
+      hills[i] = tab.load(_path.data.."hills/"..pset_number.."/data/"..i..".txt")
       if hills[i].active then
         stop(i,true)
       end
@@ -222,34 +225,37 @@ function init()
       if grid_pattern[j].play == 1 then
         _g.stop_pattern_playback(j)
       end
-      local to_inherit = tab.load(_path.data.."hills/"..params.name.."/patterns/"..j..".txt")
+      local to_inherit = tab.load(_path.data.."hills/"..pset_number.."/patterns/"..j..".txt")
       grid_pattern[j].event = to_inherit.event
       grid_pattern[j].count = #grid_pattern[j].event
       grid_pattern[j].time = to_inherit.time
     end
     for j = 1,#song_atoms do
-      song_atoms[j] = tab.load(_path.data.."hills/"..params.name.."/song/"..j..".txt")
+      song_atoms[j] = tab.load(_path.data.."hills/"..pset_number.."/song/"..j..".txt")
     end
-    snapshots = tab.load(_path.data.."hills/"..params.name.."/snapshots/all.txt")
-    params:bang()
+    snapshots = tab.load(_path.data.."hills/"..pset_number.."/snapshots/all.txt")
+    -- params:bang() -- TODO VERIFY IF THIS IS OKAY TO LEAVE OUT
     grid_dirty = true
   end
 
   params.action_write = function(filename,name)
-    os.execute("mkdir -p ".._path.data.."hills/"..name.."/data")
-    os.execute("mkdir -p ".._path.data.."hills/"..name.."/patterns")
-    os.execute("mkdir -p ".._path.data.."hills/"..name.."/song")
-    os.execute("mkdir -p ".._path.data.."hills/"..name.."/snapshots")
+    local pset_string = string.sub(filename,string.len(filename) - 6, -1)
+    local pset_number = pset_string:gsub(".pset","")
+    print("saving hills data for PSET: "..pset_number)
+    os.execute("mkdir -p ".._path.data.."hills/"..pset_number.."/data")
+    os.execute("mkdir -p ".._path.data.."hills/"..pset_number.."/patterns")
+    os.execute("mkdir -p ".._path.data.."hills/"..pset_number.."/song")
+    os.execute("mkdir -p ".._path.data.."hills/"..pset_number.."/snapshots")
     for i = 1,number_of_hills do
-      tab.save(hills[i],_path.data.."hills/"..name.."/data/"..i..".txt")
+      tab.save(hills[i],_path.data.."hills/"..pset_number.."/data/"..i..".txt")
     end
     for i = 1,16 do
-      tab.save(grid_pattern[i],_path.data.."hills/"..name.."/patterns/"..i..".txt")
+      tab.save(grid_pattern[i],_path.data.."hills/"..pset_number.."/patterns/"..i..".txt")
     end
     for i = 1,#song_atoms do
-      tab.save(song_atoms[i],_path.data.."hills/"..name.."/song/"..i..".txt")
+      tab.save(song_atoms[i],_path.data.."hills/"..pset_number.."/song/"..i..".txt")
     end
-    tab.save(snapshots,_path.data.."hills/"..name.."/snapshots/all.txt")
+    tab.save(snapshots,_path.data.."hills/"..pset_number.."/snapshots/all.txt")
   end
 
 end

@@ -221,6 +221,20 @@ m.static = function(i,j,start_point,end_point,pos)
   end
 end
 
+m["static rate"] = function(i,j,start_point,end_point,pos,sc)
+  local e_p = end_point
+  if e_p == nil then
+    e_p = hills[i][j].high_bound.note
+  end
+  if start_point ~= end_point then
+    for k = start_point,e_p do
+      hills[i][j].softcut_controls.rate[k] = hills[i][j].softcut_controls.rate[pos]
+    end
+  else
+    print("this is the last note, can't change any more!")
+  end
+end
+
 m["static loop"] = function(i,j,start_point,end_point,pos,sc)
   local e_p = end_point
   if e_p == nil then
