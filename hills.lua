@@ -22,6 +22,10 @@ hill_names = {
   "[10] (s3)"
 }
 
+local function development_stuff()
+  params:set("hill 1 kildare_notes", 2)
+end
+
 pt = include 'lib/hills_pt'
 curves = include 'lib/easing'
 prms = include 'lib/parameters'
@@ -257,6 +261,8 @@ function init()
     end
     tab.save(snapshots,_path.data.."hills/"..pset_number.."/snapshots/all.txt")
   end
+
+  development_stuff()
 
 end
 
