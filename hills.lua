@@ -59,8 +59,7 @@ function midi_to_hz(note)
 end
 
 function init()
-  kildare.init()
-  kildare_drums = {"bd","sd","tm","cp","rs","cb","hh"}
+  kildare.init(true)
   _ca.init() -- initialize clips
   _snapshots.init()
   _flow.init()
@@ -262,7 +261,7 @@ function init()
     tab.save(snapshots,_path.data.."hills/"..pset_number.."/snapshots/all.txt")
   end
 
-  development_stuff()
+  -- development_stuff()
 
 end
 
@@ -357,18 +356,18 @@ iterate = function(i)
               end
             end
           end
-        elseif not seg.loop then
-          print("WHY WOULD THIS EVER HAPPEN ANYWAY??")
-          -- if util.round(seg.note_timestamp[seg.index+1],0.01) == util.round(seg.step,0.01) then
-          --   pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index)
-          --   screen_dirty = true
-          --   seg.step = seg.note_timestamp[seg.index]
-          --   seg.perf_led = true
-          --   grid_dirty = true 
-          -- else
-          --   seg.step = util.round(seg.step + 0.01,0.01)
-          --   grid_dirty = true
-          -- end
+        else
+          if util.round(seg.note_timestamp[seg.index+1],0.01) == util.round(seg.step,0.01) then
+            pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index)
+            screen_dirty = true
+            seg.step = seg.note_timestamp[seg.index]
+            seg.perf_led = true
+            grid_dirty = true 
+          else
+            screen_dirty = true
+            seg.step = util.round(seg.step + 0.01,0.01)
+            grid_dirty = true
+          end
         end
       else
         seg.iterated = false
@@ -508,9 +507,9 @@ pass_note = function(i,j,seg,note_val,index,destination)
   if played_note ~= nil and hills[i][j].note_num.active[index] then
     if i <= 7 then
       if params:string("hill "..i.." kildare_notes") == "yes" then
-        engine.set_param(kildare_drums[i],"carHz",midi_to_hz(played_note))
+        engine.set_voice_param(kildare.drums[i],"carHz",midi_to_hz(played_note))
       end
-      engine.trig(kildare_drums[i])
+      engine.trig(kildare.drums[i])
       if params:string("hill "..i.." softcut output") == "yes" then
         if params:get("hill "..i.." softcut probability") >= math.random(100) then
           -- print("489",i,j,played_note)

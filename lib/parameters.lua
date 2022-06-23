@@ -278,121 +278,144 @@ function parameters.init()
     params:hide("hill "..i.." JF output id")
   end
 
-  params:add_group("MULTI",33)
-  -- indent for readability:
-    params:add_separator("note management")
-    params:add_option("multi kildare note","send pitches to kildare?",{"no","yes"},1)
-    params:add_option("multi scale","scale",scale_names,1)
-    params:add_number("multi base note","base note",0,127,60)
-    params:add_number("multi span","note degree span",1,127,14)
-    params:add_trigger("multi octave up","base octave up")
-    params:set_action("multi octave up",
-      function()
-        local current_note = params:get("multi base note")
-        if current_note + 12 <= 127 then
-          params:set("multi base note", current_note + 12)
-        end
+  local base_note_checker = function(sign)
+    local current_note = params:get('multi base note')
+    if sign == 'multi octave up' then
+      if current_note + 12 <= 127 then
+        params:set("multi base note", current_note + 12)
       end
-    )
-    params:add_trigger("multi octave down","base octave down")
-    params:set_action("multi octave down",
-      function()
-        local current_note = params:get("multi base note")
-        if current_note - 12 >= 0 then
-          params:set("multi base note", current_note - 12)
-        end
+    else
+      if current_note - 12 >= 0 then
+        params:set("multi base note", current_note - 12)
       end
-    )
-    params:add_option("multi random offset style", "random offset style", {"+ oct","- oct","+/- oct"},1)
-    params:add_number("multi random offset probability","random offset probability",0,100,0)
-    params:add_option("multi quant value","quant value",{"1/4", "1/4d", "1/4t", "1/8", "1/8d", "1/8t", "1/16", "1/16d", "1/16t", "1/32", "1/32d", "1/32t"},7)
-    params:add_trigger("send multi note management","send to multiple (see below)")
-    params:set_action("send multi note management",
-      function()
-        for i = 1,number_of_hills do
-          if params:string("send to "..i) == "yes" then
-            params:set("hill "..i.." scale",params:get("multi scale"))
-            params:set("hill "..i.." base note",params:get("multi base note"))
-            params:set("hill "..i.." span",params:get("multi span"))
-            params:set("hill "..i.." random offset style",params:get("multi random offset style"))
-            params:set("hill "..i.." random offset probability",params:get("multi random offset probability"))
-            params:set("hill "..i.." quant value",params:get("multi quant value"))
-            params:set("hill "..i.." kildare_notes",params:get("multi kildare note"))
-          end
-        end
-      end
-    )
-
-    params:add_separator("softcut management")
-    params:add_option("multi softcut output","softcut output?",{"no","yes"},1)
-    params:set_action("multi softcut output",
-      function(x)
-        if x == 1 then
-          params:hide("multi softcut slot")
-          params:hide("multi softcut probability")
-          _menu.rebuild_params()
-        elseif x == 2 then
-          params:show("multi softcut slot")
-          params:show("multi softcut probability")
-          _menu.rebuild_params()
-        end
-      end
-    )
-    params:add_number("multi softcut slot", "sample slot",1,6,1)
-    params:add_number("multi softcut probability", "playback probability",0,100,100, function(param) return(param:get().."%") end)
-    params:add_trigger("send multi softcut management","send to multiple (see below)")
-    params:set_action("send multi softcut management",
-      function()
-        for i = 1,number_of_hills do
-          if params:string("send to "..i) == "yes" then
-            params:set("hill "..i.." softcut output",params:get("multi softcut output"))
-            params:set("hill "..i.." softcut slot",params:get("multi softcut slot"))
-            params:set("hill "..i.." softcut probability",params:get("multi softcut probability"))
-          end
-        end
-      end
-    )
-
-    params:add_separator("MIDI management")
-    params:add_option("multi MIDI output", "MIDI output?",{"no","yes"},1)
-    params:set_action("multi MIDI output",
-      function(x)
-        if x == 1 then
-          params:hide("multi MIDI device")
-          params:hide("multi MIDI note channel")
-          params:hide("multi MIDI device")
-          params:hide("multi velocity")
-          _menu.rebuild_params()
-        elseif x == 2 then
-          params:show("multi MIDI device")
-          params:show("multi MIDI note channel")
-          params:show("multi MIDI device")
-          params:show("multi velocity")
-          _menu.rebuild_params()
-        end
-      end
-    )
-    params:add_option("multi MIDI device", "device",vports,1)
-    params:add_number("multi MIDI note channel","note channel",1,16,1)
-    params:add_number("multi velocity","velocity",0,127,60)
-    params:add_trigger("send multi MIDI management","send to multiple (see below)")
-    params:set_action("send multi MIDI management",
-      function()
-        for i = 1,number_of_hills do
-          if params:string("send to "..i) == "yes" then
-            params:set("hill "..i.." MIDI output",params:get("multi MIDI output"))
-            params:set("hill "..i.." MIDI device",params:get("multi MIDI device"))
-            params:set("hill "..i.." MIDI note channel",params:get("multi MIDI note channel"))
-            params:set("hill "..i.." velocity",params:get("multi velocity"))
-          end
-        end
-      end
-    )
-    params:add_separator("send to...")
-    for i = 1,number_of_hills do
-      params:add_option("send to "..i,hill_names[i],{"no","yes"},2)
     end
-  -- / MULTI group
+  end
+
+  -- local multi_note_manager = {
+  --   {id = 'multi kildare note', name = 'send pitches to kildare', type = 'option', options = {"no","yes"}, default = 1},
+  --   {id = 'multi scale', name = 'scale', type = 'option', options = scale_names, default = 1},
+  --   {id = 'multi base note', name = 'base note', type = 'number', min = 0, max = 127, default = 60},
+  --   {id = 'multi span', name = 'note degree span', type = 'number', min = 1, max = 127, default = 14},
+  --   {id = 'multi octave up', name = 'base octave up', type = 'trigger'},
+  --   {id = 'multi octave down', name = 'base octave down', type = 'trigger'},
+  --   {id = 'multi random offset style', name = 'random offset style', type = 'option', options = {"+ oct","- oct","+/- oct"}, default = 1},
+  --   {id = 'multi random offset probability', name = 'random offset probability', type = 'number', min = 0, max = 100, default = 0},
+  --   {id = 'multi quant value', name = 'quant value', type = 'option', options = {"1/4", "1/4d", "1/4t", "1/8", "1/8d", "1/8t", "1/16", "1/16d", "1/16t", "1/32", "1/32d", "1/32t"}, default = 7},
+  -- }
+  -- params:add_group("MULTI",23 + (#multi_note_manager*2))
+  -- -- indent for readability:
+  --   params:add_separator("note management")
+
+  --   for i = 1,#multi_note_manager do
+  --     local prm = multi_note_manager[i]
+  --     if prm.type == 'option' then
+  --       params:add_option(
+  --         prm.id,
+  --         prm.name,
+  --         prm.options,
+  --         prm.default
+  --       )
+  --     elseif prm.type == 'number' then
+  --       params:add_number(
+  --         prm.id,
+  --         prm.name,
+  --         prm.min,
+  --         prm.max,
+  --         prm.default
+  --       )
+  --     elseif prm.type == 'trigger' then
+  --       params:add_trigger(
+  --         prm.id,
+  --         prm.name
+  --       )
+  --       params:set_action(
+  --         prm.id, function() base_note_checker(prm.id) end
+  --       )
+  --     end
+  --     params:add_trigger("send "..prm.id,"--> send")
+  --     params:set_action("send "..prm.id,
+  --       function()
+  --         for j = 1,(prm.id == 'multi kildare note' and 7 or #number_of_hills) do
+  --           local destination = string.gsub(prm.id,"multi ","")
+  --           params:set("hill "..i.." "..destination,params:get(prm.id))
+  --         end
+  --       end
+  --     )
+  --     if prm.id == 'multi octave up' or prm.id == 'multi octave down' then
+  --       params:hide("send "..prm.id)
+  --     end
+  --   end
+
+  --   params:add_separator("softcut management")
+  --   params:add_option("multi softcut output","softcut output?",{"no","yes"},1)
+  --   params:set_action("multi softcut output",
+  --     function(x)
+  --       if x == 1 then
+  --         params:hide("multi softcut slot")
+  --         params:hide("multi softcut probability")
+  --         _menu.rebuild_params()
+  --       elseif x == 2 then
+  --         params:show("multi softcut slot")
+  --         params:show("multi softcut probability")
+  --         _menu.rebuild_params()
+  --       end
+  --     end
+  --   )
+  --   params:add_number("multi softcut slot", "sample slot",1,6,1)
+  --   params:add_number("multi softcut probability", "playback probability",0,100,100, function(param) return(param:get().."%") end)
+  --   params:add_trigger("send multi softcut management","send to multiple (see below)")
+  --   params:set_action("send multi softcut management",
+  --     function()
+  --       for i = 1,number_of_hills do
+  --         if params:string("send to "..i) == "yes" then
+  --           params:set("hill "..i.." softcut output",params:get("multi softcut output"))
+  --           params:set("hill "..i.." softcut slot",params:get("multi softcut slot"))
+  --           params:set("hill "..i.." softcut probability",params:get("multi softcut probability"))
+  --         end
+  --       end
+  --     end
+  --   )
+
+  --   params:add_separator("MIDI management")
+  --   params:add_option("multi MIDI output", "MIDI output?",{"no","yes"},1)
+  --   params:set_action("multi MIDI output",
+  --     function(x)
+  --       if x == 1 then
+  --         params:hide("multi MIDI device")
+  --         params:hide("multi MIDI note channel")
+  --         params:hide("multi MIDI device")
+  --         params:hide("multi velocity")
+  --         _menu.rebuild_params()
+  --       elseif x == 2 then
+  --         params:show("multi MIDI device")
+  --         params:show("multi MIDI note channel")
+  --         params:show("multi MIDI device")
+  --         params:show("multi velocity")
+  --         _menu.rebuild_params()
+  --       end
+  --     end
+  --   )
+  --   params:add_option("multi MIDI device", "device",vports,1)
+  --   params:add_number("multi MIDI note channel","note channel",1,16,1)
+  --   params:add_number("multi velocity","velocity",0,127,60)
+  --   params:add_trigger("send multi MIDI management","send to multiple (see below)")
+  --   params:set_action("send multi MIDI management",
+  --     function()
+  --       for i = 1,number_of_hills do
+  --         if params:string("send to "..i) == "yes" then
+  --           params:set("hill "..i.." MIDI output",params:get("multi MIDI output"))
+  --           params:set("hill "..i.." MIDI device",params:get("multi MIDI device"))
+  --           params:set("hill "..i.." MIDI note channel",params:get("multi MIDI note channel"))
+  --           params:set("hill "..i.." velocity",params:get("multi velocity"))
+  --         end
+  --       end
+  --     end
+  --   )
+  --   params:add_separator("send to...")
+  --   for i = 1,number_of_hills do
+  --     params:add_option("send to "..i,hill_names[i],{"no","yes"},2)
+  --   end
+  -- -- / MULTI group
 
   params:add_group("SAMPLES",(3 * 17) + 2)
   for i = 1,3 do

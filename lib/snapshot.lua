@@ -6,7 +6,7 @@ function snapshot.init()
   for i = 1,number_of_hills do
     snapshots[i] = {}
   end
-  for j = 1,#kildare_drums do
+  for j = 1,#kildare.drums do
     for coll = 1,8 do
       snapshots[j][coll] = {}
     end
@@ -34,7 +34,7 @@ end
 
 function snapshot.pack(voice,coll)
   if voice <= 7 then
-    local d_voice = kildare_drums[voice]
+    local d_voice = kildare.drums[voice]
     for i = 1, #kildare_drum_params[d_voice] do
       local d = kildare_drum_params[d_voice][i]
       if d.type ~= 'separator' then
@@ -65,7 +65,7 @@ function snapshot.unpack(voice, coll)
   end
 
   if voice <= 7 then
-    local d_voice = kildare_drums[voice]
+    local d_voice = kildare.drums[voice]
     for i = 1, #kildare_drum_params[d_voice] do
       local d = kildare_drum_params[d_voice][i]
       if d.type ~= 'separator' then
@@ -166,7 +166,7 @@ function snapshot.route_funnel(voice,coll,sec,style)
     local original_srcs = _t.deep_copy(snapshots[voice][coll])
 
     if voice <=7 then
-      local d_voice = kildare_drums[voice]
+      local d_voice = kildare.drums[voice]
       for i = 1, #kildare_drum_params[d_voice] do
         local d = kildare_drum_params[d_voice][i]
         if d.type ~= 'separator' then
@@ -185,7 +185,7 @@ function snapshot.route_funnel(voice,coll,sec,style)
         hills[voice].snapshot.current_value = r_val
 
         if voice <=7 then
-          local d_voice = kildare_drums[voice]
+          local d_voice = kildare.drums[voice]
           for i = 1, #kildare_drum_params[d_voice] do
             local d = kildare_drum_params[d_voice][i]
             if d.type ~= 'separator' then
