@@ -15,6 +15,10 @@ local m = {}
 --   shape_data[i][j].notes[pos] = current_scale[current_note_pos]
 -- end
 
+m.adjust_velocity = function(i,j,pos,delta)
+  hills[i][j].note_velocity[pos] = util.clamp(hills[i][j].note_velocity[pos]+delta,0,127)
+end
+
 m.transpose = function(i,j,pos,delta)
   hills[i][j].note_num.pool[pos] = util.clamp(hills[i][j].note_num.pool[pos]+delta,1,hills[i][j].note_num.max)
 end
@@ -36,9 +40,32 @@ m.reverse = function(i,j,start_point,end_point,focus,sc)
   end
 end
 
+m['reverse vel'] = function(i,j,start_point,end_point,focus)
+  local target = hills[i][j].note_velocity
+  local rev = {}
+  for k = end_point, start_point, -1 do
+    rev[end_point - k + 1] = target[k]
+  end
+  for k = start_point, end_point do
+    local range = (end_point-start_point)+1
+    target[k] = rev[util.linlin(start_point,end_point,1,range,k)]
+  end
+end
+
 -- 3. ROTATION
 m.rotate = function(i,j,start_point,end_point,focus,sc)
   local target = sc ~= nil and hills[i][j].softcut_controls.rate or hills[i][j].note_num.pool
+  local originals = {}
+  for k = start_point,end_point do
+    table.insert(originals,target[k])
+  end
+  for k = 1,#originals do
+    target[util.wrap(start_point+k,start_point,end_point)] = originals[k]
+  end
+end
+
+m['rotate vel'] = function(i,j,start_point,end_point,focus)
+  local target = hills[i][j].note_velocity
   local originals = {}
   for k = start_point,end_point do
     table.insert(originals,target[k])
@@ -116,6 +143,19 @@ m.shuffle = function(i,j,lo,hi,focus,sc)
   end
 end
 
+m['shuffle vel'] = function(i,j,lo,hi,focus)
+  local target = hills[i][j].note_velocity
+  local shuffled = {}
+  for m = lo,hi do
+    local pos = math.random(1, #shuffled+1)
+	  table.insert(shuffled, pos, target[m])
+  end
+  for k,v in pairs(shuffled) do
+    -- print(k,v)
+    target[lo-1+k] = v
+  end
+end
+
 m["rand fill"] = function(i,j,start_point,end_point,focus,sc)
   if sc == nil then
     for m = start_point,end_point do
@@ -125,6 +165,12 @@ m["rand fill"] = function(i,j,start_point,end_point,focus,sc)
     for m = start_point,end_point do
       hills[i][j].softcut_controls.rate[m] = math.random(1,#sample_speedlist[i-7])
     end
+  end
+end
+
+m["rand vel"] = function(i,j,start_point,end_point,focus)
+  for m = start_point,end_point do
+    hills[i][j].note_velocity[m] = math.random(0,127)
   end
 end
 
@@ -215,6 +261,20 @@ m.static = function(i,j,start_point,end_point,pos)
   if start_point ~= end_point then
     for k = start_point,e_p do
       hills[i][j].note_num.pool[k] = hills[i][j].note_num.pool[pos]
+    end
+  else
+    print("this is the last note, can't change any more!")
+  end
+end
+
+m["static vel"] = function(i,j,start_point,end_point,pos)
+  local e_p = end_point
+  if e_p == nil then
+    e_p = hills[i][j].high_bound.note
+  end
+  if start_point ~= end_point then
+    for k = start_point,e_p do
+      hills[i][j].note_velocity[k] = hills[i][j].note_velocity[pos]
     end
   else
     print("this is the last note, can't change any more!")

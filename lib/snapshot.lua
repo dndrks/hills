@@ -60,7 +60,7 @@ end
 function snapshot.unpack(voice, coll)
   if hills[voice].snapshot.partial_restore then
     clock.cancel(hills[voice].snapshot.fnl)
-    print("partial restore unpack",voice,coll)
+    -- print("partial restore unpack",voice,coll)
     hills[voice].snapshot.partial_restore = false
   end
 
@@ -79,7 +79,7 @@ function snapshot.unpack(voice, coll)
     end
   end
 
-  print("restored snapshot", voice, coll)
+  -- print("restored snapshot", voice, coll)
 
   -- TODO: ADD OPTIONAL SHIT?
   
@@ -130,7 +130,7 @@ function snapshot.fnl(fn, origin, dest_ms, fps)
 end
 
 snapshot.funnel_done_action = function(voice,coll)
-  print("snapshot funnel done",voice,coll)
+  -- print("snapshot funnel done",voice,coll)
   snapshot.unpack(voice, coll)
   if hills[voice].snapshot.partial_restore then
     hills[voice].snapshot.partial_restore = false
@@ -150,16 +150,16 @@ function snapshot.route_funnel(voice,coll,sec,style)
   if sec == 0 then
     if hills[voice].snapshot.partial_restore then
       clock.cancel(hills[voice].snapshot.fnl)
-      print("partial restore try_it",voice,coll)
+      -- print("partial restore try_it",voice,coll)
       snapshot.funnel_done_action(voice,coll)
     else
       snapshot.funnel_done_action(voice,coll)
     end
   else
-    print("doing try it for "..voice)
+    -- print("doing try it for "..voice)
     if hills[voice].snapshot.partial_restore then
       clock.cancel(hills[voice].snapshot.fnl)
-      print("interrupted, canceling previous journey")
+      -- print("interrupted, canceling previous journey")
     end
     hills[voice].snapshot.partial_restore = true
 

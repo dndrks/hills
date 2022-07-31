@@ -175,6 +175,7 @@ function init()
         ["pool"] = {}, -- gets filled with the constructed hill's notes
         ["active"] = {} -- tracks whether the note should play
       }
+      hills[i][j].note_velocity = {}
 
       hills[i][j].softcut_controls = -- this is where we track the slices for the constructed hill
       {
@@ -192,7 +193,7 @@ function init()
       {
         ["hills"] = {["focus"] = 1, ["max"] = 12}
       , ["bounds"] = {["focus"] = 1, ["max"] = 2}
-      , ["notes"] = {["focus"] = 1, ["max"] = 12, ["transform"] = "shuffle"}
+      , ["notes"] = {["focus"] = 1, ["max"] = 12, ["transform"] = "shuffle", ["velocity"] = false}
       , ["loop"] = {["focus"] = 1, ["max"] = 2}
       , ["softcut"] = {["focus"] = 1, ["max"] = 12, ["transform"] = "shuffle"}
       }
@@ -313,6 +314,7 @@ pass_data_into_storage = function(i,j,index,data)
   hills[i][j].note_timestamp[index] = data[2]
   hills[i][j].high_bound.note = #hills[i][j].note_num.pool
   hills[i][j].note_num.active[index] = true
+  hills[i][j].note_velocity[index] = 127
 
   hills[i][j].softcut_controls.loop[index] = false
   hills[i][j].softcut_controls.rate[index] = 9 -- mirrors ("speed_clip_"..i) in parameters
@@ -509,7 +511,7 @@ pass_note = function(i,j,seg,note_val,index,destination)
       if params:string("hill "..i.." kildare_notes") == "yes" then
         engine.set_voice_param(kildare.drums[i],"carHz",midi_to_hz(played_note))
       end
-      engine.trig(kildare.drums[i])
+      engine.trig(kildare.drums[i],hills[i][j].note_velocity[index])
       if params:string("hill "..i.." softcut output") == "yes" then
         if params:get("hill "..i.." softcut probability") >= math.random(100) then
           -- print("489",i,j,played_note)

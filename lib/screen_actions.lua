@@ -76,11 +76,19 @@ function screen_actions.draw()
         screen.level(key1_hold == true and 3 or 15)
         screen.move(40,10)
         local note_number = seg.note_ocean[seg.note_num.pool[s_c["notes"]["focus"]]]
-        screen.text(
-          note_number.."/"..mu.note_num_to_name(note_number)..
-          (hills[hf][focus].note_num.active[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["notes"]["focus"]] and "" or " (m)")
-          .." | slice: "..(util.wrap(note_number - params:get("hill "..hf.." base note"),0,15) + 1)
-        )
+        if ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus].notes.velocity then
+          screen.text(
+            note_number.."/"..mu.note_num_to_name(note_number)..
+            (hills[hf][focus].note_num.active[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["notes"]["focus"]] and "" or " (m)")
+            .." | velocity: "..(hills[hf][focus].note_velocity[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["notes"]["focus"]])
+          )
+        else
+          screen.text(
+            note_number.."/"..mu.note_num_to_name(note_number)..
+            (hills[hf][focus].note_num.active[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["notes"]["focus"]] and "" or " (m)")
+            .." | slice: "..(util.wrap(note_number - params:get("hill "..hf.." base note"),0,15) + 1)
+          )
+        end
         if key1_hold then
           screen.level(key1_hold == true and 15 or 3)
           screen.move(0,64)
@@ -128,7 +136,7 @@ function screen_actions.draw()
     local menus = {"hill: "..focus,"bound","notes","loop","sc"}
     screen.font_size(8)
     if ui.control_set == "edit" and ui.menu_focus ~= 1 then
-      screen.move(0,25)
+      screen.move(0,22)
       screen.level(3)
       screen.text("hill: "..focus)
     end

@@ -7,6 +7,11 @@ function enc_actions.parse(n,d)
   local s_q = ui.seq_controls[i]
   if n == 1 then
     ui.hill_focus = util.clamp(ui.hill_focus+d,1,number_of_hills)
+    if ui.hill_focus < 8 then
+      if ui.menu_focus == 5 then
+        ui.menu_focus = 4
+      end
+    end
   elseif n == 2 then
     if ui.control_set == "play" then
       ui.menu_focus = util.clamp(ui.menu_focus+d,1,ui.hill_focus <= 7 and 4 or 5)
@@ -65,9 +70,13 @@ function enc_actions.parse(n,d)
       elseif ui.menu_focus == 3 then
         if ui.control_set == "edit" then
           if not key1_hold then
-            _t.transpose(i,j,s_c["notes"]["focus"],d)
+            if ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus].notes.velocity then
+              _t.adjust_velocity(i,j,s_c["notes"]["focus"],d)
+            else
+              _t.transpose(i,j,s_c["notes"]["focus"],d)
+            end
           else
-            local note_adjustments = {"shuffle","reverse","rotate","rand fill","static"}
+            local note_adjustments = {"shuffle","reverse","rotate","rand fill","static","shuffle vel","reverse vel","rotate vel","rand vel","static vel"}
             local current_adjustment = tab.key(note_adjustments,s_c["notes"]["transform"])
             s_c["notes"]["transform"] = note_adjustments[util.clamp(current_adjustment+d,1,#note_adjustments)]
           end

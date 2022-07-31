@@ -221,6 +221,7 @@ function ca.set_position(sample,pos)
     softcut.position(sample,ca.offset_loop_start(sample,pos,"L"))
     softcut.position(sample+3,ca.offset_loop_start(sample,pos,"R"))
   end
+  softcut.voice_sync(sample+3,sample,ca.offset_loop_start(sample,pos,"L") - ca.offset_loop_start(sample,pos,"R"))
 end
 
 function ca.set_loop_start(sample,pos)

@@ -15,12 +15,12 @@ song.init = function()
     end
     song_atoms[i].start_point = 1
     song_atoms[i].end_point = 1
-    song_atoms[i].last_played = 0
     song_atoms[i].current = 1
     song_atoms[i].runner = 0
     song_atoms[i].active = true
   end
   song_atoms.clock = nil
+  song_atoms.transport_clock = nil
 end
 
 song.iterate = function()
@@ -57,22 +57,16 @@ song.check_step = function(i)
           _g.stop_pattern_playback(shot)
           grid_pattern[shot]:start()
         end
-        if song_atoms[i].last_played ~= shot and song_atoms[i].last_played > 0 then
-          _g.stop_pattern_playback(song_atoms[i].last_played)
-        end
-        -- need to know what pattern played last:
-        song_atoms[i].last_played = shot
       elseif shot == 0 then
       elseif shot == -1 then
         for k = _current,1,-1 do
-          if k~= current and song_atoms[i].lane[k][j].target > 0 then
+          if k ~= current and song_atoms[i].lane[k][j].target > 0 then
             if grid_pattern[song_atoms[i].lane[k][j].target].play == 1 then
               _g.stop_pattern_playback(song_atoms[i].lane[k][j].target)
               break
             end
           end
         end
-        -- KILL WHATEVER PREV PATTERN WAS...
       end
     end
   end
@@ -109,6 +103,29 @@ song.stop = function()
     end
   end
   -- should probably kill running patterns...
+end
+
+function clock.transport.start()
+  if params:string("clock_source") ~= "midi" then
+    if song_atoms.transport_clock == nil then
+      song_atoms.transport_clock = clock.run(
+        function()
+          clock.sync(params:get('link_quantum'))
+          song.start()
+        end
+      )
+    end
+  else
+    song.start()
+  end
+end
+
+function clock.transport.stop()
+  if song_atoms.transport_clock ~= nil then
+    clock.cancel(song_atoms.transport_clock)
+    song_atoms.transport_clock = nil
+  end
+  song.stop()
 end
 
 song.add_line = function(b,loc)

@@ -60,7 +60,7 @@ function lfos.add_params(style)
   end
   for i = ivals[style][1],ivals[style][2] do
     local _di = util.wrap(i,1,3)
-    params:add_separator("[".._di.."]")
+    params:add_separator(style.."_".._di,"[".._di.."]")
     params:add_option("lfo_"..style..i,"lfo",{"off","on"},1)
     params:set_action("lfo_"..style..i,function(x)
       lfos.sync_lfos(i,style)
