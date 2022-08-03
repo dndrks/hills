@@ -23,6 +23,25 @@ end
 --   "[10] (s-3)"
 -- }
 
+function route_audio()
+  clock.sleep(0.5)
+  local selected_route = params:get("sample_routing")
+  if rerouting_audio == true then
+    rerouting_audio = false
+    if selected_route == 2 then -- audio in + softcut output -> supercollider
+      os.execute("jack_connect crone:output_5 SuperCollider:in_1;")  
+      os.execute("jack_connect crone:output_6 SuperCollider:in_2;")
+      os.execute("jack_connect softcut:output_1 SuperCollider:in_1;")  
+      os.execute("jack_connect softcut:output_2 SuperCollider:in_2;")
+    elseif selected_route == 1 then --just audio in -> supercollider
+      os.execute("jack_disconnect softcut:output_1 SuperCollider:in_1;")  
+      os.execute("jack_disconnect softcut:output_2 SuperCollider:in_2;")
+      os.execute("jack_connect crone:output_5 SuperCollider:in_1;")  
+      os.execute("jack_connect crone:output_6 SuperCollider:in_2;")
+    end
+  end
+end
+
 function parameters.init()
   refresh_params_vports()
 
@@ -417,7 +436,16 @@ function parameters.init()
   --   end
   -- -- / MULTI group
 
-  params:add_group("SAMPLES",(3 * 17) + 2)
+  params:add_group("SAMPLES",(3 * 17) + 3)
+  params:add{
+    type = "option", id = "sample_routing", name = "audio routing", 
+    options = {"-x kildare","-> kildare"},
+    default = 1,
+    action = function(value) 
+      rerouting_audio = true
+      clock.run(route_audio)
+    end
+    }
   for i = 1,3 do
     params:add_separator("s"..i)
     params:add_option("clip "..i.." sample mode", "mode", {"single (chop)", "single (playthrough)", "folder (distribute)"},1)

@@ -641,3 +641,13 @@ function index_to_grid_pos(val,columns)
   local y = math.modf((val-1)/columns)+1
   return {x,y}
 end
+
+function cleanup ()
+  print("cleanup")
+  metro.free_all()
+  os.execute("jack_disconnect softcut:output_1 SuperCollider:in_1;")  
+  os.execute("jack_disconnect softcut:output_2 SuperCollider:in_2;")
+  os.execute("jack_connect crone:output_5 SuperCollider:in_1;")  
+  os.execute("jack_connect crone:output_6 SuperCollider:in_2;")
+  -- audio.level_eng_cut(1)
+end

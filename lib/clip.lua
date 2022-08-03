@@ -221,7 +221,7 @@ function ca.set_position(sample,pos)
     softcut.position(sample,ca.offset_loop_start(sample,pos,"L"))
     softcut.position(sample+3,ca.offset_loop_start(sample,pos,"R"))
   end
-  softcut.voice_sync(sample+3,sample,ca.offset_loop_start(sample,pos,"L") - ca.offset_loop_start(sample,pos,"R"))
+  -- softcut.voice_sync(sample+3,sample,ca.offset_loop_start(sample,pos,"L") - ca.offset_loop_start(sample,pos,"R"))
 end
 
 function ca.set_loop_start(sample,pos)
@@ -423,7 +423,14 @@ function ca.calculate_sc_positions(i,j,played_note)
     if params:get("clip "..sample.." sample") ~= "playthrough" then
       ca.set_loop_start(sample,sc_start_point_base)
       ca.set_loop_end(sample,sc_end_point_base)
-      ca.set_position(sample,sample_track[sample].reverse and sc_end_point_base-0.001 or sc_start_point_base)
+      -- ca.set_position(sample,sample_track[sample].reverse and sc_end_point_base-0.001 or sc_start_point_base)
+      if changed_direction then
+        -- TODO: account for offset_loop_start...
+        -- ca.set_position(sample,sample_track[sample].reverse and sample_track[sample].end_point-0.001 or softcut_offsets[sample]+0.001)
+        ca.set_position(sample,sample_track[sample].reverse and sc_end_point_base-0.001 or sc_start_point_base + 0.001)
+      else
+        ca.set_position(sample,sample_track[sample].reverse and sc_end_point_base or sc_start_point_base)
+      end
     elseif params:get("clip "..sample.." sample") == "playthrough" then
       ca.set_loop_start(sample,softcut_offsets[sample])
       ca.set_loop_end(sample,sample_track[sample].end_point)
