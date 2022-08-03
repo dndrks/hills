@@ -23,7 +23,7 @@ end
 --   "[10] (s-3)"
 -- }
 
-function route_audio()
+local function route_audio()
   clock.sleep(0.5)
   local selected_route = params:get("sample_routing")
   if rerouting_audio == true then
@@ -436,16 +436,25 @@ function parameters.init()
   --   end
   -- -- / MULTI group
 
-  params:add_group("SAMPLES",(3 * 17) + 3)
+  params:add_group("SAMPLES",(3 * 17) + 5)
   params:add{
     type = "option", id = "sample_routing", name = "audio routing", 
     options = {"-x kildare","-> kildare"},
     default = 1,
-    action = function(value) 
+    action = function(value)
+      print("rerouting audio")
       rerouting_audio = true
       clock.run(route_audio)
     end
     }
+  params:add_control("sample_to_delay","delay send level",controlspec.new(0,5,'lin',0,1,''))
+  params:set_action("sample_to_delay", function(x)
+    engine.set_softcut_param('delaySend',x)
+  end)
+  params:add_control("sample_to_reverb","reverb send level",controlspec.new(0,5,'lin',0,1,''))
+  params:set_action("sample_to_reverb", function(x)
+    engine.set_softcut_param('reverbSend',x)
+  end)
   for i = 1,3 do
     params:add_separator("s"..i)
     params:add_option("clip "..i.." sample mode", "mode", {"single (chop)", "single (playthrough)", "folder (distribute)"},1)
