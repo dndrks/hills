@@ -99,6 +99,9 @@ function grid_lib.handle_grid_pat(i,alt)
       grid_pattern[i].event = grid_pattern[i].deep_copy(pattern_clipboard.event)
       grid_pattern[i].time = grid_pattern[i].deep_copy(pattern_clipboard.time)
       grid_pattern[i].count = pattern_clipboard.count
+      for events = 1,grid_pattern[i].count do
+        grid_pattern[i].event[events].id = i
+      end
       pattern_clipboard.event = {}
       pattern_clipboard.time = {}
       pattern_clipboard.count = 0

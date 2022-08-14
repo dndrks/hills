@@ -10,16 +10,16 @@ engine.name = "Kildare"
 
 number_of_hills = 10
 hill_names = {
-  "[1] (bd)",
-  "[2] (sd)",
-  "[3] (tm)",
-  "[4] (cp)",
-  "[5] (rs)",
-  "[6] (cb)",
-  "[7] (hh)",
-  "[8] (s1)",
-  "[9] (s2)",
-  "[10] (s3)"
+  "1: bd",
+  "2: sd",
+  "3: tm",
+  "4: cp",
+  "5: rs",
+  "6: cb",
+  "7: hh",
+  "8: s1",
+  "9: s2",
+  "10: s3"
 }
 
 local function development_stuff()
@@ -39,7 +39,8 @@ _flow = include 'lib/flow'
 _song = include 'lib/song'
 _ca = include 'lib/clip'
 _snapshots = include 'lib/snapshot'
-sc_lfos = include 'lib/sc_lfos'
+-- sc_lfos = include 'lib/sc_lfos'
+sc_lfos = require 'lfo'
 mu = require 'musicutil'
 
 r = function()
@@ -419,7 +420,7 @@ stop = function(i,clock_synced_loop)
         seg.perf_led = false
         grid_dirty = true
         if params:string("hill "..i.." MIDI output") == "yes" then
-          midi_device[dev]:note_off(pre_note[i],seg.velocity,ch)
+          midi_device[dev]:note_off(pre_note[i],seg.note_velocity,ch)
         end
         if params:string("hill "..i.." JF output") == "yes" then
           local ch = params:get("hill "..i.." JF output id")
@@ -524,9 +525,9 @@ pass_note = function(i,j,seg,note_val,index,destination)
       -- TODO: we can also just assign a drum voice to do the same manipulation...!
       if params:string("hill "..i.." softcut output") == "yes" then
         if params:get("hill "..i.." softcut probability") >= math.random(100) then
-          if params:string("hill "..i.." reset softcut level lfo") == "yes" then
-            sc_lfos.reset_phase_from_hill(i-7,params:string("hill "..i.." reset softcut level lfo style"))
-          end
+          -- if params:string("hill "..i.." reset softcut level lfo") == "yes" then
+          --   sc_lfos.reset_phase_from_hill(i-7,params:string("hill "..i.." reset softcut level lfo style"))
+          -- end
           -- if params:string("hill "..i.." reset softcut pan lfo") == "yes" then
           --   sc_lfos.reset_phase_from_hill(i-4,params:string("hill "..i.." reset softcut pan lfo style"))
           -- end
@@ -541,9 +542,9 @@ pass_note = function(i,j,seg,note_val,index,destination)
       local ch = params:get("hill "..i.." MIDI note channel")
       local dev = params:get("hill "..i.." MIDI device")
       if pre_note[i] ~= nil then
-        midi_device[dev]:note_off(pre_note[i],seg.velocity,ch)
+        midi_device[dev]:note_off(pre_note[i],seg.note_velocity,ch)
       end
-      midi_device[dev]:note_on(played_note,seg.velocity,ch)
+      midi_device[dev]:note_on(played_note,seg.note_velocity,ch)
     end
     if params:string("hill "..i.." crow output") == "yes" then
       if params:string("hill "..i.." crow output style") == "osc" then

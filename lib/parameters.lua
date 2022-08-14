@@ -9,6 +9,10 @@ local function refresh_params_vports()
   end
 end
 
+local function round_form(param,quant,form)
+  return(util.round(param,quant)..form)
+end
+
 -- local hill_names = {"A","B","C","D","E","F","G","H"}
 -- local hill_names = {
 --   "[1] (bd)",
@@ -23,9 +27,10 @@ end
 --   "[10] (s-3)"
 -- }
 
-local function route_audio()
+local current_audio_route = 1
+
+local function route_audio(selected_route)
   clock.sleep(0.5)
-  local selected_route = params:get("sample_routing")
   if rerouting_audio == true then
     rerouting_audio = false
     if selected_route == 2 then -- audio in + softcut output -> supercollider
@@ -113,6 +118,13 @@ function parameters.init()
     if i <= 7 then
       params:add_separator("Kildare management "..hill_names[i])
       params:add_option("hill "..i.." kildare_notes","send pitches?",{"no","yes"},1)
+      params:set_action("hill "..i.." kildare_notes",
+        function(x)
+          if x == 1 then
+            engine.set_voice_param(kildare.drums[i],"carHz", mu.note_num_to_freq(params:get(kildare.drums[i].."_".."carHz")))
+          end
+        end
+      )
     end
 
     params:add_separator("softcut management "..hill_names[i])
@@ -436,25 +448,111 @@ function parameters.init()
   --   end
   -- -- / MULTI group
 
-  params:add_group("SAMPLES",(3 * 17) + 5)
+  params:add_group("SAMPLES",(3 * 17) + 17)
   params:add{
     type = "option", id = "sample_routing", name = "audio routing", 
     options = {"-x kildare","-> kildare"},
     default = 1,
     action = function(value)
-      print("rerouting audio")
-      rerouting_audio = true
-      clock.run(route_audio)
+      if current_audio_route ~= value then
+        print("rerouting audio, don't worry about the 'cannot allocate memory' messages!")
+        rerouting_audio = true
+        clock.run(route_audio,value)
+      end
+      if value == 1 then
+        params:hide('sample_fx')
+        params:hide('sample_to_delay')
+        params:hide('sample_to_reverb')
+        params:hide('sample_squishPitch')
+        params:hide('sample_squishChunk')
+        params:hide('sample_amDepth')
+        params:hide('sample_amHz')
+        params:hide('sample_eqHz')
+        params:hide('sample_eqAmp')
+        params:hide('sample_bitRate')
+        params:hide('sample_bitCount')
+        params:hide('sample_lpHz')
+        params:hide('sample_hpHz')
+        params:hide('sample_filterQ')
+        _menu.rebuild_params()
+      else
+        params:show('sample_fx')
+        params:show('sample_to_delay')
+        params:show('sample_to_reverb')
+        params:show('sample_squishPitch')
+        params:show('sample_squishChunk')
+        params:show('sample_amDepth')
+        params:show('sample_amHz')
+        params:show('sample_eqHz')
+        params:show('sample_eqAmp')
+        params:show('sample_bitRate')
+        params:show('sample_bitCount')
+        params:show('sample_lpHz')
+        params:show('sample_hpHz')
+        params:show('sample_filterQ')
+        _menu.rebuild_params()
+      end
     end
     }
-  params:add_control("sample_to_delay","delay send level",controlspec.new(0,5,'lin',0,1,''))
+  params:add_separator('sample_fx', 'global sample fx')
+  params:add_control("sample_to_delay","delay send level",controlspec.new(0,5,'lin',0,1,''), function(param) return (round_form(param:get()*100,1,"%")) end)
   params:set_action("sample_to_delay", function(x)
     engine.set_softcut_param('delaySend',x)
   end)
-  params:add_control("sample_to_reverb","reverb send level",controlspec.new(0,5,'lin',0,1,''))
+  params:add_control("sample_to_reverb","reverb send level",controlspec.new(0,5,'lin',0,1,''), function(param) return (round_form(param:get()*100,1,"%")) end)
   params:set_action("sample_to_reverb", function(x)
     engine.set_softcut_param('reverbSend',x)
   end)
+
+  params:add_control("sample_squishPitch","squish pitch",controlspec.new(1,10,'lin',0,1,'',1/9),function(param) return (round_form(param:get(),1,'')) end)
+  params:set_action("sample_squishPitch", function(x)
+    engine.set_softcut_param('squishPitch',x)
+  end)
+  params:add_control("sample_squishChunk","squish chunkiness",controlspec.new(1,10,'lin',0,1,'',1/9),function(param) return (round_form(param:get(),1,'')) end)
+  params:set_action("sample_squishChunk", function(x)
+    engine.set_softcut_param('squishChunk',x)
+  end)
+
+  params:add_control("sample_amDepth","amp mod depth",controlspec.new(0,1,'lin',0,0,''),function(param) return (round_form(param:get()*100,1,"%")) end)
+  params:set_action("sample_amDepth", function(x)
+    engine.set_softcut_param('amDepth',x)
+  end)
+  params:add_control("sample_amHz","amp mod freq",controlspec.new(0.001,12000,'exp',0,8175.08,''),function(param) return (round_form(param:get(),0.01," Hz")) end)
+  params:set_action("sample_amHz", function(x)
+    engine.set_softcut_param('amHz',x)
+  end)
+
+  params:add_control("sample_eqHz","eq freq",controlspec.new(20,20000,'exp',0,6000,''),function(param) return (round_form(param:get(),0.01," Hz")) end)
+  params:set_action("sample_eqHz", function(x)
+    engine.set_softcut_param('eqHz',x)
+  end)
+  params:add_control("sample_eqAmp","eq gain",controlspec.new(-2,2,'lin',0,0,''),function(param) return (round_form(param:get()*100,1,"%")) end)
+  params:set_action("sample_eqAmp", function(x)
+    engine.set_softcut_param('eqAmp',x)
+  end)
+
+  params:add_control("sample_bitRate","bit rate",controlspec.new(20,24000,'exp',0,24000,''),function(param) return (util.round(param:get(),0.1).." Hz") end)
+  params:set_action("sample_bitRate", function(x)
+    engine.set_softcut_param('bitRate',x)
+  end)
+  params:add_control("sample_bitCount","bit depth",controlspec.new(1,24,'lin',0,24,'',1/23),function(param) return (round_form(param:get(),1," bit")) end)
+  params:set_action("sample_bitCount", function(x)
+    engine.set_softcut_param('bitCount',x)
+  end)
+  
+  params:add_control("sample_lpHz","lo-pass freq",controlspec.new(20,20000,'exp',0,20000),function(param) return (round_form(param:get(),0.01," Hz")) end)
+  params:set_action("sample_lpHz", function(x)
+    engine.set_softcut_param('lpHz',x)
+  end)
+  params:add_control("sample_hpHz","hi-pass freq",controlspec.new(20,24000,'exp',0,20,''),function(param) return (util.round(param:get(),0.1).." Hz") end)
+  params:set_action("sample_hpHz", function(x)
+    engine.set_softcut_param('hpHz',x)
+  end)
+  params:add_control("sample_filterQ","filter q",controlspec.new(0,100,'lin',0,50,''),function(param) return (util.round(param:get()).."%") end)
+  params:set_action("sample_filterQ", function(x)
+    engine.set_softcut_param('filterQ',x)
+  end)
+
   for i = 1,3 do
     params:add_separator("s"..i)
     params:add_option("clip "..i.." sample mode", "mode", {"single (chop)", "single (playthrough)", "folder (distribute)"},1)
@@ -481,6 +579,7 @@ function parameters.init()
       function(file)
         if file ~= _path.audio and file ~= "playthrough" and file ~= "distributed" then
           _ca.load_sample(file,i)
+          print(i.."1")
           parameters.toggle_softcut_params("show", i)
         else
           parameters.toggle_softcut_params("hide", i)
@@ -492,6 +591,7 @@ function parameters.init()
       function(file)
         if file ~= _path.audio then
           _ca.folder_callback(file,i)
+          print(i.."2")
           parameters.toggle_softcut_params("show", i)
         else
           parameters.toggle_softcut_params("hide", i)
@@ -505,6 +605,7 @@ function parameters.init()
         if file ~= _path.audio then
           params:set("clip "..i.." sample", "playthrough", 1)
           _ca.load_sample(file,i)
+          print(i.."3")
           parameters.toggle_softcut_params("show", i)
         else
           parameters.toggle_softcut_params("hide", i)
@@ -599,9 +700,16 @@ function parameters.init()
     end
   end)
 
-  sc_lfos.add_params("vol_clip_")
-  sc_lfos.add_params("pan_clip_")
-  sc_lfos.add_params("post_filter_fc_")
+  vol_lfos = {}
+  params:add_group('level_lfos','SAMPLE LEVEL LFOs',45)
+  for i = 1,3 do
+    vol_lfos[i] = sc_lfos:add{min = 0, max = 5, action = function(s,r) params:lookup_param('vol_clip_'..i).action(s) end}
+    vol_lfos[i]:add_params('lfo_vol_clip_'..i, "["..i.."]")
+  end
+
+  -- sc_lfos.add_params("vol_clip_")
+  -- sc_lfos.add_params("pan_clip_")
+  -- sc_lfos.add_params("post_filter_fc_")
 
   _menu.rebuild_params()
   clock.run(function() clock.sleep(1) params:bang() end)
@@ -621,6 +729,7 @@ function parameters.toggle_softcut_params(state, i)
   params[state](params, "post_filter_dry_"..i)
   params[state](params, "post_filter_rq_"..i)
   _menu.rebuild_params()
+  print("happening",i,state)
 end
 
 return parameters
