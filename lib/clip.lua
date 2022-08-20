@@ -7,11 +7,7 @@ function ca.init()
   clip = {}
   sample_track = {}
   clear = {}
-  sample_speedlist = {
-    {-4, -2, -1, -0.5, -0.25, 0, 0.25, 0.5, 1, 2, 4},
-    {-4, -2, -1, -0.5, -0.25, 0, 0.25, 0.5, 1, 2, 4},
-    {-4, -2, -1, -0.5, -0.25, 0, 0.25, 0.5, 1, 2, 4},
-  }
+  sample_speedlist = {-4, -2, -1, -0.5, -0.25, 0, 0.25, 0.5, 1, 2, 4}
   sample_offset = {1,1,1,1,1,1}
   for i = 1,3 do
     clip[i] = {}
@@ -55,6 +51,37 @@ function ca.init()
     sample_track[i].reverse = false
     sample_track[i].changed_direction = false
   end
+
+  sample_info = {sample1 = {sample_rates = {}}, sample2 = {sample_rates = {}}, sample3 = {sample_rates = {}}}
+
+  function kildare.folder_callback(voice,folder)
+    sample_info[voice] = {}
+    sample_info[voice].sample_rates = {}
+    local wavs = util.scandir(folder)
+    local sample_id = 0
+    for index, data in ipairs(wavs) do
+      local ch, len, rate = audio.file_info(folder..data)
+      if rate ~= 0 then
+        sample_id = sample_id + 1
+        sample_info[voice].sample_rates[sample_id] = rate
+      end
+    end
+  end
+
+  function kildare.file_callback(voice,file)
+    sample_info[voice] = {}
+    sample_info[voice].sample_rates = {}
+    local ch, len, rate = audio.file_info(file)
+    if rate ~= 0 then
+      sample_info[voice].sample_rates[1] = rate
+    end
+  end
+
+  function kildare.clear_callback(voice)
+    sample_info[voice] = {}
+    sample_info[voice].sample_rates = {}
+  end
+
 end
 
 -- function ca.sample_callback(path,i,summed)
@@ -63,52 +90,6 @@ end
 --     clip[i].collage = false
 --   end
 -- end
-
-function ca.load_sample(file,sample,summed)
-  local old_min = clip[sample].min
-  local old_max = clip[sample].max
-  if file ~= "-" and file ~= "" and file ~= "distributed" then
-    local ch, len, rate = audio.file_info(file)
-    clip[sample].sample_rate = rate
-    if clip[sample].sample_rate ~= 48000 then
-      print("sample rate needs to be 48khz!")
-      print(len/48000, len/rate, file)
-    end
-    if len/48000 < max_sample_duration then
-      clip[sample].sample_length = len/48000
-    else
-      clip[sample].sample_length = max_sample_duration
-    end
-    clip[sample].original_length = len/48000
-    clip[sample].original_bpm = ca.derive_bpm(clip[sample])
-    clip[sample].original_samplerate = rate/1000
-    -- local im_ch = ch == 2 and clip[sample].channel-1 or 1
-    local scaled = {
-      {1,softcut_offsets[1],clip[sample].sample_length + 0.05 + softcut_offsets[1]},
-      {1,softcut_offsets[2],clip[sample].sample_length + 0.05 + softcut_offsets[2]},
-      {1,softcut_offsets[3],clip[sample].sample_length + 0.05 + softcut_offsets[3]},
-      {2,softcut_offsets[1],clip[sample].sample_length + 0.05 + softcut_offsets[1]},
-      {2,softcut_offsets[2],clip[sample].sample_length + 0.05 + softcut_offsets[2]},
-      {2,softcut_offsets[3],clip[sample].sample_length + 0.05 + softcut_offsets[3]},
-    }
-    if sample_track[sample].playing then
-      -- softcut.play(sample,0)
-      -- sample_track[sample].playing = false
-      ca.stop_playback(sample)
-    end
-
-    softcut.buffer_clear_region(softcut_offsets[sample], max_sample_duration, 0, 0)
-    softcut.buffer_read_stereo(file, 0, softcut_offsets[sample], clip[sample].sample_length + 0.05, 0) -- TODO: verify if preserve could just be 0?
-    sample_track[sample].end_point = (clip[sample].sample_length-0.01) + softcut_offsets[sample]
-    ca.set_position(sample,softcut_offsets[sample])
-    ca.set_rate(sample,ca.get_total_pitch_offset(sample))
-    clear[sample] = 0
-    sample_track[sample].rec_limit = 0
-  end
-  -- if params:get("clip "..sample.." sample") ~= file then
-  --   params:set("clip "..sample.." sample", file, 1)
-  -- end
-end
 ---
 function ca.folder_callback(file,dest)
   
@@ -252,8 +233,7 @@ function ca.set_loop_end(sample,pos)
 end
 
 function ca.set_rate(sample,r)
-  softcut.rate(sample,r)
-  softcut.rate(sample+3,r)
+  engine.set_voice_param(sample,'rate',r)
 end
 
 function ca.set_level(sample,l)
@@ -309,14 +289,14 @@ function ca.get_total_pitch_offset(_t,i,j,pitched)
   total_offset = total_offset + sample_rate_compensation
   local step_rate;
   if i and j then
-    step_rate = hills[i][j].softcut_controls.rate[hills[i][hills[i].segment].index]
+    step_rate = hills[i][j].sample_controls.rate[hills[i][hills[i].segment].index]
     -- print(i,j,step_rate)
   end
   if not pitched then
     if step_rate and step_rate ~= params:get("speed_clip_".._t) then
-      total_offset = math.pow(0.5, -total_offset / 12) * sample_speedlist[_t][step_rate]  
+      total_offset = math.pow(0.5, -total_offset / 12) * sample_speedlist[step_rate]  
     else
-      total_offset = math.pow(0.5, -total_offset / 12) * sample_speedlist[_t][params:get("speed_clip_".._t)]
+      total_offset = math.pow(0.5, -total_offset / 12) * sample_speedlist[params:get("speed_clip_".._t)]
     end
   else
     if step_rate and step_rate ~= params:get("speed_clip_".._t) then
@@ -325,11 +305,6 @@ function ca.get_total_pitch_offset(_t,i,j,pitched)
       total_offset = math.pow(0.5, -total_offset / 12) * pitched * sample_speedlist[_t][params:get("speed_clip_".._t)]
     end
   end
-  -- if i ~= nil and j ~= nil then
-  --   total_offset = math.pow(0.5, -total_offset / 12) * sample_speedlist[_t][hills[i][j].softcut_controls.rate[hills[i][j].index]]
-  -- else
-  --   total_offset = math.pow(0.5, -total_offset / 12) * sample_speedlist[_t][params:get("speed_clip_".._t)]
-  -- end
   if params:get("pitch_control") ~= 0 then
     total_offset = total_offset + (total_offset * (params:get("pitch_control")/100))
     if total_offset < 0 then
@@ -362,6 +337,85 @@ function ca.get_total_pitch_offset(_t,i,j,pitched)
   end
 end
 
+function ca.get_resampled_rate(voice, sample_id, i, j, pitched)
+  local total_offset;
+  total_offset = params:get(voice..'_playbackRateOffset')
+  local step_rate;
+  if i and j then
+    step_rate = hills[i][j].sample_controls.rate[hills[i][hills[i].segment].index]
+  end
+  if not pitched then
+    if step_rate and step_rate ~= params:get(voice..'_playbackRateBase') then
+      total_offset = math.pow(0.5, -total_offset / 12) * sample_speedlist[step_rate]  
+    else
+      total_offset = math.pow(0.5, -total_offset / 12) * sample_speedlist[params:get(voice..'_playbackRateBase')]
+    end
+  else
+    if step_rate and step_rate ~= params:get(voice..'_playbackRateBase') then
+      total_offset = math.pow(0.5, -total_offset / 12) * pitched * sample_speedlist[step_rate]
+    else
+      total_offset = math.pow(0.5, -total_offset / 12) * pitched * sample_speedlist[params:get(voice..'_playbackRateBase')]
+    end
+  end
+  if util.round(params:get(voice..'_playbackPitchControl'),0.01) ~= 0 then
+    total_offset = total_offset + (total_offset * (util.round(params:get(voice..'_playbackPitchControl'),0.01)/100))
+    return (total_offset)
+  else
+    return (total_offset)
+  end
+end
+
+function ca.set_true_rate(i,j,played_note)
+  if params:string("hill "..i.." softcut repitch") == "yes" then
+    local note_distance = (played_note - 60)
+    local rates_from_notes = {
+      1,
+      1.05946,
+      1.12246,
+      1.18920,
+      1.25992,
+      1.33484,
+      1.41421,
+      1.49830,
+      1.58740,
+      1.68179,
+      1.78179,
+      1.88774,
+    }
+    local octave_distance = 0
+    octave_distance = math.floor((played_note - 60)/12)
+    if played_note == (60 + ((octave_distance+1)*11) + octave_distance) then
+      ca.set_rate(sample,ca.get_total_pitch_offset(sample,i,j,rates_from_notes[12] * (2^octave_distance)))
+    else
+      ca.set_rate(sample,ca.get_total_pitch_offset(sample,i,j,rates_from_notes[util.wrap(note_distance+1,1,#rates_from_notes)] * (2^octave_distance)))
+    end
+  else
+    ca.set_rate(sample,ca.get_total_pitch_offset(sample,i,j))
+  end
+end
+
+function ca.play_slice(target,slice,velocity,i,j)
+  engine.set_voice_param(target,'sampleStart',slice/16)
+  engine.set_voice_param(target,'sampleEnd',(slice+1)/16)
+  local rate = ca.get_resampled_rate(target, 1, i, j)
+  print(rate)
+  engine.set_voice_param(target, 'rate', rate)
+  engine.trig(target,velocity)
+end
+
+function ca.play_through(target,velocity)
+  engine.set_voice_param(target,'sampleStart',0)
+  engine.set_voice_param(target,'sampleEnd',1)
+  engine.trig(target,velocity)
+end
+
+function ca.play_index(target,index,velocity)
+  engine.change_sample(target,index)
+  engine.set_voice_param(target,'sampleStart',0)
+  engine.set_voice_param(target,'sampleEnd',1)
+  engine.trig(target,velocity)
+end
+
 function ca.calculate_sc_positions(i,j,played_note)
   -- print(i,j,played_note)
   local sample = params:get("hill "..i.." softcut slot")
@@ -386,7 +440,6 @@ function ca.calculate_sc_positions(i,j,played_note)
       sc_start_point_base = (s_p+(duration/slice_count) * (slice-1))
       sc_end_point_base = (s_p+(duration/slice_count) * (slice)) - clip[sample].fade_time
     end
-    -- softcut.rate(sample,ca.get_total_pitch_offset(sample,i,j))
     if params:string("hill "..i.." softcut repitch") == "yes" then
       -- local note_distance = (played_note - params:get("hill "..i.." base note"))
       local note_distance = (played_note - 60)
@@ -443,7 +496,7 @@ function ca.calculate_sc_positions(i,j,played_note)
         ca.set_position(sample,sample_track[sample].reverse and sample_track[sample].end_point or softcut_offsets[sample])
       end
     end
-    ca.set_loop_state(sample,hills[i][j].softcut_controls.loop[hills[i][j].index])
+    ca.set_loop_state(sample,hills[i][j].sample_controls.loop[hills[i][j].index])
     -- softcut.loop_start(sample,sc_start_point_base)
     
   end

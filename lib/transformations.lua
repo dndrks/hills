@@ -24,12 +24,12 @@ m.transpose = function(i,j,pos,delta)
 end
 
 m.sc_transpose = function(i,j,pos,delta)
-  hills[i][j].softcut_controls.rate[pos] = util.clamp(hills[i][j].softcut_controls.rate[pos]+delta,1,#sample_speedlist[i-7])
+  hills[i][j].sample_controls.rate[pos] = util.clamp(hills[i][j].sample_controls.rate[pos]+delta,1,#sample_speedlist[i-7])
 end
 
 -- 2. REVERSAL
 m.reverse = function(i,j,start_point,end_point,focus,sc)
-  local target = sc ~= nil and hills[i][j].softcut_controls.rate or hills[i][j].note_num.pool
+  local target = sc ~= nil and hills[i][j].sample_controls.rate or hills[i][j].note_num.pool
   local rev = {}
   for k = end_point, start_point, -1 do
     rev[end_point - k + 1] = target[k]
@@ -54,7 +54,7 @@ end
 
 -- 3. ROTATION
 m.rotate = function(i,j,start_point,end_point,focus,sc)
-  local target = sc ~= nil and hills[i][j].softcut_controls.rate or hills[i][j].note_num.pool
+  local target = sc ~= nil and hills[i][j].sample_controls.rate or hills[i][j].note_num.pool
   local originals = {}
   for k = start_point,end_point do
     table.insert(originals,target[k])
@@ -131,7 +131,7 @@ end
 
 -- 9. SUBSTITUTION -- this should commit!
 m.shuffle = function(i,j,lo,hi,focus,sc)
-  local target = sc ~= nil and hills[i][j].softcut_controls.rate or hills[i][j].note_num.pool
+  local target = sc ~= nil and hills[i][j].sample_controls.rate or hills[i][j].note_num.pool
   local shuffled = {}
   for m = lo,hi do
     local pos = math.random(1, #shuffled+1)
@@ -163,7 +163,7 @@ m["rand fill"] = function(i,j,start_point,end_point,focus,sc)
     end
   else
     for m = start_point,end_point do
-      hills[i][j].softcut_controls.rate[m] = math.random(1,#sample_speedlist[i-7])
+      hills[i][j].sample_controls.rate[m] = math.random(1,#sample_speedlist[i-7])
     end
   end
 end
@@ -181,7 +181,7 @@ m["rand rate"] = function(i,j,start_point,end_point,focus,sc)
     end
   else
     for m = start_point,end_point do
-      hills[i][j].softcut_controls.rate[m] = math.random(1,#sample_speedlist[i-7])
+      hills[i][j].sample_controls.rate[m] = math.random(1,#sample_speedlist[i-7])
     end
   end
 end
@@ -190,9 +190,9 @@ m["rand loop"] = function(i,j,start_point,end_point,focus,sc)
   for m = start_point,end_point do
     local state = math.random(0,1)
     if state == 1 then
-      hills[i][j].softcut_controls.loop[m] = true
+      hills[i][j].sample_controls.loop[m] = true
     else
-      hills[i][j].softcut_controls.loop[m] = false
+      hills[i][j].sample_controls.loop[m] = false
     end
   end
 end
@@ -202,7 +202,7 @@ m.mute = function(i,j,pos)
 end
 
 m.toggle_loop = function(i,j,pos)
-  hills[i][j].softcut_controls.loop[pos] = not hills[i][j].softcut_controls.loop[pos]
+  hills[i][j].sample_controls.loop[pos] = not hills[i][j].sample_controls.loop[pos]
 end
 
 m.offset_timestart = function(i,j,target,delta)
@@ -288,7 +288,7 @@ m["static rate"] = function(i,j,start_point,end_point,pos,sc)
   end
   if start_point ~= end_point then
     for k = start_point,e_p do
-      hills[i][j].softcut_controls.rate[k] = hills[i][j].softcut_controls.rate[pos]
+      hills[i][j].sample_controls.rate[k] = hills[i][j].sample_controls.rate[pos]
     end
   else
     print("this is the last note, can't change any more!")
@@ -302,7 +302,7 @@ m["static loop"] = function(i,j,start_point,end_point,pos,sc)
   end
   if start_point ~= end_point then
     for k = start_point,e_p do
-      hills[i][j].softcut_controls.loop[k] = hills[i][j].softcut_controls.loop[pos]
+      hills[i][j].sample_controls.loop[k] = hills[i][j].sample_controls.loop[pos]
     end
   else
     print("this is the last note, can't change any more!")

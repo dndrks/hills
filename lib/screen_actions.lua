@@ -111,16 +111,16 @@ function screen_actions.draw()
       elseif ui.menu_focus == 5 then
         screen.level(key1_hold == true and 3 or 15)
         screen.move(40,10)
-        local note_number = seg.softcut_controls.rate[s_c["softcut"]["focus"]]
+        local note_number = seg.sample_controls.rate[s_c["softcut"]["focus"]]
         local slice_number = seg.note_ocean[seg.note_num.pool[s_c["notes"]["focus"]]]
         screen.text(
           sample_speedlist[hf-7][note_number].."x"..
-          " | "..(hills[hf][focus].softcut_controls.loop[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["softcut"]["focus"]] and "LOOP" or "1-SHOT")
+          " | "..(hills[hf][focus].sample_controls.loop[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["softcut"]["focus"]] and "LOOP" or "1-SHOT")
         )
         if key1_hold then
           screen.level(key1_hold == true and 15 or 3)
           screen.move(20,64)
-          screen.text("K2: "..((seg.softcut_controls.loop[s_c["softcut"]["focus"]]) and "1-SHOT" or "LOOP"))
+          screen.text("K2: "..((seg.sample_controls.loop[s_c["softcut"]["focus"]]) and "1-SHOT" or "LOOP"))
           screen.move(128,64)
           if ui.screen_controls[hf][focus]["softcut"]["transform"] ~= "rand rate" and
           ui.screen_controls[hf][focus]["softcut"]["transform"] ~= "rand loop" and

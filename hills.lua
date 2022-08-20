@@ -178,7 +178,7 @@ function init()
       }
       hills[i][j].note_velocity = {}
 
-      hills[i][j].softcut_controls = -- this is where we track the slices for the constructed hill
+      hills[i][j].sample_controls = -- this is where we track the slices for the constructed hill
       {
         ["loop"] = {}, -- gets filled with the constructed hill's loop states
         ["rate"] = {} -- gets filled with the constructed hill's rates
@@ -317,8 +317,8 @@ pass_data_into_storage = function(i,j,index,data)
   hills[i][j].note_num.active[index] = true
   hills[i][j].note_velocity[index] = 127
 
-  hills[i][j].softcut_controls.loop[index] = false
-  hills[i][j].softcut_controls.rate[index] = 9 -- mirrors ("speed_clip_"..i) in parameters
+  hills[i][j].sample_controls.loop[index] = false
+  hills[i][j].sample_controls.rate[index] = 9
 end
 
 calculate_timedeltas = function(i,j)
@@ -534,7 +534,17 @@ pass_note = function(i,j,seg,note_val,index,destination)
           -- if params:string("hill "..i.." reset softcut filter lfo") == "yes" then
           --   sc_lfos.reset_phase_from_hill(i-1,params:string("hill "..i.." reset softcut filter lfo style"))
           -- end
-          _ca.calculate_sc_positions(i,j,played_note)
+          -- _ca.calculate_sc_positions(i,j,played_note)
+          local target = "sample"..i-7
+          if params:string(target..'_sampleMode') == 'chop' then
+            local slice = util.wrap(played_note - params:get("hill "..i.." base note"),0,15) + 1
+            _ca.play_slice(target,slice,hills[i][j].note_velocity[index],i,j)
+          elseif params:string(target..'_sampleMode') == 'playthrough' then
+            _ca.play_through(target,slice,hills[i][j].note_velocity[index])
+          elseif params:string(target..'_sampleMode') == 'distribute' then
+            local idx = util.wrap(played_note - params:get("hill "..i.." base note"),0,15) + 1
+            _ca.play_index(target,idx,hills[i][j].note_velocity[index]) -- TODO: adjust for actual sample pool size
+          end
         end
       end
     end
@@ -646,9 +656,9 @@ end
 function cleanup ()
   print("cleanup")
   metro.free_all()
-  os.execute("jack_disconnect softcut:output_1 SuperCollider:in_1;")  
-  os.execute("jack_disconnect softcut:output_2 SuperCollider:in_2;")
-  os.execute("jack_connect crone:output_5 SuperCollider:in_1;")  
-  os.execute("jack_connect crone:output_6 SuperCollider:in_2;")
+  -- os.execute("jack_disconnect softcut:output_1 SuperCollider:in_1;")  
+  -- os.execute("jack_disconnect softcut:output_2 SuperCollider:in_2;")
+  -- os.execute("jack_connect crone:output_5 SuperCollider:in_1;")  
+  -- os.execute("jack_connect crone:output_6 SuperCollider:in_2;")
   -- audio.level_eng_cut(1)
 end
