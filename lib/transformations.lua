@@ -23,8 +23,8 @@ m.transpose = function(i,j,pos,delta)
   hills[i][j].note_num.pool[pos] = util.clamp(hills[i][j].note_num.pool[pos]+delta,1,hills[i][j].note_num.max)
 end
 
-m.sc_transpose = function(i,j,pos,delta)
-  hills[i][j].sample_controls.rate[pos] = util.clamp(hills[i][j].sample_controls.rate[pos]+delta,1,#sample_speedlist[i-7])
+m.sample_transpose = function(i,j,pos,delta)
+  hills[i][j].sample_controls.rate[pos] = util.clamp(hills[i][j].sample_controls.rate[pos]+delta,1,#sample_speedlist)
 end
 
 -- 2. REVERSAL
@@ -163,7 +163,7 @@ m["rand fill"] = function(i,j,start_point,end_point,focus,sc)
     end
   else
     for m = start_point,end_point do
-      hills[i][j].sample_controls.rate[m] = math.random(1,#sample_speedlist[i-7])
+      hills[i][j].sample_controls.rate[m] = math.random(1,#sample_speedlist)
     end
   end
 end
@@ -181,7 +181,7 @@ m["rand rate"] = function(i,j,start_point,end_point,focus,sc)
     end
   else
     for m = start_point,end_point do
-      hills[i][j].sample_controls.rate[m] = math.random(1,#sample_speedlist[i-7])
+      hills[i][j].sample_controls.rate[m] = math.random(1,#sample_speedlist)
     end
   end
 end

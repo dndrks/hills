@@ -31,7 +31,7 @@ function screen_actions.draw()
         elseif ui.menu_focus == 3 then
           screen.level(s_c["notes"]["focus"] == i and 15 or (seg.index-1 == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0)))
         elseif ui.menu_focus == 5 then
-          screen.level(s_c["softcut"]["focus"] == i and 15 or (seg.index-1 == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0)))
+          screen.level(s_c["samples"]["focus"] == i and 15 or (seg.index-1 == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0)))
         end
       else
         screen.level(seg.index-1 == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0))
@@ -111,37 +111,47 @@ function screen_actions.draw()
       elseif ui.menu_focus == 5 then
         screen.level(key1_hold == true and 3 or 15)
         screen.move(40,10)
-        local note_number = seg.sample_controls.rate[s_c["softcut"]["focus"]]
+        local note_number = seg.sample_controls.rate[s_c["samples"]["focus"]]
         local slice_number = seg.note_ocean[seg.note_num.pool[s_c["notes"]["focus"]]]
         screen.text(
-          sample_speedlist[hf-7][note_number].."x"..
-          " | "..(hills[hf][focus].sample_controls.loop[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["softcut"]["focus"]] and "LOOP" or "1-SHOT")
+          sample_speedlist[note_number].."x"..
+          " | "..(hills[hf][focus].sample_controls.loop[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["samples"]["focus"]] and "LOOP" or "ONCE")
         )
         if key1_hold then
           screen.level(key1_hold == true and 15 or 3)
           screen.move(20,64)
-          screen.text("K2: "..((seg.sample_controls.loop[s_c["softcut"]["focus"]]) and "1-SHOT" or "LOOP"))
+          screen.text("K2: "..((seg.sample_controls.loop[s_c["samples"]["focus"]]) and "ONCE" or "LOOP"))
           screen.move(128,64)
-          if ui.screen_controls[hf][focus]["softcut"]["transform"] ~= "rand rate" and
-          ui.screen_controls[hf][focus]["softcut"]["transform"] ~= "rand loop" and
-          ui.screen_controls[hf][focus]["softcut"]["transform"] ~= "static rate" and
-          ui.screen_controls[hf][focus]["softcut"]["transform"] ~= "static loop" then
-            screen.text_right("K3: "..ui.screen_controls[hf][focus]["softcut"]["transform"].." rate")
+          if ui.screen_controls[hf][focus]["samples"]["transform"] ~= "rand rate" and
+          ui.screen_controls[hf][focus]["samples"]["transform"] ~= "rand loop" and
+          ui.screen_controls[hf][focus]["samples"]["transform"] ~= "static rate" and
+          ui.screen_controls[hf][focus]["samples"]["transform"] ~= "static loop" then
+            screen.text_right("K3: "..ui.screen_controls[hf][focus]["samples"]["transform"].." rate")
           else
-            screen.text_right("K3: "..ui.screen_controls[hf][focus]["softcut"]["transform"])
+            screen.text_right("K3: "..ui.screen_controls[hf][focus]["samples"]["transform"])
           end
         end
       end
     end
-    local menus = {"hill: "..focus,"bound","notes","loop","sc"}
+    local menus = {"hill: "..focus,"bound","notes","loop","smpl"}
     screen.font_size(8)
     if ui.control_set == "edit" and ui.menu_focus ~= 1 then
       screen.move(0,22)
       screen.level(3)
       screen.text("hill: "..focus)
     end
-    for i = 1,ui.hill_focus <= 7 and 4 or 5 do
-      screen.level(ui.menu_focus == i and 15 or 3)
+    local upper_bound;
+    if ui.hill_focus <= 7 then
+      if params:string("hill "..ui.hill_focus.." sample output") == "yes" then
+        upper_bound = 5
+      else
+        upper_bound = 4
+      end
+    else
+      upper_bound = 5
+    end
+    for i = 1,upper_bound do
+      screen.level(ui.menu_focus == i and (key1_hold and ((ui.menu_focus > 2 and  ui.control_set == "edit") and 3 or 15) or 15) or 3)
       screen.move(0,12+(10*i))
       if ui.control_set == "edit" and ui.menu_focus == i then
         screen.text("["..menus[i].."]")
@@ -163,13 +173,13 @@ function screen_actions.draw()
       end
     end
     if ui.seq_menu_layer ~= "deep_edit" then
-      local mods = _p.get_mod(hf,current_focus)
-      if #mods ~= 0 then
-        for i = 1,#mods do
-          screen.move(128,0+(i*8))
-          screen.text_right(mods[i])
-        end
-      end
+      -- local mods = _p.get_mod(hf,current_focus)
+      -- if #mods ~= 0 then
+      --   for i = 1,#mods do
+      --     screen.move(128,0+(i*8))
+      --     screen.text_right(mods[i])
+      --   end
+      -- end
     end
     if ui.seq_menu_focus == 1 then
       local chunk = step_seq[hf].active_chunk

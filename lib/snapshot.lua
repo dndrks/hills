@@ -6,50 +6,49 @@ function snapshot.init()
   for i = 1,number_of_hills do
     snapshots[i] = {}
   end
+
   for j = 1,#kildare.drums do
     for coll = 1,8 do
       snapshots[j][coll] = {}
     end
   end
-  for j = 1,3 do
+
+  snapshots.delay = {}
+  snapshots.reverb = {}
+  snapshots.main = {}
+  
+  for k,v in pairs(kildare.fx) do
     for coll = 1,8 do
-      snapshots[7+j][coll] = {}
+      snapshots[v][coll] = {}
     end
+    snapshots[v].partial_restore = false
+    snapshots[v].restore_times = {["beats"] = {1,2,4,8,16,32,64,128}, ["time"] = {1,2,4,8,16,32,64,128}, ["mode"] = "beats"}
+    snapshots[v].mod_index = 0
+    snapshots[v].focus = 0
   end
+
   snapshots.mod = {["index"] = 0, ["held"] = {false,false,false,false,false,false}}
-  softcut_params = {
-    "speed_clip_",
-    "semitone_offset_",
-    "vol_clip_",
-    "pan_clip_",
-    "post_filter_fc_",
-    "post_filter_lp_",
-    "post_filter_hp_",
-    "post_filter_bp_",
-    "post_filter_dry_",
-    "post_filter_rq_"
-  }
-  softcut_lfo_ids = {["vol_clip_"] = {1,2,3}, ["pan_clip_"] = {4,5,6}, ["post_filter_fc_"] = {7,8,9}}
 end
 
 function snapshot.pack(voice,coll)
-  if voice <= 7 then
+  if type(voice) == "number" and voice <= 10 then
     local d_voice = kildare.drums[voice]
     for i = 1, #kildare_drum_params[d_voice] do
       local d = kildare_drum_params[d_voice][i]
-      if d.type ~= 'separator' then
+      if d.type ~= 'separator' and not d.lfo_exclude then
         snapshots[voice][coll][d.id] = params:get(d_voice.."_"..d.id)
       end
     end
   else
-    local sc_target = voice - 7
-    for i = 1,#softcut_params do
-      snapshots[voice][coll][softcut_params[i]..sc_target] = params:get(softcut_params[i]..sc_target)
+    -- delay, reverb, main
+    for i = 1, #kildare_fx_params[voice] do
+      local d = kildare_fx_params[voice][i]
+      if d.type ~= 'separator' and not d.lfo_exclude then
+        snapshots[voice][coll][d.id] = params:get(voice.."_"..d.id)
+      end
     end
   end
-  -- do i want other hill params? or just synthesis snapshots?
-  -- snapshots[voice][coll].kildare_notes = params:get("hill "..voice.." kildare_notes")
-  -- TODO: ADD LFOS
+
   selected_snapshot[voice] = coll
 end
 
@@ -58,26 +57,33 @@ function snapshot.seed_restore_state_to_all(voice,coll,_p)
 end
 
 function snapshot.unpack(voice, coll)
-  if hills[voice].snapshot.partial_restore then
-    clock.cancel(hills[voice].snapshot.fnl)
-    -- print("partial restore unpack",voice,coll)
-    hills[voice].snapshot.partial_restore = false
-  end
-
-  if voice <= 7 then
+  if type(voice) == "number" and voice <= 10 then
+    if hills[voice].snapshot.partial_restore then
+      clock.cancel(hills[voice].snapshot.fnl)
+      hills[voice].snapshot.partial_restore = false
+    end
     local d_voice = kildare.drums[voice]
     for i = 1, #kildare_drum_params[d_voice] do
       local d = kildare_drum_params[d_voice][i]
-      if d.type ~= 'separator' then
+      if d.type ~= 'separator' and not d.lfo_exclude then
         params:set(d_voice.."_"..d.id, snapshots[voice][coll][d.id])
       end
     end
   else
-    local sc_target = voice - 7
-    for i = 1,#softcut_params do
-      params:set(softcut_params[i]..sc_target, snapshots[voice][coll][softcut_params[i]..sc_target])
+    if snapshots[voice].partial_restore then
+      clock.cancel(snapshots[voice].fnl)
+      snapshots[voice].partial_restore = false
+    end
+    -- delay, reverb, main
+    for i = 1, #kildare_fx_params[voice] do
+      local d = kildare_fx_params[voice][i]
+      if d.type ~= 'separator' and not d.lfo_exclude then
+        params:set(voice.."_"..d.id, snapshots[voice][coll][d.id])
+      end
     end
   end
+
+  selected_snapshot[voice] = coll
 
   -- print("restored snapshot", voice, coll)
 
@@ -85,13 +91,18 @@ function snapshot.unpack(voice, coll)
   
   screen_dirty = true
   grid_dirty = true
-  selected_snapshot[voice] = coll
 end
 
 function snapshot.save_to_slot(_t,slot)
   clock.sleep(0.25)
-  hills[_t].snapshot.saver_active = true
-  if hills[_t].snapshot.saver_active then
+  local focus;
+  if type(_t) == "number" and _t <= 10 then
+    focus = hills[_t].snapshot.saver_active
+  else
+    focus = snapshots[_t].saver_active
+  end
+  focus = true
+  if focus then
     if not mods.alt then
       snapshot.pack(_t,slot)
     else
@@ -99,7 +110,7 @@ function snapshot.save_to_slot(_t,slot)
     end
     grid_dirty = true
   end
-  hills[_t].snapshot.saver_active = false
+  focus = false
 end
 
 function snapshot.clear(_t,slot)
@@ -132,13 +143,25 @@ end
 snapshot.funnel_done_action = function(voice,coll)
   -- print("snapshot funnel done",voice,coll)
   snapshot.unpack(voice, coll)
-  if hills[voice].snapshot.partial_restore then
-    hills[voice].snapshot.partial_restore = false
+  if type(voice) == 'number' and voice <= 10 then
+    if hills[voice].snapshot.partial_restore then
+      hills[voice].snapshot.partial_restore = false
+    end
+  else
+    if snapshots[voice].partial_restore then
+      snapshots[voice].partial_restore = false
+    end
   end
 end
 
 
 function snapshot.route_funnel(voice,coll,sec,style)
+  local focus;
+  if type(voice) == 'number' and voice <= 10 then
+    focus = hills[voice].snapshot
+  else
+    focus = snapshots[voice]
+  end
   if style ~= nil then
     if style == "beats" then
       sec = clock.get_beat_sec()*sec
@@ -148,8 +171,8 @@ function snapshot.route_funnel(voice,coll,sec,style)
     end
   end
   if sec == 0 then
-    if hills[voice].snapshot.partial_restore then
-      clock.cancel(hills[voice].snapshot.fnl)
+    if focus.partial_restore then
+      clock.cancel(focus.fnl)
       -- print("partial restore try_it",voice,coll)
       snapshot.funnel_done_action(voice,coll)
     else
@@ -157,57 +180,56 @@ function snapshot.route_funnel(voice,coll,sec,style)
     end
   else
     -- print("doing try it for "..voice)
-    if hills[voice].snapshot.partial_restore then
-      clock.cancel(hills[voice].snapshot.fnl)
+    if focus.partial_restore then
+      clock.cancel(focus.fnl)
       -- print("interrupted, canceling previous journey")
     end
-    hills[voice].snapshot.partial_restore = true
+    focus.partial_restore = true
 
     local original_srcs = _t.deep_copy(snapshots[voice][coll])
 
-    if voice <=7 then
+    if type(voice) == 'number' and voice <= 10 then
       local d_voice = kildare.drums[voice]
       for i = 1, #kildare_drum_params[d_voice] do
         local d = kildare_drum_params[d_voice][i]
-        if d.type ~= 'separator' then
+        if d.type ~= 'separator' and not d.lfo_exclude then
           original_srcs[d.id] = params:get(d_voice.."_"..d.id)
         end
       end
     else
-      local sc_target = voice - 7
-      for i = 1,#softcut_params do
-        original_srcs[softcut_params[i]..sc_target] = params:get(softcut_params[i]..sc_target)
+      -- delay, reverb, main
+      for i = 1, #kildare_fx_params[voice] do
+        local d = kildare_fx_params[voice][i]
+        if d.type ~= 'separator' and not d.lfo_exclude then
+          original_srcs[d.id] = params:get(voice.."_"..d.id)
+        end
       end
     end
     
-    hills[voice].snapshot.fnl = snapshot.fnl(
+    focus.fnl = snapshot.fnl(
       function(r_val)
-        hills[voice].snapshot.current_value = r_val
+        focus.current_value = r_val
 
-        if voice <=7 then
+        if type(voice) == 'number' and voice <=10 then
           local d_voice = kildare.drums[voice]
           for i = 1, #kildare_drum_params[d_voice] do
             local d = kildare_drum_params[d_voice][i]
-            if d.type ~= 'separator' then
+            if d.type ~= 'separator' and not d.lfo_exclude then
               params:set(d_voice.."_"..d.id, util.linlin(0,1,original_srcs[d.id],snapshots[voice][coll][d.id],r_val))
             end
           end
         else
-          local sc_target = voice - 7
-          for i = 1,#softcut_params do
-            if softcut_params[i] == "vol_clip_" or softcut_params[i] == "pan_clip_" or softcut_params[i] == "post_filter_fc_" then
-              if params:string("lfo_"..softcut_params[i]..softcut_lfo_ids[softcut_params[i]][sc_target]) == "off" then
-                params:set(softcut_params[i]..sc_target, util.linlin(0,1,original_srcs[softcut_params[i]..sc_target],snapshots[voice][coll][softcut_params[i]..sc_target],r_val))
-              end
-            else
-              params:set(softcut_params[i]..sc_target, util.linlin(0,1,original_srcs[softcut_params[i]..sc_target],snapshots[voice][coll][softcut_params[i]..sc_target],r_val))
+          for i = 1, #kildare_fx_params[voice] do
+            local d = kildare_fx_params[voice][i]
+            if d.type ~= 'separator' and not d.lfo_exclude then
+              params:set(voice.."_"..d.id, util.linlin(0,1,original_srcs[d.id],snapshots[voice][coll][d.id],r_val))
             end
           end
         end
 
         screen_dirty = true
         grid_dirty = true
-        if hills[voice].snapshot.current_value ~= nil and util.round(hills[voice].snapshot.current_value,0.001) == 1 then
+        if focus.current_value ~= nil and util.round(focus.current_value,0.001) == 1 then
           snapshot.funnel_done_action(voice,coll)
         end
       end,

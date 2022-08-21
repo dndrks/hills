@@ -39,7 +39,6 @@ _flow = include 'lib/flow'
 _song = include 'lib/song'
 _ca = include 'lib/clip'
 _snapshots = include 'lib/snapshot'
--- sc_lfos = include 'lib/sc_lfos'
 sc_lfos = require 'lfo'
 mu = require 'musicutil'
 
@@ -196,7 +195,7 @@ function init()
       , ["bounds"] = {["focus"] = 1, ["max"] = 2}
       , ["notes"] = {["focus"] = 1, ["max"] = 12, ["transform"] = "shuffle", ["velocity"] = false}
       , ["loop"] = {["focus"] = 1, ["max"] = 2}
-      , ["softcut"] = {["focus"] = 1, ["max"] = 12, ["transform"] = "shuffle"}
+      , ["samples"] = {["focus"] = 1, ["max"] = 12, ["transform"] = "shuffle"}
       }
     end
 
@@ -513,37 +512,33 @@ pass_note = function(i,j,seg,note_val,index,destination)
         engine.set_voice_param(kildare.drums[i],"carHz",midi_to_hz(played_note))
       end
       engine.trig(kildare.drums[i],hills[i][j].note_velocity[index])
-      if params:string("hill "..i.." softcut output") == "yes" then
-        if params:get("hill "..i.." softcut probability") >= math.random(100) then
-          -- print("489",i,j,played_note)
-          _ca.calculate_sc_positions(i,j,played_note)
+      if params:string("hill "..i.." sample output") == "yes" then
+        if params:get("hill "..i.." sample probability") >= math.random(100) then
+          local target = "sample"..params:get("hill "..i.." sample slot")
+          if params:string(target..'_sampleMode') == 'chop' then
+            local slice = util.wrap(played_note - params:get("hill "..i.." base note"),0,15) + 1
+            _ca.play_slice(target,slice,hills[i][j].note_velocity[index],i,j,played_note)
+          elseif params:string(target..'_sampleMode') == 'playthrough' then
+            _ca.play_through(target,hills[i][j].note_velocity[index],i,j,played_note)
+          elseif params:string(target..'_sampleMode') == 'distribute' then
+            local idx = util.wrap(played_note - params:get("hill "..i.." base note"),0,15) + 1
+            _ca.play_index(target,idx,hills[i][j].note_velocity[index],i,j,played_note) -- TODO: adjust for actual sample pool size
+          end
         end
       end
     else
-      -- TRIGGER SOFTCUT
-      -- TODO: all 6 softcut voices are distributed on the channel
-      -- TODO: we can also just assign a drum voice to do the same manipulation...!
-      if params:string("hill "..i.." softcut output") == "yes" then
-        if params:get("hill "..i.." softcut probability") >= math.random(100) then
-          -- if params:string("hill "..i.." reset softcut level lfo") == "yes" then
-          --   sc_lfos.reset_phase_from_hill(i-7,params:string("hill "..i.." reset softcut level lfo style"))
-          -- end
-          -- if params:string("hill "..i.." reset softcut pan lfo") == "yes" then
-          --   sc_lfos.reset_phase_from_hill(i-4,params:string("hill "..i.." reset softcut pan lfo style"))
-          -- end
-          -- if params:string("hill "..i.." reset softcut filter lfo") == "yes" then
-          --   sc_lfos.reset_phase_from_hill(i-1,params:string("hill "..i.." reset softcut filter lfo style"))
-          -- end
-          -- _ca.calculate_sc_positions(i,j,played_note)
+      -- TRIGGER SAMPLE
+      if params:string("hill "..i.." sample output") == "yes" then
+        if params:get("hill "..i.." sample probability") >= math.random(100) then
           local target = "sample"..i-7
           if params:string(target..'_sampleMode') == 'chop' then
             local slice = util.wrap(played_note - params:get("hill "..i.." base note"),0,15) + 1
-            _ca.play_slice(target,slice,hills[i][j].note_velocity[index],i,j)
+            _ca.play_slice(target,slice,hills[i][j].note_velocity[index],i,j,played_note)
           elseif params:string(target..'_sampleMode') == 'playthrough' then
-            _ca.play_through(target,slice,hills[i][j].note_velocity[index])
+            _ca.play_through(target,hills[i][j].note_velocity[index],i,j,played_note)
           elseif params:string(target..'_sampleMode') == 'distribute' then
             local idx = util.wrap(played_note - params:get("hill "..i.." base note"),0,15) + 1
-            _ca.play_index(target,idx,hills[i][j].note_velocity[index]) -- TODO: adjust for actual sample pool size
+            _ca.play_index(target,idx,hills[i][j].note_velocity[index],i,j,played_note) -- TODO: adjust for actual sample pool size
           end
         end
       end
@@ -656,9 +651,4 @@ end
 function cleanup ()
   print("cleanup")
   metro.free_all()
-  -- os.execute("jack_disconnect softcut:output_1 SuperCollider:in_1;")  
-  -- os.execute("jack_disconnect softcut:output_2 SuperCollider:in_2;")
-  -- os.execute("jack_connect crone:output_5 SuperCollider:in_1;")  
-  -- os.execute("jack_connect crone:output_6 SuperCollider:in_2;")
-  -- audio.level_eng_cut(1)
 end

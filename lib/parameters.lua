@@ -29,30 +29,12 @@ end
 
 local current_audio_route = 1
 
-local function route_audio(selected_route)
-  clock.sleep(0.5)
-  if rerouting_audio == true then
-    rerouting_audio = false
-    if selected_route == 2 then -- audio in + softcut output -> supercollider
-      os.execute("jack_connect crone:output_5 SuperCollider:in_1;")  
-      os.execute("jack_connect crone:output_6 SuperCollider:in_2;")
-      os.execute("jack_connect softcut:output_1 SuperCollider:in_1;")  
-      os.execute("jack_connect softcut:output_2 SuperCollider:in_2;")
-    elseif selected_route == 1 then --just audio in -> supercollider
-      os.execute("jack_disconnect softcut:output_1 SuperCollider:in_1;")  
-      os.execute("jack_disconnect softcut:output_2 SuperCollider:in_2;")
-      os.execute("jack_connect crone:output_5 SuperCollider:in_1;")  
-      os.execute("jack_connect crone:output_6 SuperCollider:in_2;")
-    end
-  end
-end
-
 function parameters.init()
   refresh_params_vports()
 
   params:add_separator("hills")
   for i = 1,number_of_hills do
-    params:add_group(hill_names[i],61)
+    params:add_group(hill_names[i], i > 7 and 59 or 61)
 
     params:add_separator("note management "..hill_names[i])
     params:add_option("hill "..i.." scale","scale",scale_names,1)
@@ -127,34 +109,29 @@ function parameters.init()
       )
     end
 
-    params:add_separator("softcut management "..hill_names[i])
-    params:add_option("hill "..i.." softcut output","softcut output?",{"no","yes"},i<= 7 and 1 or 2)
-    params:set_action("hill "..i.." softcut output",
+    params:add_separator("sample management "..hill_names[i])
+    params:add_option("hill "..i.." sample output","sample output?",{"no","yes"},i<= 7 and 1 or 2)
+    params:set_action("hill "..i.." sample output",
       function(x)
         if x == 1 then
-          params:hide("hill "..i.." softcut slot")
-          params:hide("hill "..i.." softcut probability")
-          params:hide("hill "..i.." softcut repitch")
-          params:hide("hill "..i.." softcut momentary")
+          params:hide("hill "..i.." sample slot")
+          params:hide("hill "..i.." sample probability")
+          params:hide("hill "..i.." sample repitch")
+          params:hide("hill "..i.." sample momentary")
           _menu.rebuild_params()
         elseif x == 2 then
-          params:show("hill "..i.." softcut slot")
-          params:show("hill "..i.." softcut probability")
-          params:show("hill "..i.." softcut repitch")
-          params:show("hill "..i.." softcut momentary")
+          params:show("hill "..i.." sample slot")
+          params:show("hill "..i.." sample probability")
+          params:show("hill "..i.." sample repitch")
+          params:show("hill "..i.." sample momentary")
           _menu.rebuild_params()
         end
       end
     )
-    params:add_number("hill "..i.." softcut slot", "sample slot",1,3,i<= 7 and 1 or i-7)
-    params:add_number("hill "..i.." softcut probability", "playback probability",0,100,100, function(param) return(param:get().."%") end)
-    params:add_option("hill "..i.." softcut repitch", "send pitches?",{"no","yes"},1)
-    params:add_option("hill "..i.." softcut momentary", "stop when released?", {"no","yes"},1)
-
-    if i > 7 then
-      params:add_option("hill "..i.." reset softcut level lfo", "reset level lfo on trig?", {"no","yes"}, 1)
-      params:add_option("hill "..i.." reset softcut level lfo style", "reset lfo to", {"floor","ceiling"}, 1)
-    end
+    params:add_number("hill "..i.." sample slot", "sample slot",1,3,i<= 7 and 1 or i-7)
+    params:add_number("hill "..i.." sample probability", "playback probability",0,100,100, function(param) return(param:get().."%") end)
+    params:add_option("hill "..i.." sample repitch", "send pitches?",{"no","yes"},1)
+    params:add_option("hill "..i.." sample momentary", "stop when released?", {"no","yes"},1)
 
     params:add_separator("MIDI management "..hill_names[i])
     params:add_option("hill "..i.." MIDI output", "MIDI output?",{"no","yes"},1)
@@ -377,31 +354,31 @@ function parameters.init()
   --     end
   --   end
 
-  --   params:add_separator("softcut management")
-  --   params:add_option("multi softcut output","softcut output?",{"no","yes"},1)
-  --   params:set_action("multi softcut output",
+  --   params:add_separator("sample management")
+  --   params:add_option("multi sample output","sample output?",{"no","yes"},1)
+  --   params:set_action("multi sample output",
   --     function(x)
   --       if x == 1 then
-  --         params:hide("multi softcut slot")
-  --         params:hide("multi softcut probability")
+  --         params:hide("multi sample slot")
+  --         params:hide("multi sample probability")
   --         _menu.rebuild_params()
   --       elseif x == 2 then
-  --         params:show("multi softcut slot")
-  --         params:show("multi softcut probability")
+  --         params:show("multi sample slot")
+  --         params:show("multi sample probability")
   --         _menu.rebuild_params()
   --       end
   --     end
   --   )
-  --   params:add_number("multi softcut slot", "sample slot",1,6,1)
-  --   params:add_number("multi softcut probability", "playback probability",0,100,100, function(param) return(param:get().."%") end)
-  --   params:add_trigger("send multi softcut management","send to multiple (see below)")
-  --   params:set_action("send multi softcut management",
+  --   params:add_number("multi sample slot", "sample slot",1,6,1)
+  --   params:add_number("multi sample probability", "playback probability",0,100,100, function(param) return(param:get().."%") end)
+  --   params:add_trigger("send multi sample management","send to multiple (see below)")
+  --   params:set_action("send multi sample management",
   --     function()
   --       for i = 1,number_of_hills do
   --         if params:string("send to "..i) == "yes" then
-  --           params:set("hill "..i.." softcut output",params:get("multi softcut output"))
-  --           params:set("hill "..i.." softcut slot",params:get("multi softcut slot"))
-  --           params:set("hill "..i.." softcut probability",params:get("multi softcut probability"))
+  --           params:set("hill "..i.." sample output",params:get("multi sample output"))
+  --           params:set("hill "..i.." sample slot",params:get("multi sample slot"))
+  --           params:set("hill "..i.." sample probability",params:get("multi sample probability"))
   --         end
   --       end
   --     end
@@ -448,288 +425,8 @@ function parameters.init()
   --   end
   -- -- / MULTI group
 
-  -- params:add_group("SAMPLES",(3 * 17) + 17)
-  -- params:add{
-  --   type = "option", id = "sample_routing", name = "audio routing", 
-  --   options = {"-x kildare","-> kildare"},
-  --   default = 1,
-  --   action = function(value)
-  --     if current_audio_route ~= value then
-  --       print("rerouting audio, don't worry about the 'cannot allocate memory' messages!")
-  --       rerouting_audio = true
-  --       clock.run(route_audio,value)
-  --     end
-  --     if value == 1 then
-  --       params:hide('sample_fx')
-  --       params:hide('sample_to_delay')
-  --       params:hide('sample_to_reverb')
-  --       params:hide('sample_squishPitch')
-  --       params:hide('sample_squishChunk')
-  --       params:hide('sample_amDepth')
-  --       params:hide('sample_amHz')
-  --       params:hide('sample_eqHz')
-  --       params:hide('sample_eqAmp')
-  --       params:hide('sample_bitRate')
-  --       params:hide('sample_bitCount')
-  --       params:hide('sample_lpHz')
-  --       params:hide('sample_hpHz')
-  --       params:hide('sample_filterQ')
-  --       _menu.rebuild_params()
-  --     else
-  --       params:show('sample_fx')
-  --       params:show('sample_to_delay')
-  --       params:show('sample_to_reverb')
-  --       params:show('sample_squishPitch')
-  --       params:show('sample_squishChunk')
-  --       params:show('sample_amDepth')
-  --       params:show('sample_amHz')
-  --       params:show('sample_eqHz')
-  --       params:show('sample_eqAmp')
-  --       params:show('sample_bitRate')
-  --       params:show('sample_bitCount')
-  --       params:show('sample_lpHz')
-  --       params:show('sample_hpHz')
-  --       params:show('sample_filterQ')
-  --       _menu.rebuild_params()
-  --     end
-  --   end
-  --   }
-  -- params:add_separator('sample_fx', 'global sample fx')
-  -- params:add_control("sample_to_delay","delay send level",controlspec.new(0,5,'lin',0,1,''), function(param) return (round_form(param:get()*100,1,"%")) end)
-  -- params:set_action("sample_to_delay", function(x)
-  --   -- engine.set_softcut_param('delaySend',x)
-  -- end)
-  -- params:add_control("sample_to_reverb","reverb send level",controlspec.new(0,5,'lin',0,1,''), function(param) return (round_form(param:get()*100,1,"%")) end)
-  -- params:set_action("sample_to_reverb", function(x)
-  --   -- engine.set_softcut_param('reverbSend',x)
-  -- end)
-
-  -- params:add_control("sample_squishPitch","squish pitch",controlspec.new(1,10,'lin',0,1,'',1/9),function(param) return (round_form(param:get(),1,'')) end)
-  -- params:set_action("sample_squishPitch", function(x)
-  --   -- engine.set_softcut_param('squishPitch',x)
-  -- end)
-  -- params:add_control("sample_squishChunk","squish chunkiness",controlspec.new(1,10,'lin',0,1,'',1/9),function(param) return (round_form(param:get(),1,'')) end)
-  -- params:set_action("sample_squishChunk", function(x)
-  --   -- engine.set_softcut_param('squishChunk',x)
-  -- end)
-
-  -- params:add_control("sample_amDepth","amp mod depth",controlspec.new(0,1,'lin',0,0,''),function(param) return (round_form(param:get()*100,1,"%")) end)
-  -- params:set_action("sample_amDepth", function(x)
-  --   -- engine.set_softcut_param('amDepth',x)
-  -- end)
-  -- params:add_control("sample_amHz","amp mod freq",controlspec.new(0.001,12000,'exp',0,8175.08,''),function(param) return (round_form(param:get(),0.01," Hz")) end)
-  -- params:set_action("sample_amHz", function(x)
-  --   -- engine.set_softcut_param('amHz',x)
-  -- end)
-
-  -- params:add_control("sample_eqHz","eq freq",controlspec.new(20,20000,'exp',0,6000,''),function(param) return (round_form(param:get(),0.01," Hz")) end)
-  -- params:set_action("sample_eqHz", function(x)
-  --   -- engine.set_softcut_param('eqHz',x)
-  -- end)
-  -- params:add_control("sample_eqAmp","eq gain",controlspec.new(-2,2,'lin',0,0,''),function(param) return (round_form(param:get()*100,1,"%")) end)
-  -- params:set_action("sample_eqAmp", function(x)
-  --   -- engine.set_softcut_param('eqAmp',x)
-  -- end)
-
-  -- params:add_control("sample_bitRate","bit rate",controlspec.new(20,24000,'exp',0,24000,''),function(param) return (util.round(param:get(),0.1).." Hz") end)
-  -- params:set_action("sample_bitRate", function(x)
-  --   -- engine.set_softcut_param('bitRate',x)
-  -- end)
-  -- params:add_control("sample_bitCount","bit depth",controlspec.new(1,24,'lin',0,24,'',1/23),function(param) return (round_form(param:get(),1," bit")) end)
-  -- params:set_action("sample_bitCount", function(x)
-  --   -- engine.set_softcut_param('bitCount',x)
-  -- end)
-  
-  -- params:add_control("sample_lpHz","lo-pass freq",controlspec.new(20,20000,'exp',0,20000),function(param) return (round_form(param:get(),0.01," Hz")) end)
-  -- params:set_action("sample_lpHz", function(x)
-  --   -- engine.set_softcut_param('lpHz',x)
-  -- end)
-  -- params:add_control("sample_hpHz","hi-pass freq",controlspec.new(20,24000,'exp',0,20,''),function(param) return (util.round(param:get(),0.1).." Hz") end)
-  -- params:set_action("sample_hpHz", function(x)
-  --   -- engine.set_softcut_param('hpHz',x)
-  -- end)
-  -- params:add_control("sample_filterQ","filter q",controlspec.new(0,100,'lin',0,50,''),function(param) return (util.round(param:get()).."%") end)
-  -- params:set_action("sample_filterQ", function(x)
-  --   -- engine.set_softcut_param('filterQ',x)
-  -- end)
-
-  -- for i = 1,3 do
-  --   params:add_separator("s"..i)
-  --   params:add_option("clip "..i.." sample mode", "mode", {"single (chop)", "single (playthrough)", "folder (distribute)"},1)
-  --   params:set_action("clip "..i.." sample mode",
-  --     function(x)
-  --       if x == 1 then
-  --         params:show("clip "..i.." sample")
-  --         params:hide("clip "..i.." sample folder")
-  --         params:hide("clip "..i.." playthrough sample")
-  --       elseif x == 2 then
-  --         params:show("clip "..i.." playthrough sample")
-  --         params:hide("clip "..i.." sample")
-  --         params:hide("clip "..i.." sample folder")
-  --       elseif x == 3 then
-  --         params:show("clip "..i.." sample folder")
-  --         params:hide("clip "..i.." sample")
-  --         params:hide("clip "..i.." playthrough sample")
-  --       end
-  --       _menu.rebuild_params()
-  --     end
-  --   )
-  --   params:add_file("clip "..i.." sample", "load", _path.audio)
-  --   params:set_action("clip "..i.." sample",
-  --     function(file)
-  --       if file ~= _path.audio and file ~= "playthrough" and file ~= "distributed" then
-  --         _ca.load_sample(file,i)
-  --         print(i.."1")
-  --         parameters.toggle_softcut_params("show", i)
-  --       else
-  --         parameters.toggle_softcut_params("hide", i)
-  --       end
-  --     end
-  --   )
-  --   params:add_file("clip "..i.." sample folder", "load", _path.audio)
-  --   params:set_action("clip "..i.." sample folder",
-  --     function(file)
-  --       if file ~= _path.audio then
-  --         _ca.folder_callback(file,i)
-  --         print(i.."2")
-  --         parameters.toggle_softcut_params("show", i)
-  --       else
-  --         parameters.toggle_softcut_params("hide", i)
-  --       end
-  --     end
-  --   )
-
-  --   params:add_file("clip "..i.." playthrough sample", "load", _path.audio)
-  --   params:set_action("clip "..i.." playthrough sample",
-  --     function(file)
-  --       if file ~= _path.audio then
-  --         params:set("clip "..i.." sample", "playthrough", 1)
-  --         _ca.load_sample(file,i)
-  --         print(i.."3")
-  --         parameters.toggle_softcut_params("show", i)
-  --       else
-  --         parameters.toggle_softcut_params("hide", i)
-  --       end
-  --     end
-  --   )
-    
-  --   params:add_option("speed_clip_"..i,"speed (all slices)", sample_speedlist)
-  --   params:set("speed_clip_"..i, 9)
-  --   params:set_action("speed_clip_"..i,
-  --     function(x)
-  --       -- softcut.rate(i, speedlist[i][params:get("speed_clip_"..i)]*offset[i])
-  --       softcut.rate(i, _ca.get_total_pitch_offset(i))
-  --       for j = 1,8 do
-  --         for k = 1,#hills[i+7][j].sample_controls.rate do
-  --           hills[i+7][j].sample_controls.rate[k] = x
-  --         end
-  --       end
-  --       if x < 6 then
-  --         if not sample_track[i].reverse then sample_track[i].reverse = true end
-  --       elseif x > 6 then
-  --         if sample_track[i].reverse then sample_track[i].reverse = false end
-  --       end
-  --     end
-  --   )
-  --   params:add_number("semitone_offset_"..i, "offset", -24,24,0, function(param) return (param:get().." st") end)
-  --   params:set_action("semitone_offset_"..i,
-  --     function(value)
-  --       sample_offset[i] = math.pow(0.5, -value / 12)
-  --       softcut.rate(i, _ca.get_total_pitch_offset(i))
-  --     end
-  --   )
-  --   params:add_number(
-  --     "playhead_distance_L_"..i,
-  --     "playhead distance (L)",
-  --     -100,
-  --     100,
-  --     0,
-  --     function(param) return ((param:get()*10).."ms") end
-  --   )
-  --   params:add_number(
-  --     "playhead_distance_R_"..i,
-  --     "playhead distance (R)",
-  --     -100,
-  --     100,
-  --     0,
-  --     function(param) return ((param:get()*10).."ms") end
-  --   )
-  --   params:set_action("playhead_distance_L_"..i,
-  --     function()
-  --       if params:get("clip "..i.." sample") == "playthrough" then
-  --         _ca.set_loop_start(i,softcut_offsets[i])
-  --       end
-  --     end
-  --   )
-  --   params:set_action("playhead_distance_R_"..i,
-  --     function()
-  --       if params:get("clip "..i.." sample") == "playthrough" then
-  --         _ca.set_loop_start(i,softcut_offsets[i])
-  --       end
-  --     end
-  --   )
-  --   params:add_control("vol_clip_"..i,"level",controlspec.new(0,5,'lin',0,1,''))
-  --   params:set_action("vol_clip_"..i, function(x)
-  --     _ca.set_level(i, x)
-  --   end)
-    
-  --   params:add_control("pan_clip_"..i,"pan",controlspec.new(-1,1,'lin',0.01,0,''),frm.bipolar_as_pan_widget)
-  --   params:set_action("pan_clip_"..i, function(x)
-  --     _ca.set_pan(i, x)
-  --   end)
-
-  --   params:add_control("post_filter_fc_"..i,"filter cutoff",controlspec.new(20,12000,'exp',0.01,12000,''))
-  --   params:set_action("post_filter_fc_"..i, function(x) _ca.set_filter("post_filter_fc",i,x) end)
-  --   params:add_control("post_filter_lp_"..i,"lopass",controlspec.new(0,1,'lin',0.01,0,''))
-  --   params:set_action("post_filter_lp_"..i, function(x) _ca.set_filter("post_filter_lp",i,x) end)
-  --   params:add_control("post_filter_hp_"..i,"hipass",controlspec.new(0,1,'lin',0.01,0,''))
-  --   params:set_action("post_filter_hp_"..i, function(x) _ca.set_filter("post_filter_hp",i,x) end)
-  --   params:add_control("post_filter_bp_"..i,"bandpass",controlspec.new(0,1,'lin',0.01,0,''))
-  --   params:set_action("post_filter_bp_"..i, function(x) _ca.set_filter("post_filter_bp",i,x) end)
-  --   params:add_control("post_filter_dry_"..i,"dry",controlspec.new(0,1,'lin',0.01,1,''))
-  --   params:set_action("post_filter_dry_"..i, function(x) _ca.set_filter("post_filter_dry",i,x) end)
-  --   params:add_number("post_filter_rq_"..i,"filter q",0,100,50,function(param) return (util.round(param:get(),0.01).."%") end)
-  --   params:set_action("post_filter_rq_"..i, function(x) _ca.set_filter("post_filter_rq",i,util.linlin(0,100,2.0,0.001,x)) end)
-
-  -- end
-  -- params:add_separator("global")
-  -- params:add_control("pitch_control","pitch control",controlspec.new(-12,12,'lin',0,0,'%'))
-  -- params:set_action("pitch_control",function(x)
-  --   for i = 1,3 do
-  --     softcut.rate(i,_ca.get_total_pitch_offset(i))
-  --   end
-  -- end)
-
-  -- vol_lfos = {}
-  -- params:add_group('level_lfos','SAMPLE LEVEL LFOs',45)
-  -- for i = 1,3 do
-  --   vol_lfos[i] = sc_lfos:add{min = 0, max = 5, action = function(s,r) params:lookup_param('vol_clip_'..i).action(s) end}
-  --   vol_lfos[i]:add_params('lfo_vol_clip_'..i, "["..i.."]")
-  -- end
-
-  -- sc_lfos.add_params("vol_clip_")
-  -- sc_lfos.add_params("pan_clip_")
-  -- sc_lfos.add_params("post_filter_fc_")
-
   _menu.rebuild_params()
   clock.run(function() clock.sleep(1) params:bang() end)
-end
-
-function parameters.toggle_softcut_params(state, i)
-  params[state](params, "speed_clip_"..i)
-  params[state](params, "semitone_offset_"..i)
-  params[state](params, "playhead_distance_L_"..i)
-  params[state](params, "playhead_distance_R_"..i)
-  params[state](params, "vol_clip_"..i)
-  params[state](params, "pan_clip_"..i)
-  params[state](params, "post_filter_fc_"..i)
-  params[state](params, "post_filter_lp_"..i)
-  params[state](params, "post_filter_hp_"..i)
-  params[state](params, "post_filter_bp_"..i)
-  params[state](params, "post_filter_dry_"..i)
-  params[state](params, "post_filter_rq_"..i)
-  _menu.rebuild_params()
-  print("happening",i,state)
 end
 
 return parameters
