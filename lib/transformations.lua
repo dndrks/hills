@@ -349,46 +349,6 @@ m.quantize = function(i,j,smallest,start_point,end_point)
   m.adjust_timestamps(i,j)
 end
 
--- m.quantize = function(i,j,smallest,start_point,end_point)
---   local s_p = start_point
---   local e_p = end_point
---   if s_p == nil then
---     s_p = hills[i][j].low_bound.note
---   end
---   if e_p == nil then
---     e_p = hills[i][j].high_bound.note
---   end
---   local notes_to_durs =
---   {
---     ["1/4"] = 1
---   , ["1/4d"] = 2/3
---   , ["1/4t"] = 3/2
---   , ["1/8"] = 2
---   , ["1/8d"] = 4/3
---   , ["1/8t"] = 3
---   , ["1/16"] = 4
---   , ["1/16d"] = 8/3
---   , ["1/16t"] = 6
---   , ["1/32"] = 8
---   , ["1/32d"] = 16/3
---   , ["1/32t"] = 12
---   }
---   local quant_val = clock.get_beat_sec()/notes_to_durs[smallest]
---   for k = s_p,e_p do
---     hills[i][j].note_timedelta[k] = util.round(hills[i][j].note_timedelta[k]/quant_val) * quant_val
---   end
---   for k = e_p,s_p,-1 do
---     if hills[i][j].note_timedelta[k] == 0 then
---       print(k)
---       hills[i][j].note_timedelta[k] = quant_val
---     end
---   end
---   if hills[i][j].high_bound.note > #hills[i][j].note_timedelta then
---     hills[i][j].high_bound.note = #hills[i][j].note_timedelta
---   end
---   m.adjust_timestamps(i,j)
--- end
-
 m.clamp_to_steps = function(i,j,count)
   hills[i][j].high_bound.note = hills[i][j].low_bound.note + (count-1)
 end

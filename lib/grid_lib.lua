@@ -122,6 +122,7 @@ function grid_lib.stop_pattern_playback(i)
       active_voices[i][j] = false
     end
   end
+  grid_dirty = true
 end
 
 function grid_lib.init()

@@ -41,10 +41,7 @@ function key_actions.parse(n,z)
           if ui.menu_focus ~= 3 then
             _a.start(i,j,true)
           else
-            -- local h = hills[i]
-            -- local seg = h[h.segment]
             ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus].notes.velocity = not ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus].notes.velocity
-            -- pass_note(i,h.segment,seg,seg.note_num.pool[seg.index],seg.index)
           end
         else
           if ui.menu_focus == 1 then
