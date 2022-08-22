@@ -21,6 +21,7 @@ song.init = function()
   end
   song_atoms.clock = nil
   song_atoms.transport_clock = nil
+  song_atoms.transport_active = false
 end
 
 song.iterate = function()
@@ -118,6 +119,7 @@ function clock.transport.start()
   else
     song.start()
   end
+  song_atoms.transport_active = true
 end
 
 function clock.transport.stop()
@@ -126,6 +128,7 @@ function clock.transport.stop()
     song_atoms.transport_clock = nil
   end
   song.stop()
+  song_atoms.transport_active = false
 end
 
 song.add_line = function(b,loc)

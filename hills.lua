@@ -636,10 +636,17 @@ redraw = function()
   if ui.control_set ~= "song" then
     _s.draw()
   else
-    _flow.draw_menu()
+    if not key2_hold then
+      _flow.draw_song_menu()
+    else
+      _flow.draw_transport_menu()
+    end
   end
   screen.update()
   screen_dirty = false
+  if key2_hold then
+    screen_dirty = true
+  end
 end
 
 function index_to_grid_pos(val,columns)

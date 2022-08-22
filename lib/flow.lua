@@ -36,7 +36,7 @@ function f_m.draw_square(x,y)
   end
 end
 
-function f_m.draw_menu()
+function f_m.draw_song_menu()
   screen.move(0,10)
   screen.font_size(12)
   screen.level(15)
@@ -130,69 +130,107 @@ function f_m.draw_menu()
   end
 end
 
+function f_m.draw_transport_menu()
+  screen.font_size(8)
+  screen.move(0,30)
+  local show_me_frac = math.fmod(clock.get_beats(),1)
+  if show_me_frac <= 0.25 then
+    show_me_frac = 1
+  else
+    show_me_frac = 4
+  end
+  if show_me_frac == 1 then
+    screen.level(15)
+  else
+    screen.level(3)
+  end
+  screen.font_size(18)
+  screen.text(params:get("clock_tempo").." bpm")
+  screen.move(0,50)
+  screen.level(15)
+  screen.font_size(14)
+  screen.text("K3: "..(song_atoms.transport_active and "STOP SONG" or "START SONG"))
+end
+
 function f_m.process_encoder(n,d)
-  if n == 1 then
-    page.flow.group = util.clamp(page.flow.group + d,1,4)
-  elseif n == 2 then
-    if _fm_.song_col[_fm_.group] == 5 then
-      if d > 0 then
-        local current_line = _fm_.song_line[_fm_.group]
-        _fm_.song_line[_fm_.group] = util.clamp(_fm_.song_line[_fm_.group] + d,1,song_atoms[_fm_.group].end_point)
-        if (_fm_.song_line[_fm_.group] ~= song_atoms[_fm_.group].start_point) and (_fm_.song_line[_fm_.group] ~= song_atoms[_fm_.group].end_point) then
-          _fm_.song_col[_fm_.group] = 1
-        elseif current_line ~= _fm_.song_line[_fm_.group] then
-          _fm_.song_col[_fm_.group] = 1
+  if not key2_hold then
+    if n == 1 then
+      page.flow.group = util.clamp(page.flow.group + d,1,4)
+    elseif n == 2 then
+      if _fm_.song_col[_fm_.group] == 5 then
+        if d > 0 then
+          local current_line = _fm_.song_line[_fm_.group]
+          _fm_.song_line[_fm_.group] = util.clamp(_fm_.song_line[_fm_.group] + d,1,song_atoms[_fm_.group].end_point)
+          if (_fm_.song_line[_fm_.group] ~= song_atoms[_fm_.group].start_point) and (_fm_.song_line[_fm_.group] ~= song_atoms[_fm_.group].end_point) then
+            _fm_.song_col[_fm_.group] = 1
+          elseif current_line ~= _fm_.song_line[_fm_.group] then
+            _fm_.song_col[_fm_.group] = 1
+          end
+        else
+          _fm_.song_col[_fm_.group] = util.clamp(_fm_.song_col[_fm_.group] + d,1,5)
         end
-      else
+      elseif _fm_.song_col[_fm_.group] == 2 or _fm_.song_col[_fm_.group] == 3 or _fm_.song_col[_fm_.group] == 4 then
         _fm_.song_col[_fm_.group] = util.clamp(_fm_.song_col[_fm_.group] + d,1,5)
+      elseif _fm_.song_col[_fm_.group] == 1 then
+        if d < 0 then
+          local current_line = _fm_.song_line[_fm_.group]
+          _fm_.song_line[_fm_.group] = util.clamp(_fm_.song_line[_fm_.group] + d,1,song_atoms[_fm_.group].end_point)
+          if (_fm_.song_line[_fm_.group] ~= song_atoms[_fm_.group].start_point) and (_fm_.song_line[_fm_.group] ~= song_atoms[_fm_.group].end_point) then
+            _fm_.song_col[_fm_.group] = 5
+          elseif current_line ~= _fm_.song_line[_fm_.group] then
+            _fm_.song_col[_fm_.group] = 5
+          end
+        else
+          _fm_.song_col[_fm_.group] = util.clamp(_fm_.song_col[_fm_.group] + d,1,5)
+        end
       end
-    elseif _fm_.song_col[_fm_.group] == 2 or _fm_.song_col[_fm_.group] == 3 or _fm_.song_col[_fm_.group] == 4 then
-      _fm_.song_col[_fm_.group] = util.clamp(_fm_.song_col[_fm_.group] + d,1,5)
-    elseif _fm_.song_col[_fm_.group] == 1 then
-      if d < 0 then
-        local current_line = _fm_.song_line[_fm_.group]
-        _fm_.song_line[_fm_.group] = util.clamp(_fm_.song_line[_fm_.group] + d,1,song_atoms[_fm_.group].end_point)
-        if (_fm_.song_line[_fm_.group] ~= song_atoms[_fm_.group].start_point) and (_fm_.song_line[_fm_.group] ~= song_atoms[_fm_.group].end_point) then
-          _fm_.song_col[_fm_.group] = 5
-        elseif current_line ~= _fm_.song_line[_fm_.group] then
-          _fm_.song_col[_fm_.group] = 5
-        end
-      else
-        _fm_.song_col[_fm_.group] = util.clamp(_fm_.song_col[_fm_.group] + d,1,5)
+    elseif n == 3 then
+      if _fm_.song_col[_fm_.group] == 1 then
+        song_atoms[_fm_.group].lane[_fm_.song_line[_fm_.group]].beats = util.clamp(song_atoms[_fm_.group].lane[_fm_.song_line[_fm_.group]].beats + d,1,128)
+      elseif _fm_.song_col[_fm_.group] == 2 or _fm_.song_col[_fm_.group] == 3 or _fm_.song_col[_fm_.group] == 4 or _fm_.song_col[_fm_.group] == 5 then
+        song_atoms[_fm_.group].lane[_fm_.song_line[_fm_.group]][pattern_names[_fm_.song_col[_fm_.group]-1]].target = util.clamp(song_atoms[_fm_.group].lane[_fm_.song_line[_fm_.group]][pattern_names[_fm_.song_col[_fm_.group]-1]].target + d,-1,16)
+      -- elseif _fm_.song_col[_fm_.group] == 3 then
+      --   if _fm_.alt then
+      --     song_atoms[_fm_.group].lane[_fm_.song_line[_fm_.group]].snapshot_restore_mod_index = util.clamp(song_atoms[_fm_.group].lane[_fm_.song_line[_fm_.group]].snapshot_restore_mod_index + d, 0,8)
+      --   else
+      --     song_atoms[_fm_.group].lane[_fm_.song_line[_fm_.group]].snapshot.target = util.clamp(song_atoms[_fm_.group].lane[_fm_.song_line[_fm_.group]].snapshot.target + d,-1,16)
+      --   end
       end
     end
-  elseif n == 3 then
-    if _fm_.song_col[_fm_.group] == 1 then
-      song_atoms[_fm_.group].lane[_fm_.song_line[_fm_.group]].beats = util.clamp(song_atoms[_fm_.group].lane[_fm_.song_line[_fm_.group]].beats + d,1,128)
-    elseif _fm_.song_col[_fm_.group] == 2 or _fm_.song_col[_fm_.group] == 3 or _fm_.song_col[_fm_.group] == 4 or _fm_.song_col[_fm_.group] == 5 then
-      song_atoms[_fm_.group].lane[_fm_.song_line[_fm_.group]][pattern_names[_fm_.song_col[_fm_.group]-1]].target = util.clamp(song_atoms[_fm_.group].lane[_fm_.song_line[_fm_.group]][pattern_names[_fm_.song_col[_fm_.group]-1]].target + d,-1,16)
-    -- elseif _fm_.song_col[_fm_.group] == 3 then
-    --   if _fm_.alt then
-    --     song_atoms[_fm_.group].lane[_fm_.song_line[_fm_.group]].snapshot_restore_mod_index = util.clamp(song_atoms[_fm_.group].lane[_fm_.song_line[_fm_.group]].snapshot_restore_mod_index + d, 0,8)
-    --   else
-    --     song_atoms[_fm_.group].lane[_fm_.song_line[_fm_.group]].snapshot.target = util.clamp(song_atoms[_fm_.group].lane[_fm_.song_line[_fm_.group]].snapshot.target + d,-1,16)
-    --   end
+  else
+    if n == 2 then
+      params:delta("clock_tempo",d)
+    elseif n == 3 then
+      params:delta("clock_tempo",d/10)
     end
   end
 end
 
 function f_m.process_key(n,z)
   if n == 3 and z == 1 then
-    if _fm_.menu_layer == 1 then
-      _fm_.menu_layer = 3
-    elseif _fm_.menu_layer == 3 then
-      if _fm_.main_sel == 3 then
-        if not _fm_.alt then
-          _song.add_line(_fm_.group,_fm_.song_line[_fm_.group])
-        else
-          _song.duplicate_line(_fm_.group,_fm_.song_line[_fm_.group])
-        end
-      elseif _fm_.main_sel == 2 then
-        if _fm_.alt then
-          if _fm_.scene_line_sel > 1 then
-            snapshot.seed_restore_state_to_all(_fm_.group,track[_fm_.group].snapshot.focus,snapshot_restore_params[_fm_.scene_line_sel-1])
+    if not key2_hold then
+      if _fm_.menu_layer == 1 then
+        _fm_.menu_layer = 3
+      elseif _fm_.menu_layer == 3 then
+        if _fm_.main_sel == 3 then
+          if not _fm_.alt then
+            _song.add_line(_fm_.group,_fm_.song_line[_fm_.group])
+          else
+            _song.duplicate_line(_fm_.group,_fm_.song_line[_fm_.group])
+          end
+        elseif _fm_.main_sel == 2 then
+          if _fm_.alt then
+            if _fm_.scene_line_sel > 1 then
+              snapshot.seed_restore_state_to_all(_fm_.group,track[_fm_.group].snapshot.focus,snapshot_restore_params[_fm_.scene_line_sel-1])
+            end
           end
         end
+      end
+    else
+      if song_atoms.transport_active then
+        clock.transport.stop()
+      else
+        clock.transport.start()
       end
     end
   elseif n == 2 and z == 1 then
