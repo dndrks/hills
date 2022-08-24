@@ -131,8 +131,12 @@ function f_m.draw_song_menu()
 end
 
 function f_m.draw_transport_menu()
+  screen.move(0,10)
+  screen.font_size(12)
+  screen.level(15)
+  screen.text("TRANSPORT")
   screen.font_size(8)
-  screen.move(0,30)
+  screen.move(0,35)
   local show_me_frac = math.fmod(clock.get_beats(),1)
   if show_me_frac <= 0.25 then
     show_me_frac = 1
@@ -146,7 +150,7 @@ function f_m.draw_transport_menu()
   end
   screen.font_size(18)
   screen.text(params:get("clock_tempo").." bpm")
-  screen.move(0,50)
+  screen.move(0,58)
   screen.level(15)
   screen.font_size(14)
   screen.text("K3: "..(song_atoms.transport_active and "STOP SONG" or "START SONG"))

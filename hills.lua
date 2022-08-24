@@ -75,7 +75,6 @@ function init()
   key2_hold_counter.event =
     function()
       key2_hold = true
-      print("K2 held!")
       screen_dirty = true
     end
 
@@ -521,7 +520,7 @@ pass_note = function(i,j,seg,note_val,index,destination)
           elseif params:string(target..'_sampleMode') == 'playthrough' then
             _ca.play_through(target,hills[i][j].note_velocity[index],i,j,played_note)
           elseif params:string(target..'_sampleMode') == 'distribute' then
-            local idx = util.wrap(played_note - params:get("hill "..i.." base note"),0,15) + 1
+            local idx = util.wrap(played_note - params:get("hill "..i.." base note"),0,sample_info[target].sample_count-1) + 1
             _ca.play_index(target,idx,hills[i][j].note_velocity[index],i,j,played_note) -- TODO: adjust for actual sample pool size
           end
         end
@@ -537,7 +536,7 @@ pass_note = function(i,j,seg,note_val,index,destination)
           elseif params:string(target..'_sampleMode') == 'playthrough' then
             _ca.play_through(target,hills[i][j].note_velocity[index],i,j,played_note)
           elseif params:string(target..'_sampleMode') == 'distribute' then
-            local idx = util.wrap(played_note - params:get("hill "..i.." base note"),0,15) + 1
+            local idx = util.wrap(played_note - params:get("hill "..i.." base note"),0,sample_info[target].sample_count-1) + 1
             _ca.play_index(target,idx,hills[i][j].note_velocity[index],i,j,played_note) -- TODO: adjust for actual sample pool size
           end
         end

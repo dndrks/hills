@@ -83,10 +83,24 @@ function screen_actions.draw()
             .." | velocity: "..(hills[hf][focus].note_velocity[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["notes"]["focus"]])
           )
         else
+          local target_sample_voice;
+          local target_sample_string = "";
+          if params:string('hill '..hf..' sample output') == "yes" then
+            target_sample_voice = params:get('hill '..hf..' sample slot')
+            if params:string('sample'..target_sample_voice..'_sampleMode') == 'distribute' then
+              if sample_info['sample'..target_sample_voice].sample_count == nil then
+                target_sample_string = ""
+              else
+                target_sample_string = ' | sample: '..(util.wrap(note_number - params:get("hill "..hf.." base note"),0,sample_info['sample'..target_sample_voice].sample_count-1) + 1)
+              end
+            elseif params:string('sample'..target_sample_voice..'_sampleMode') == 'chop' then
+              target_sample_string = ' | slice: '..(util.wrap(note_number - params:get("hill "..hf.." base note"),0,15) + 1)
+            end
+          end
           screen.text(
             note_number.."/"..mu.note_num_to_name(note_number)..
             (hills[hf][focus].note_num.active[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["notes"]["focus"]] and "" or " (m)")
-            .." | slice: "..(util.wrap(note_number - params:get("hill "..hf.." base note"),0,15) + 1)
+            ..target_sample_string
           )
         end
         if key1_hold then

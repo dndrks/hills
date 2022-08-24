@@ -22,14 +22,14 @@ function ca.init()
     sample_info[voice] = {}
     sample_info[voice].sample_rates = {}
     sample_info[voice].sample_lengths = {}
+    sample_info[voice].sample_count = 0
     local wavs = util.scandir(folder)
-    local sample_id = 0
     for index, data in ipairs(wavs) do
       local ch, len, rate = audio.file_info(folder..data)
       if rate ~= 0 then
-        sample_id = sample_id + 1
-        sample_info[voice].sample_rates[sample_id] = rate
-        sample_info[voice].sample_lengths[sample_id] = len/rate
+        sample_info[voice].sample_count = sample_info[voice].sample_count + 1
+        sample_info[voice].sample_rates[sample_info[voice].sample_count] = rate
+        sample_info[voice].sample_lengths[sample_info[voice].sample_count] = len/rate
       end
     end
   end
@@ -106,32 +106,19 @@ end
 function ca.get_resampled_rate(voice, i, j, pitched)
   local total_offset;
   total_offset = params:get(voice..'_playbackRateOffset')
-  local step_rate;
-  if i and j then
-    step_rate = hills[i][j].sample_controls.rate[hills[i][hills[i].segment].index]
-  end
-  if not pitched then
-    if step_rate and step_rate ~= params:get(voice..'_playbackRateBase') then
-      total_offset = math.pow(0.5, -total_offset / 12) * sample_speedlist[step_rate]  
-    else
-      total_offset = math.pow(0.5, -total_offset / 12) * sample_speedlist[params:get(voice..'_playbackRateBase')]
-    end
-  else
-    if step_rate and step_rate ~= params:get(voice..'_playbackRateBase') then
-      total_offset = math.pow(0.5, -total_offset / 12) * pitched * sample_speedlist[step_rate]
-    else
-      total_offset = math.pow(0.5, -total_offset / 12) * pitched * sample_speedlist[params:get(voice..'_playbackRateBase')]
-    end
+  local step_rate = hills[i][j].sample_controls.rate[hills[i][hills[i].segment].index]
+  total_offset = math.pow(0.5, -total_offset / 12) * sample_speedlist[step_rate]  
+  if pitched then
+    total_offset = total_offset * pitched
   end
   if util.round(params:get(voice..'_playbackPitchControl'),0.01) ~= 0 then
     total_offset = total_offset + (total_offset * (util.round(params:get(voice..'_playbackPitchControl'),0.01)/100))
-    return (total_offset)
-  else
-    return (total_offset)
   end
+  print(total_offset * sample_speedlist[params:get(voice..'_playbackRateBase')])
+  return (total_offset * sample_speedlist[params:get(voice..'_playbackRateBase')])
 end
 
-function ca.set_pitched_rate(target,i,j,played_note)
+function ca.get_pitched_rate(target,i,j,played_note)
   local note_distance = (played_note - 60)
   local rates_from_notes = {
     1,
@@ -166,7 +153,7 @@ function ca.play_slice(target,slice,velocity,i,j, played_note)
     engine.set_voice_param(target,'loop',hills[i][j].sample_controls.loop[hills[i][j].index] and 1 or 0)
     local rate;
     if params:string('hill '..i..' sample repitch') == "yes" and played_note ~= nil then
-      rate = ca.set_pitched_rate(target,i,j,played_note)
+      rate = ca.get_pitched_rate(target,i,j,played_note)
     else
       rate = ca.get_resampled_rate(target, i, j)
     end
@@ -181,7 +168,7 @@ function ca.play_through(target,velocity,i,j, played_note)
   engine.set_voice_param(target,'loop',hills[i][j].sample_controls.loop[hills[i][j].index] and 1 or 0)
   local rate;
   if params:string('hill '..i..' sample repitch') == "yes" and played_note ~= nil then
-    rate = ca.set_pitched_rate(target,i,j,played_note)
+    rate = ca.get_pitched_rate(target,i,j,played_note)
   else
     rate = ca.get_resampled_rate(target, i, j)
   end
@@ -196,7 +183,7 @@ function ca.play_index(target,index,velocity,i,j, played_note)
   engine.set_voice_param(target,'loop',hills[i][j].sample_controls.loop[hills[i][j].index] and 1 or 0)
   local rate;
   if params:string('hill '..i..' sample repitch') == "yes" and played_note ~= nil then
-    rate = ca.set_pitched_rate(target,i,j,played_note)
+    rate = ca.get_pitched_rate(target,i,j,played_note)
   else
     rate = ca.get_resampled_rate(target, i, j)
   end

@@ -32,7 +32,7 @@ function grid_lib.pattern_execute(data)
     end
     grid_dirty = true
   elseif data.event == "snapshot_restore" then
-    _snapshots.route_funnel(data.x,data.y,snapshots.mod.index,"time")
+    _snapshots.route_funnel(data.x,data.y,data.mod_index,"time")
     if data.x == 'delay' or data.x == 'reverb' or data.x == 'main' then
       snapshots[data.x].focus = data.y
     else
@@ -323,7 +323,8 @@ function g.key(x,y,z)
               ["event"] = "snapshot_restore",
               ["x"] = x,
               ["y"] = y,
-              ["id"] = i
+              ["id"] = i,
+              ['mod_index'] = snapshots.mod.index
             }
           )
         end
@@ -354,15 +355,24 @@ function g.key(x,y,z)
               ["event"] = "snapshot_restore",
               ["x"] = x,
               ["y"] = y,
-              ["id"] = i
+              ["id"] = i,
+              ['mod_index'] = snapshots.mod.index
             }
           )
         end
       end
     end
-  elseif x>=13 and y<=4 and z == 1 then
+  elseif x>=13 and y<=4 then
     local target = (x-12)+(4*(y-1))
-    grid_lib.handle_grid_pat(target,mods.alt)
+    if grid_pattern[target].count == 0 then
+      if z == 0 then
+        grid_lib.handle_grid_pat(target,mods.alt)
+      end
+    else
+      if z == 1 then
+        grid_lib.handle_grid_pat(target,mods.alt)
+      end
+    end
   elseif x == 12 and y == 5 then
     overdub_toggle = z == 1 and true or false
   elseif x == 12 and y == 6 then
