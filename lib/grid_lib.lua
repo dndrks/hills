@@ -49,6 +49,7 @@ duplicate_toggle = false
 copy_toggle = false
 pattern_clipboard = {event = {}, time = {}, count = 0}
 
+pattern_links = {}
 for i = 1,16 do
   grid_pattern[i] = pt.new(i)
   grid_pattern[i].process = grid_lib.pattern_execute
@@ -64,6 +65,14 @@ for i = 1,16 do
         end
       end
     end
+  grid_pattern[i].start_callback = function()
+    if #pattern_links[i] ~= 0 then
+      for j = 1,#pattern_links[i] do
+        grid_pattern[pattern_links[i][j]]:start()
+      end
+    end
+  end
+  pattern_links[i] = {}
 end
 
 function grid_lib.handle_grid_pat(i,alt)
@@ -299,67 +308,80 @@ function g.key(x,y,z)
         copied = nil
         clipboard = nil
       end
-    elseif mods["snapshots"] and not mods['snapshots_extended'] then
-      x = x - 1
-      if z == 1 then
-        if tab.count(snapshots[x][y]) == 0 then
-          hills[x].snapshot.saver_clock = clock.run(_snapshots.save_to_slot,x,y)
-          hills[x].snapshot.focus = y
-        elseif not mods.alt then
-          _snapshots.route_funnel(x,y,snapshots.mod.index,"time")
-          hills[x].snapshot.focus = y
+    elseif not snapshot_overwrite_mod then
+      if mods["snapshots"] and not mods['snapshots_extended'] then
+        x = x - 1
+        if z == 1 then
+          if tab.count(snapshots[x][y]) == 0 then
+            hills[x].snapshot.saver_clock = clock.run(_snapshots.save_to_slot,x,y)
+            hills[x].snapshot.focus = y
+          elseif not mods.alt then
+            _snapshots.route_funnel(x,y,snapshots.mod.index,"time")
+            hills[x].snapshot.focus = y
+          else
+            hills[x].snapshot.saver_clock = clock.run(_snapshots.save_to_slot,x,y)
+          end
         else
-          hills[x].snapshot.saver_clock = clock.run(_snapshots.save_to_slot,x,y)
+          if hills[x].snapshot.saver_clock ~= nil then
+            clock.cancel(hills[x].snapshot.saver_clock)
+          end
         end
-      else
-        if hills[x].snapshot.saver_clock ~= nil then
-          clock.cancel(hills[x].snapshot.saver_clock)
+        if z == 1 and tab.count(snapshots[x][y]) > 0 then
+          for i = 1,16 do
+            grid_pattern[i]:watch(
+              {
+                ["event"] = "snapshot_restore",
+                ["x"] = x,
+                ["y"] = y,
+                ["id"] = i,
+                ['mod_index'] = snapshots.mod.index
+              }
+            )
+          end
         end
-      end
-      if z == 1 and tab.count(snapshots[x][y]) > 0 then
-        for i = 1,16 do
-          grid_pattern[i]:watch(
-            {
-              ["event"] = "snapshot_restore",
-              ["x"] = x,
-              ["y"] = y,
-              ["id"] = i,
-              ['mod_index'] = snapshots.mod.index
-            }
-          )
-        end
-      end
-    elseif mods['snapshots_extended'] then
-      local fx = {'delay','reverb','main'}
-      x = x - 1
-      local x = fx[x]
-      if z == 1 then
-        if tab.count(snapshots[x][y]) == 0 then
-          snapshots[x].saver_clock = clock.run(_snapshots.save_to_slot,x,y)
-          snapshots[x].focus = y
-        elseif not mods.alt then
-          _snapshots.route_funnel(x,y,snapshots.mod.index,"time")
-          snapshots[x].focus = y
+      elseif mods['snapshots_extended'] then
+        local fx = {'delay','reverb','main'}
+        x = x - 1
+        local x = fx[x]
+        if z == 1 then
+          if tab.count(snapshots[x][y]) == 0 then
+            snapshots[x].saver_clock = clock.run(_snapshots.save_to_slot,x,y)
+            snapshots[x].focus = y
+          elseif not mods.alt then
+            _snapshots.route_funnel(x,y,snapshots.mod.index,"time")
+            snapshots[x].focus = y
+          else
+            snapshots[x].saver_clock = clock.run(_snapshots.save_to_slot,x,y)
+          end
         else
-          snapshots[x].saver_clock = clock.run(_snapshots.save_to_slot,x,y)
+          if snapshots[x].saver_clock ~= nil then
+            clock.cancel(snapshots[x].saver_clock)
+          end
         end
-      else
-        if snapshots[x].saver_clock ~= nil then
-          clock.cancel(snapshots[x].saver_clock)
+        if z == 1 and tab.count(snapshots[x][y]) > 0 then
+          for i = 1,16 do
+            grid_pattern[i]:watch(
+              {
+                ["event"] = "snapshot_restore",
+                ["x"] = x,
+                ["y"] = y,
+                ["id"] = i,
+                ['mod_index'] = snapshots.mod.index
+              }
+            )
+          end
         end
       end
-      if z == 1 and tab.count(snapshots[x][y]) > 0 then
-        for i = 1,16 do
-          grid_pattern[i]:watch(
-            {
-              ["event"] = "snapshot_restore",
-              ["x"] = x,
-              ["y"] = y,
-              ["id"] = i,
-              ['mod_index'] = snapshots.mod.index
-            }
-          )
+    elseif snapshot_overwrite_mod then
+      if mods['snapshots'] and not mods['snapshots_extended'] then
+        x = x - 1
+        if z == 1 then
+          print(x,y)
+          if tab.count(snapshots[x][y]) ~= 0 then
+            snapshot_overwrite[x][y] = not snapshot_overwrite[x][y]
+          end
         end
+      elseif mods['snapshots_extended'] then
       end
     end
   elseif x>=13 and y<=4 then
@@ -471,34 +493,49 @@ function grid_redraw()
             display_level = 15
           end
           g:led(i,j,display_level)
-        elseif mods["snapshots"] and not mods['snapshots_extended'] then
-          local display_level;
-          if i-1 < number_of_hills+1 then
-            if tab.count(snapshots[i-1][j]) == 0 then
-              display_level = 3
-            else
-              if hills[i-1].snapshot.focus == j then
-                display_level = 12
+        elseif snapshot_overwrite_mod then
+          if mods["snapshots"] and not mods['snapshots_extended'] then
+            local display_level;
+            if i-1 < number_of_hills+1 then
+              if snapshot_overwrite[i-1][j] then
+                display_level = 15
               else
-                display_level = 6
+                display_level = 5
               end
+              g:led(i,j,display_level)
             end
-            g:led(i,j,display_level)
+          elseif mods['snapshots_extended'] then
           end
-        elseif mods['snapshots_extended'] then
-          local display_level;
-          local fx = {'delay','reverb','main'}
-          if i-1 < 4 then
-            if tab.count(snapshots[fx[i-1]][j]) == 0 then
-              display_level = 3
-            else
-              if snapshots[fx[i-1]].focus == j then
-                display_level = 12
+        elseif not snapshot_overwrite_mod then
+          if mods["snapshots"] and not mods['snapshots_extended'] then
+            local display_level;
+            if i-1 < number_of_hills+1 then
+              if tab.count(snapshots[i-1][j]) == 0 then
+                display_level = 3
               else
-                display_level = 6
+                if hills[i-1].snapshot.focus == j then
+                  display_level = 12
+                else
+                  display_level = 6
+                end
               end
+              g:led(i,j,display_level)
             end
-            g:led(i,j,display_level)
+          elseif mods['snapshots_extended'] then
+            local display_level;
+            local fx = {'delay','reverb','main'}
+            if i-1 < 4 then
+              if tab.count(snapshots[fx[i-1]][j]) == 0 then
+                display_level = 3
+              else
+                if snapshots[fx[i-1]].focus == j then
+                  display_level = 12
+                else
+                  display_level = 6
+                end
+              end
+              g:led(i,j,display_level)
+            end
           end
         end
       else

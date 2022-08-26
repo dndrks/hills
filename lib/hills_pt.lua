@@ -112,6 +112,9 @@ function pattern:start()
     self.step = 1
     self.metro.time = self.time[1] * self.time_factor
     self.metro:start()
+    if self.start_callback ~= nil then
+      self.start_callback()
+    end
   end
 end
 
@@ -134,6 +137,9 @@ function pattern:next_event()
       self.metro:stop()
     end
   else
+    if self.step == 1 and self.start_callback ~= nil then
+      self.start_callback()
+    end
     self.metro:start()
   end
 end

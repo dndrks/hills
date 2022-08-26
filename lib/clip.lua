@@ -114,7 +114,7 @@ function ca.get_resampled_rate(voice, i, j, pitched)
   if util.round(params:get(voice..'_playbackPitchControl'),0.01) ~= 0 then
     total_offset = total_offset + (total_offset * (util.round(params:get(voice..'_playbackPitchControl'),0.01)/100))
   end
-  print(total_offset * sample_speedlist[params:get(voice..'_playbackRateBase')])
+  -- print(total_offset * sample_speedlist[params:get(voice..'_playbackRateBase')])
   return (total_offset * sample_speedlist[params:get(voice..'_playbackRateBase')])
 end
 

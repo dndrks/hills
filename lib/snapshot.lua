@@ -2,14 +2,18 @@ local snapshot = {}
 
 function snapshot.init()
   selected_snapshot = {}
+  snapshot_overwrite = {}
+  snapshot_overwrite_mod = false
   snapshots = {}
   for i = 1,number_of_hills do
     snapshots[i] = {}
+    snapshot_overwrite[i] = {}
   end
 
   for j = 1,#kildare.drums do
     for coll = 1,8 do
       snapshots[j][coll] = {}
+      snapshot_overwrite[j][coll] = false
     end
   end
 
@@ -18,8 +22,10 @@ function snapshot.init()
   snapshots.main = {}
   
   for k,v in pairs(kildare.fx) do
+    snapshot_overwrite[v] = {}
     for coll = 1,8 do
       snapshots[v][coll] = {}
+      snapshot_overwrite[v][coll] = false
     end
     snapshots[v].partial_restore = false
     snapshots[v].restore_times = {["beats"] = {1,2,4,8,16,32,64,128}, ["time"] = {1,2,4,8,16,32,64,128}, ["mode"] = "beats"}

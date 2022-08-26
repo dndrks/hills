@@ -263,6 +263,30 @@ function init()
 
   -- development_stuff()
 
+  local over_targets = {
+    bd = 1,
+    sd = 2,
+    tm = 3,
+    cp = 4,
+    rs = 5,
+    cb = 6,
+    hh = 7,
+    sample1 = 8,
+    sample2 = 9,
+    sample3 = 10,
+  }
+  function kildare.voice_param_callback(voice, param, val)
+    if snapshot_overwrite_mod then
+      for i = 1,8 do
+        local over_target = over_targets[voice]
+        local should_overwrite = snapshot_overwrite[over_target][i]
+        if should_overwrite then
+          snapshots[over_target][i][param] = val
+        end
+      end
+    end
+  end
+
 end
 
 process_events = function(i)
