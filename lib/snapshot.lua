@@ -161,34 +161,30 @@ snapshot.funnel_done_action = function(voice,coll)
 end
 
 
-function snapshot.route_funnel(voice,coll,sec,style)
+function snapshot.route_funnel(voice,coll,mod_idx)
   local focus;
   if type(voice) == 'number' and voice <= 10 then
     focus = hills[voice].snapshot
   else
     focus = snapshots[voice]
   end
-  if style ~= nil then
-    if style == "beats" then
-      sec = clock.get_beat_sec()*sec
-    elseif style == "time" then
-      -- sec = sec
-      sec = clock.get_beat_sec()*sec
+  if mod_idx ~= 0 then
+    if params:string('global_snapshot_mod_mode_'..mod_idx) == "free" then
+      mod_idx = params:get('global_snapshot_mod_time_'..mod_idx)
+    elseif params:string('global_snapshot_mod_mode_'..mod_idx) == "clocked" then
+      mod_idx = clock.get_beat_sec() * params:get('global_snapshot_mod_beats_'..mod_idx)
     end
   end
-  if sec == 0 then
+  if mod_idx == 0 then
     if focus.partial_restore then
       clock.cancel(focus.fnl)
-      -- print("partial restore try_it",voice,coll)
       snapshot.funnel_done_action(voice,coll)
     else
       snapshot.funnel_done_action(voice,coll)
     end
   else
-    -- print("doing try it for "..voice)
     if focus.partial_restore then
       clock.cancel(focus.fnl)
-      -- print("interrupted, canceling previous journey")
     end
     focus.partial_restore = true
 
@@ -240,7 +236,7 @@ function snapshot.route_funnel(voice,coll,sec,style)
         end
       end,
       0,
-      {{1,sec}},
+      {{1,mod_idx}},
       60
     )
   end

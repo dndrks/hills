@@ -211,15 +211,13 @@ function init()
     end)
   end
 
-  params.action_read = function(filename)
-    local pset_string = string.sub(filename,string.len(filename) - 6, -1)
-    local pset_number = pset_string:gsub(".pset","")
-    print("loading hills data for PSET: "..pset_number)
+  params.action_read = function(filename,name,number)
+    print("loading hills data for PSET: "..number)
     for i = 1,number_of_hills do
       if hills[i].active then
         stop(i,true)
       end
-      hills[i] = tab.load(_path.data.."hills/"..pset_number.."/data/"..i..".txt")
+      hills[i] = tab.load(_path.data.."hills/"..number.."/data/"..i..".txt")
       if hills[i].active then
         stop(i,true)
       end
@@ -228,37 +226,40 @@ function init()
       if grid_pattern[j].play == 1 then
         _g.stop_pattern_playback(j)
       end
-      local to_inherit = tab.load(_path.data.."hills/"..pset_number.."/patterns/"..j..".txt")
+      local to_inherit = tab.load(_path.data.."hills/"..number.."/patterns/"..j..".txt")
       grid_pattern[j].event = to_inherit.event
       grid_pattern[j].count = #grid_pattern[j].event
       grid_pattern[j].time = to_inherit.time
+      grid_pattern[j].loop = to_inherit.loop
     end
     for j = 1,#song_atoms do
-      song_atoms[j] = tab.load(_path.data.."hills/"..pset_number.."/song/"..j..".txt")
+      song_atoms[j] = tab.load(_path.data.."hills/"..number.."/song/"..j..".txt")
     end
-    snapshots = tab.load(_path.data.."hills/"..pset_number.."/snapshots/all.txt")
+    snapshots = tab.load(_path.data.."hills/"..number.."/snapshots/all.txt")
+    snapshot_overwrite = tab.load(_path.data.."hills/"..number.."/snapshots/overwrite_state.txt")
     -- params:bang() -- TODO VERIFY IF THIS IS OKAY TO LEAVE OUT
     grid_dirty = true
   end
 
-  params.action_write = function(filename,name)
-    local pset_string = string.sub(filename,string.len(filename) - 6, -1)
-    local pset_number = pset_string:gsub(".pset","")
-    print("saving hills data for PSET: "..pset_number)
-    os.execute("mkdir -p ".._path.data.."hills/"..pset_number.."/data")
-    os.execute("mkdir -p ".._path.data.."hills/"..pset_number.."/patterns")
-    os.execute("mkdir -p ".._path.data.."hills/"..pset_number.."/song")
-    os.execute("mkdir -p ".._path.data.."hills/"..pset_number.."/snapshots")
+  params.action_write = function(filename,name,number)
+    -- local pset_string = string.sub(filename,string.len(filename) - 6, -1)
+    -- local pset_number = pset_string:gsub(".pset","")
+    print("saving hills data for PSET: "..number)
+    os.execute("mkdir -p ".._path.data.."hills/"..number.."/data")
+    os.execute("mkdir -p ".._path.data.."hills/"..number.."/patterns")
+    os.execute("mkdir -p ".._path.data.."hills/"..number.."/song")
+    os.execute("mkdir -p ".._path.data.."hills/"..number.."/snapshots")
     for i = 1,number_of_hills do
-      tab.save(hills[i],_path.data.."hills/"..pset_number.."/data/"..i..".txt")
+      tab.save(hills[i],_path.data.."hills/"..number.."/data/"..i..".txt")
     end
     for i = 1,16 do
-      tab.save(grid_pattern[i],_path.data.."hills/"..pset_number.."/patterns/"..i..".txt")
+      tab.save(grid_pattern[i],_path.data.."hills/"..number.."/patterns/"..i..".txt")
     end
     for i = 1,#song_atoms do
-      tab.save(song_atoms[i],_path.data.."hills/"..pset_number.."/song/"..i..".txt")
+      tab.save(song_atoms[i],_path.data.."hills/"..number.."/song/"..i..".txt")
     end
-    tab.save(snapshots,_path.data.."hills/"..pset_number.."/snapshots/all.txt")
+    tab.save(snapshots,_path.data.."hills/"..number.."/snapshots/all.txt")
+    tab.save(snapshot_overwrite, _path.data.."hills/"..number.."/snapshots/overwrite_state.txt")
   end
 
   -- development_stuff()
@@ -285,6 +286,18 @@ function init()
         end
       end
     end
+  end
+
+  function kildare.model_change_callback(hill,model)
+    hill_names[hill] = hill..': '..model
+    params.params[params.lookup['hill_'..hill..'_group']].name = hill_names[hill]
+    params.params[params.lookup['hill_'..hill..'_note_header']].name = 'note management '..hill..': '..model
+    params.params[params.lookup['hill_'..hill..'_note_header']].name = 'note management '..hill..': '..model
+    params.params[params.lookup['hill_'..hill..'_kildare_header']].name = 'Kildare management '..hill..': '..model
+    params.params[params.lookup['hill_'..hill..'_sample_header']].name = 'sample management '..hill..': '..model
+    params.params[params.lookup['hill_'..hill..'_MIDI_header']].name = 'MIDI management '..hill..': '..model
+    params.params[params.lookup['hill_'..hill..'_crow_header']].name = 'crow management '..hill..': '..model
+    params.params[params.lookup['hill_'..hill..'_JF_header']].name = 'JF management '..hill..': '..model
   end
 
 end
@@ -532,9 +545,9 @@ pass_note = function(i,j,seg,note_val,index,destination)
   if played_note ~= nil and hills[i][j].note_num.active[index] then
     if i <= 7 then
       if params:string("hill "..i.." kildare_notes") == "yes" then
-        engine.set_voice_param(kildare.drums[i],"carHz",midi_to_hz(played_note))
+        engine.set_voice_param(i,"carHz",midi_to_hz(played_note))
       end
-      engine.trig(kildare.drums[i],hills[i][j].note_velocity[index])
+      engine.trig(i,hills[i][j].note_velocity[index])
       if params:string("hill "..i.." sample output") == "yes" then
         if params:get("hill "..i.." sample probability") >= math.random(100) then
           local target = "sample"..params:get("hill "..i.." sample slot")

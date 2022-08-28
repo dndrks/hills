@@ -32,7 +32,11 @@ function grid_lib.pattern_execute(data)
     end
     grid_dirty = true
   elseif data.event == "snapshot_restore" then
-    _snapshots.route_funnel(data.x,data.y,data.mod_index,"time")
+    local mod_idx = 0
+    if params:string('pattern_'..(data.id)..'_snapshot_mod_restore') == 'yes' then
+      mod_idx = data.mod_index
+    end
+    _snapshots.route_funnel(data.x,data.y,mod_idx)
     if data.x == 'delay' or data.x == 'reverb' or data.x == 'main' then
       snapshots[data.x].focus = data.y
     else
@@ -49,6 +53,7 @@ pattern_clipboard = {event = {}, time = {}, count = 0}
 
 pattern_link_source = 0
 pattern_links = {}
+pattern_link_clocks = {}
 for i = 1,16 do
   grid_pattern[i] = pt.new(i)
   grid_pattern[i].process = grid_lib.pattern_execute
@@ -65,9 +70,11 @@ for i = 1,16 do
       end
     end
   grid_pattern[i].start_callback = function()
-    if tab.count(pattern_links) ~= 0 then
+    if tab.count(pattern_links[i]) ~= 0 then
       for k,v in pairs(pattern_links[i]) do
-        grid_pattern[k]:start()
+        if grid_pattern[k].rec == 0 and #grid_pattern[k].event > 0 then
+          grid_pattern[k]:start()
+        end
       end
     end
   end
@@ -81,6 +88,13 @@ function grid_lib.handle_grid_pat(i,alt)
       grid_pattern[i]:start() -- start playing
     elseif grid_pattern[i].count == 0 then -- otherwise, if there are no events recorded..
       grid_pattern[i]:rec_start() -- start recording
+      if params:string('pattern_'..i..'_start_rec_at') == 'when engaged' then
+        grid_pattern[i]:watch(
+          {
+            ['event'] = 'ignore'
+          }
+        )
+      end
     elseif grid_pattern[i].play == 1 then -- if we're playing...
       grid_lib.stop_pattern_playback(i)
     else -- if by this point, we're not playing...
@@ -131,6 +145,15 @@ function grid_lib.stop_pattern_playback(i)
       active_voices[i][j] = false
     end
   end
+
+  if tab.count(pattern_links[i]) ~= 0 then
+    for k,v in pairs(pattern_links[i]) do
+      if grid_pattern[k].play == 1 then
+       grid_lib.stop_pattern_playback(k)
+      end
+    end
+  end
+
   grid_dirty = true
 end
 
@@ -339,7 +362,7 @@ function g.key(x,y,z)
             which_type.saver_clock = clock.run(_snapshots.save_to_slot,x,y)
             which_type.focus = y
           elseif not mods.alt then
-            _snapshots.route_funnel(x,y,snapshots.mod.index,"time")
+            _snapshots.route_funnel(x,y,snapshots.mod.index)
             which_type.focus = y
           else
             which_type.saver_clock = clock.run(_snapshots.save_to_slot,x,y)
@@ -389,10 +412,10 @@ function g.key(x,y,z)
       if pattern_link_source == 0 then
         pattern_link_source = target
       else
-        if pattern_links[pattern_link_source][target] == nil then
-          pattern_links[pattern_link_source][target] = true
+        if params:string('pattern_'..pattern_link_source..'_link_'..target) == 'no' then
+          params:set('pattern_'..pattern_link_source..'_link_'..target,2)
         else
-          pattern_links[pattern_link_source][target] = nil
+          params:set('pattern_'..pattern_link_source..'_link_'..target,1)
         end
       end
     elseif z == 0 and toggles.link then

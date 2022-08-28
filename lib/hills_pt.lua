@@ -33,12 +33,13 @@ function pattern:clear()
   self.rec = 0
   self.play = 0
   self:set_overdub(0)
+  self.total_time = 0
   self.prev_time = 0
   self.event = {}
   self.time = {}
   self.count = 0
   self.step = 0
-  self.time_factor = 1
+  self.time_factor = 1 
 end
 
 --- adjust the time factor of this pattern.
@@ -62,7 +63,18 @@ function pattern:rec_stop()
       self.prev_time = util.time()
       self.time[self.count] = self.prev_time - t
       --tab.print(self.time)
+      self.total_time = self:get_total_time()
     end
+  end
+end
+
+function pattern:get_total_time()
+  if self.count ~= 0 then
+    local total_time = 0
+    for i = 1,#self.time do
+      total_time = total_time + self.time[i]
+    end
+    return total_time
   end
 end
 
@@ -122,13 +134,6 @@ end
 function pattern:next_event()
   self.prev_time = util.time()
   self.step = util.wrap(self.step+1,1,self.count)
-  -- if self.step == self.count and self.loop == 1 then
-  --   self.step = 1
-  -- elseif self.step > self.count and self.loop == 1 then
-  --   self.step = 1
-  -- else
-  --   self.step = self.step + 1
-  -- end
   self.process(self.event[self.step])
   self.metro.time = self.time[self.step] * self.time_factor
   if self.step == self.count and self.loop == 0 then
