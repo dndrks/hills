@@ -44,11 +44,10 @@ end
 grid_pattern = {}
 grid_overdub_state = {}
 overdubbing_pattern = false
-overdub_toggle = false
-duplicate_toggle = false
-copy_toggle = false
+toggles = {overdub = false, loop = false, duplicate = false, copy = false, link = false}
 pattern_clipboard = {event = {}, time = {}, count = 0}
 
+pattern_link_source = 0
 pattern_links = {}
 for i = 1,16 do
   grid_pattern[i] = pt.new(i)
@@ -66,9 +65,9 @@ for i = 1,16 do
       end
     end
   grid_pattern[i].start_callback = function()
-    if #pattern_links[i] ~= 0 then
-      for j = 1,#pattern_links[i] do
-        grid_pattern[pattern_links[i][j]]:start()
+    if tab.count(pattern_links) ~= 0 then
+      for k,v in pairs(pattern_links[i]) do
+        grid_pattern[k]:start()
       end
     end
   end
@@ -76,7 +75,7 @@ for i = 1,16 do
 end
 
 function grid_lib.handle_grid_pat(i,alt)
-  if not overdub_toggle and not loop_toggle and not duplicate_toggle and not copy_toggle and not alt then
+  if not toggles.overdub and not toggles.loop and not toggles.duplicate and not toggles.copy and not toggles.link and not alt then
     if grid_pattern[i].rec == 1 then -- if we're recording...
       grid_pattern[i]:rec_stop() -- stop recording
       grid_pattern[i]:start() -- start playing
@@ -97,13 +96,13 @@ function grid_lib.handle_grid_pat(i,alt)
       end
     end
     grid_pattern[i]:clear() -- clears the pattern
-  elseif overdub_toggle then
+  elseif toggles.overdub then
     grid_pattern[i]:set_overdub(grid_pattern[i].overdub == 0 and 1 or 0)
-  elseif duplicate_toggle then
+  elseif toggles.duplicate then
     grid_pattern[i]:duplicate()
-  elseif loop_toggle then
+  elseif toggles.loop then
     grid_pattern[i].loop = grid_pattern[i].loop == 1 and 0 or 1
-  elseif copy_toggle then
+  elseif toggles.copy then
     if #pattern_clipboard.event == 0 and grid_pattern[i].count > 0 then
       pattern_clipboard.event = grid_pattern[i].deep_copy(grid_pattern[i].event)
       pattern_clipboard.time = grid_pattern[i].deep_copy(grid_pattern[i].time)
@@ -119,6 +118,7 @@ function grid_lib.handle_grid_pat(i,alt)
       pattern_clipboard.time = {}
       pattern_clipboard.count = 0
     end
+  elseif toggles.link then
   end
 end
 
@@ -156,6 +156,27 @@ end
 
 mods = {["hill"] = false,["bound"] = false,["notes"] = false,["loop"] = false,["playmode"] = false,["copy"] = false,["snapshots"] = false,["snapshots_extended"] = false,["alt"] = false}
 local modkeys = {"hill","bound","notes","loop","playmode","copy","snapshots","alt"}
+
+local function is_toggle_state_off()
+  if not toggles.overdub and not toggles.loop and not toggles.duplicate and not toggles.copy and not toggles.link then
+    return true
+  else
+    return false
+  end
+end
+
+local function enable_toggle(target)
+  local turn_off = false
+  if toggles[target] then
+    turn_off = true
+  end
+  for k,v in pairs(toggles) do
+    toggles[k] = false
+  end
+  if not turn_off then
+    toggles[target] = true
+  end
+end
 
 function g.key(x,y,z)
   if x == 1 then
@@ -215,14 +236,12 @@ function g.key(x,y,z)
           clipboard = nil
           copied = nil
         end
-        if not mods['snapshots'] then
-          mods['snapshots_extended'] = false
-        end
+        -- if not mods['snapshots'] then
+        --   mods['snapshots_extended'] = false
+        -- end
+
       else
-        mods["snapshots_extended"] = not mods["snapshots_extended"]
-        if mods['snapshots_extended'] and not mods['snapshots'] then
-          mods['snapshots'] = true
-        end
+
       end
     end
     if y == 8 then
@@ -309,53 +328,25 @@ function g.key(x,y,z)
         clipboard = nil
       end
     elseif not snapshot_overwrite_mod then
-      if mods["snapshots"] and not mods['snapshots_extended'] then
-        x = x - 1
-        if z == 1 then
-          if tab.count(snapshots[x][y]) == 0 then
-            hills[x].snapshot.saver_clock = clock.run(_snapshots.save_to_slot,x,y)
-            hills[x].snapshot.focus = y
-          elseif not mods.alt then
-            _snapshots.route_funnel(x,y,snapshots.mod.index,"time")
-            hills[x].snapshot.focus = y
-          else
-            hills[x].snapshot.saver_clock = clock.run(_snapshots.save_to_slot,x,y)
-          end
-        else
-          if hills[x].snapshot.saver_clock ~= nil then
-            clock.cancel(hills[x].snapshot.saver_clock)
-          end
-        end
-        if z == 1 and tab.count(snapshots[x][y]) > 0 then
-          for i = 1,16 do
-            grid_pattern[i]:watch(
-              {
-                ["event"] = "snapshot_restore",
-                ["x"] = x,
-                ["y"] = y,
-                ["id"] = i,
-                ['mod_index'] = snapshots.mod.index
-              }
-            )
-          end
-        end
-      elseif mods['snapshots_extended'] then
+      if (mods["snapshots"] and not mods['snapshots_extended']) or (mods['snapshots'] and mods['snapshots_extended']) then
         local fx = {'delay','reverb','main'}
+        local which_focus = (mods["snapshots"] and not mods['snapshots_extended']) and 'snapshots' or 'snapshots_extended'
         x = x - 1
-        local x = fx[x]
+        local x = which_focus == 'snapshots_extended' and fx[x] or x
+        local which_type = which_focus == 'snapshots' and hills[x].snapshot or snapshots[x]
         if z == 1 then
           if tab.count(snapshots[x][y]) == 0 then
-            snapshots[x].saver_clock = clock.run(_snapshots.save_to_slot,x,y)
-            snapshots[x].focus = y
+            which_type.saver_clock = clock.run(_snapshots.save_to_slot,x,y)
+            which_type.focus = y
           elseif not mods.alt then
             _snapshots.route_funnel(x,y,snapshots.mod.index,"time")
-            snapshots[x].focus = y
+            which_type.focus = y
           else
-            snapshots[x].saver_clock = clock.run(_snapshots.save_to_slot,x,y)
+            which_type.saver_clock = clock.run(_snapshots.save_to_slot,x,y)
           end
         else
-          if snapshots[x].saver_clock ~= nil then
-            clock.cancel(snapshots[x].saver_clock)
+          if which_type.saver_clock ~= nil then
+            clock.cancel(which_type.saver_clock)
           end
         end
         if z == 1 and tab.count(snapshots[x][y]) > 0 then
@@ -373,15 +364,14 @@ function g.key(x,y,z)
         end
       end
     elseif snapshot_overwrite_mod then
-      if mods['snapshots'] and not mods['snapshots_extended'] then
-        x = x - 1
-        if z == 1 then
-          print(x,y)
-          if tab.count(snapshots[x][y]) ~= 0 then
-            snapshot_overwrite[x][y] = not snapshot_overwrite[x][y]
-          end
+      local fx = {'delay','reverb','main'}
+      local which_focus = (mods["snapshots"] and not mods['snapshots_extended']) and 'snapshots' or 'snapshots_extended'
+      x = x - 1
+      local x = which_focus == 'snapshots_extended' and fx[x] or x
+      if z == 1 then
+        if tab.count(snapshots[x][y]) ~= 0 then
+          snapshot_overwrite[x][y] = not snapshot_overwrite[x][y]
         end
-      elseif mods['snapshots_extended'] then
       end
     end
   elseif x>=13 and y<=4 then
@@ -395,14 +385,37 @@ function g.key(x,y,z)
         grid_lib.handle_grid_pat(target,mods.alt)
       end
     end
-  elseif x == 12 and y == 5 then
-    overdub_toggle = z == 1 and true or false
-  elseif x == 12 and y == 6 then
-    loop_toggle = z == 1 and true or false
-  elseif x == 12 and y == 7 then
-    duplicate_toggle = z == 1 and true or false
-  elseif x == 12 and y == 8 then
-    copy_toggle = z == 1 and true or false
+    if z == 1 and toggles.link then
+      if pattern_link_source == 0 then
+        pattern_link_source = target
+      else
+        if pattern_links[pattern_link_source][target] == nil then
+          pattern_links[pattern_link_source][target] = true
+        else
+          pattern_links[pattern_link_source][target] = nil
+        end
+      end
+    elseif z == 0 and toggles.link then
+      if pattern_link_source == target then
+        pattern_link_source = 0
+      end
+    end
+
+  elseif x == 12 and y == 5 and z == 1 then
+    enable_toggle('overdub')
+  elseif x == 12 and y == 6 and z == 1 then
+    enable_toggle('loop')
+  elseif x == 12 and y == 7 and z == 1 then
+    enable_toggle('duplicate')
+  elseif x == 12 and y == 8 and z == 1 then
+    enable_toggle('copy')
+  elseif x == 13 and y == 8 and z == 1 then
+    enable_toggle('link')
+    pattern_link_source = 0
+  elseif x == 12 and y == 2 and z == 1 and (mods["snapshots"] or mods["snapshots_extended"]) then
+    snapshot_overwrite_mod = not snapshot_overwrite_mod
+  elseif x == 12 and y == 1 and z == 1 and mods['snapshots'] then
+    mods["snapshots_extended"] = not mods["snapshots_extended"]
   end
   if mod_held and not mods["alt"] and not mods["copy"] and not mods["snapshots"] then
     if x == 14 and y == 8 then
@@ -430,13 +443,15 @@ function g.key(x,y,z)
         stop_dir_clock("U")
       end
     end
-  elseif mod_held and (mods["snapshots"] or mods['snapshots_extended']) then
-    if x >=14 then
+  elseif mod_held and mods["snapshots"] and is_toggle_state_off() then
+    if x >= 15 then
       if z == 1 then
-        if y == 7 then
-          snapshots.mod.index = x - 13
+        if y == 6 then
+          snapshots.mod.index = x - 14
+        elseif y == 7 then
+          snapshots.mod.index = (x + 2) - 14
         elseif y == 8 then
-          snapshots.mod.index = (x+3) - 13
+          snapshots.mod.index = (x + 4) - 14
         end
       else
         snapshots.mod.index = 0
@@ -494,41 +509,39 @@ function grid_redraw()
           end
           g:led(i,j,display_level)
         elseif snapshot_overwrite_mod then
-          if mods["snapshots"] and not mods['snapshots_extended'] then
+
+          if mods["snapshots"] then
             local display_level;
-            if i-1 < number_of_hills+1 then
-              if snapshot_overwrite[i-1][j] then
+            local fx = {'delay','reverb','main'}
+            local extension_limit = mods['snapshots_extended'] and 4 or number_of_hills+1
+            if i-1 < extension_limit then
+              if mods['snapshots_extended'] and snapshot_overwrite[fx[i-1]][j] or snapshot_overwrite[i-1][j] then
                 display_level = 15
               else
-                display_level = 5
-              end
-              g:led(i,j,display_level)
-            end
-          elseif mods['snapshots_extended'] then
-          end
-        elseif not snapshot_overwrite_mod then
-          if mods["snapshots"] and not mods['snapshots_extended'] then
-            local display_level;
-            if i-1 < number_of_hills+1 then
-              if tab.count(snapshots[i-1][j]) == 0 then
-                display_level = 3
-              else
-                if hills[i-1].snapshot.focus == j then
-                  display_level = 12
+                if tab.count(mods['snapshots_extended'] and snapshots[fx[i-1]][j] or snapshots[i-1][j]) ~= 0 then
+                  if (mods['snapshots_extended'] and snapshots[fx[i-1]].focus or hills[i-1].snapshot.focus) == j then
+                    display_level = 8
+                  else
+                    display_level = 5
+                  end
                 else
-                  display_level = 6
+                  display_level = 1
                 end
               end
               g:led(i,j,display_level)
             end
-          elseif mods['snapshots_extended'] then
+          end
+
+        elseif not snapshot_overwrite_mod then
+          if mods["snapshots"] then
             local display_level;
             local fx = {'delay','reverb','main'}
-            if i-1 < 4 then
-              if tab.count(snapshots[fx[i-1]][j]) == 0 then
+            local extension_limit = mods['snapshots_extended'] and 4 or number_of_hills+1
+            if i-1 < extension_limit then
+              if tab.count(mods['snapshots_extended'] and snapshots[fx[i-1]][j] or snapshots[i-1][j]) == 0 then
                 display_level = 3
               else
-                if snapshots[fx[i-1]].focus == j then
+                if (mods['snapshots_extended'] and snapshots[fx[i-1]].focus or hills[i-1].snapshot.focus) == j then
                   display_level = 12
                 else
                   display_level = 6
@@ -555,17 +568,19 @@ function grid_redraw()
     g:led(15,7,dirs["U"] and 15 or 8)
     g:led(15,8,dirs["D"] and 15 or 8)
     g:led(16,8,dirs["R"] and 15 or 8)
-  elseif mod_held and mods["snapshots"] then
-    for i = 14,16 do
-      g:led(i,7,snapshots.mod.index == (i - 13) and 15 or 6)
-      g:led(i,8,snapshots.mod.index == ((i+3) - 13) and 15 or 6)
+  elseif mod_held and mods["snapshots"] and is_toggle_state_off() then
+    for i = 15,16 do
+      g:led(i,6,snapshots.mod.index == (i - 14) and 15 or 6)
+      g:led(i,7,snapshots.mod.index == (i - 12) and 15 or 6)
+      g:led(i,8,snapshots.mod.index == (i - 10) and 15 or 6)
     end
   end
   
-  g:led(12,5,overdub_toggle and 15 or 6)
-  g:led(12,6,loop_toggle and 15 or 6)
-  g:led(12,7,duplicate_toggle and 15 or 6)
-  g:led(12,8,copy_toggle and 15 or 6)
+  g:led(12,5,toggles.overdub and 15 or 6)
+  g:led(12,6,toggles.loop and 15 or 6)
+  g:led(12,7,toggles.duplicate and 15 or 6)
+  g:led(12,8,toggles.copy and 15 or 6)
+  g:led(13,8,toggles.link and 15 or 6)
 
   if mod_held and mods["copy"] then
     if not clipboard then
@@ -593,7 +608,7 @@ function grid_redraw()
     end
   end
 
-  if copy_toggle then
+  if toggles.copy then
     if #pattern_clipboard.event == 0 then
       for i = 14,16 do
         for j = 5,8 do
@@ -617,7 +632,7 @@ function grid_redraw()
         end
       end
     end
-  elseif duplicate_toggle then
+  elseif toggles.duplicate then
     for i = 14,16 do
       for j = 5,8 do
         if (j == 5 and (i == 14 or i == 15)) or (j == 8 and (i == 14 or i == 15)) then
@@ -629,7 +644,7 @@ function grid_redraw()
         end
       end
     end
-  elseif overdub_toggle then
+  elseif toggles.overdub then
     for i = 14,16 do
       for j = 5,8 do
         if j == 5 or j == 8 then
@@ -641,7 +656,7 @@ function grid_redraw()
         end
       end
     end
-  elseif loop_toggle then
+  elseif toggles.loop then
     for i = 14,16 do
       for j = 5,8 do
         if j == 8 then
@@ -653,11 +668,17 @@ function grid_redraw()
         end
       end
     end
+  elseif toggles.link then
+    g:led(14,5,15)
+    g:led(16,6,15)
+    g:led(14,7,15)
+    g:led(16,8,15)
   end
 
   if mod_held and mods["playmode"] then
 
   end
+
   for i = 1,16 do
     local led_level
     if grid_pattern[i].count == 0 and grid_pattern[i].rec == 0 then
@@ -674,11 +695,21 @@ function grid_redraw()
         led_level = 8
       end
     end
-    if loop_toggle then
+    if toggles.loop then
       led_level = grid_pattern[i].loop == 1 and 12 or 3
+    elseif toggles.link and pattern_link_source > 0 then
+      led_level = pattern_links[pattern_link_source][i] and 12 or 3
     end
     g:led(index_to_grid_pos(i,4)[1]+12,index_to_grid_pos(i,4)[2],led_level)
   end
+
+  -- g:led(index_to_grid_pos(pattern_link_source,4)[1]+12,index_to_grid_pos(pattern_link_source,4)[2],15)
+
+  if mods['snapshots'] or mods['snapshots_extended'] then
+    g:led(12,1,mods['snapshots_extended'] and 15 or 6)
+    g:led(12,2,snapshot_overwrite_mod and 15 or 6)
+  end
+
   g:refresh()
 end
 
@@ -693,6 +724,7 @@ function start_dir_clock(dir,n,d)
         clock.sleep(held_dirs_iters[dir] <= 5 and 0.15 or (held_dirs_iters[dir] <= 15 and 0.1 or (held_dirs_iters[dir] <= 30 and 0.05 or 0.01)))
         _e.parse(n,d)
         held_dirs_iters[dir] = held_dirs_iters[dir]+1
+        screen_dirty = true
       end
     end
   )
