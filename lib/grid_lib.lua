@@ -355,10 +355,23 @@ function g.key(x,y,z)
         local fx = {'delay','reverb','main'}
         local which_focus = (mods["snapshots"] and not mods['snapshots_extended']) and 'snapshots' or 'snapshots_extended'
         x = x - 1
+        
+        local _snap;
+        if x <= 7 then
+          local d_voice = params:string('voice_model_'..x)
+          _snap = snapshots[x][d_voice]
+        elseif x <= 10 then
+          local d_voice = 'sample'..x-7
+          _snap = snapshots[x][d_voice]
+        else
+          _snap = snapshots[x]
+        end
+
         local x = which_focus == 'snapshots_extended' and fx[x] or x
         local which_type = which_focus == 'snapshots' and hills[x].snapshot or snapshots[x]
+        
         if z == 1 then
-          if tab.count(snapshots[x][y]) == 0 then
+          if tab.count(_snap[y]) == 0 then
             which_type.saver_clock = clock.run(_snapshots.save_to_slot,x,y)
             which_type.focus = y
           elseif not mods.alt then
@@ -372,7 +385,7 @@ function g.key(x,y,z)
             clock.cancel(which_type.saver_clock)
           end
         end
-        if z == 1 and tab.count(snapshots[x][y]) > 0 then
+        if z == 1 and tab.count(_snap[y]) > 0 then
           for i = 1,16 do
             grid_pattern[i]:watch(
               {
@@ -390,10 +403,24 @@ function g.key(x,y,z)
       local fx = {'delay','reverb','main'}
       local which_focus = (mods["snapshots"] and not mods['snapshots_extended']) and 'snapshots' or 'snapshots_extended'
       x = x - 1
+      local _snap, _snapover;
+      if x <= 7 then
+        local d_voice = params:string('voice_model_'..x)
+        _snap = snapshots[x][d_voice]
+        _snapover = snapshot_overwrite[x][d_voice]
+      elseif x <= 10 then
+        local d_voice = 'sample'..x-7
+        print(d_voice)
+        _snap = snapshots[x][d_voice]
+        _snapover = snapshot_overwrite[x][d_voice]
+      else
+        _snap = snapshots[x]
+        _snapover = snapshot_overwrite[x]
+      end
       local x = which_focus == 'snapshots_extended' and fx[x] or x
       if z == 1 then
-        if tab.count(snapshots[x][y]) ~= 0 then
-          snapshot_overwrite[x][y] = not snapshot_overwrite[x][y]
+        if tab.count(_snap[y]) ~= 0 then
+          _snapover[y] = not _snapover[y]
         end
       end
     end
@@ -537,11 +564,26 @@ function grid_redraw()
             local display_level;
             local fx = {'delay','reverb','main'}
             local extension_limit = mods['snapshots_extended'] and 4 or number_of_hills+1
+            local _snap, _snapover;
+
+            if i-1 <= 7 then
+              local d_voice = params:string('voice_model_'..i-1)
+              _snap = snapshots[i-1][d_voice]
+              _snapover = snapshot_overwrite[i-1][d_voice]
+            elseif i - 1 <= 10 then
+              local d_voice = 'sample'..(i-8)
+              _snap = snapshots[i-1][d_voice]
+              _snapover = snapshot_overwrite[i-1][d_voice]
+            else
+              print('else2?')
+              _snap = snapshots[i-1]
+              _snapover = snapshot_overwrite[i-1]
+            end
             if i-1 < extension_limit then
-              if mods['snapshots_extended'] and snapshot_overwrite[fx[i-1]][j] or snapshot_overwrite[i-1][j] then
+              if mods['snapshots_extended'] and snapshot_overwrite[fx[i-1]][j] or _snapover[j] then
                 display_level = 15
               else
-                if tab.count(mods['snapshots_extended'] and snapshots[fx[i-1]][j] or snapshots[i-1][j]) ~= 0 then
+                if tab.count(mods['snapshots_extended'] and snapshots[fx[i-1]][j] or _snap[j]) ~= 0 then
                   if (mods['snapshots_extended'] and snapshots[fx[i-1]].focus or hills[i-1].snapshot.focus) == j then
                     display_level = 8
                   else
@@ -561,7 +603,18 @@ function grid_redraw()
             local fx = {'delay','reverb','main'}
             local extension_limit = mods['snapshots_extended'] and 4 or number_of_hills+1
             if i-1 < extension_limit then
-              if tab.count(mods['snapshots_extended'] and snapshots[fx[i-1]][j] or snapshots[i-1][j]) == 0 then
+              local _snap,d_voice;
+              if i-1 <= 7 then
+                d_voice = params:string('voice_model_'..i-1)
+                _snap = snapshots[i-1][d_voice]
+              elseif i-1 <= 10 then
+                d_voice = 'sample'..(i-8)
+                _snap = snapshots[i-1][d_voice]
+              else
+                print('else?')
+                _snap = snapshots[i-1]
+              end
+              if tab.count(mods['snapshots_extended'] and snapshots[fx[i-1]][j] or _snap[j]) == 0 then
                 display_level = 3
               else
                 if (mods['snapshots_extended'] and snapshots[fx[i-1]].focus or hills[i-1].snapshot.focus) == j then

@@ -264,25 +264,14 @@ function init()
 
   -- development_stuff()
 
-  local over_targets = {
-    bd = 1,
-    sd = 2,
-    tm = 3,
-    cp = 4,
-    rs = 5,
-    cb = 6,
-    hh = 7,
-    sample1 = 8,
-    sample2 = 9,
-    sample3 = 10,
-  }
   function kildare.voice_param_callback(voice, param, val)
     if snapshot_overwrite_mod then
+      local d_voice = params:string('voice_model_'..voice)
       for i = 1,8 do
-        local over_target = over_targets[voice]
-        local should_overwrite = snapshot_overwrite[over_target][i]
+        local should_overwrite = snapshot_overwrite[voice][d_voice][i]
         if should_overwrite then
-          snapshots[over_target][i][param] = val
+          print(snapshot_overwrite, snapshot_overwrite[voice], snapshot_overwrite[voice][d_voice], voice,d_voice,i,param)
+          snapshot_overwrite[voice][d_voice][i][param] = val
         end
       end
     end
@@ -298,6 +287,8 @@ function init()
     params.params[params.lookup['hill_'..hill..'_MIDI_header']].name = 'MIDI management '..hill..': '..model
     params.params[params.lookup['hill_'..hill..'_crow_header']].name = 'crow management '..hill..': '..model
     params.params[params.lookup['hill_'..hill..'_JF_header']].name = 'JF management '..hill..': '..model
+    grid_dirty = true
+    -- snapshot_overwrite_mod = false
   end
 
 end

@@ -10,10 +10,14 @@ function snapshot.init()
     snapshot_overwrite[i] = {}
   end
 
-  for j = 1,#kildare.drums do
-    for coll = 1,8 do
-      snapshots[j][coll] = {}
-      snapshot_overwrite[j][coll] = false
+  for i = 1,#kildare.drums do
+    for j = 1,#kildare.drums do
+      snapshots[i][kildare.drums[j]] = {}
+      snapshot_overwrite[i][kildare.drums[j]] = {}
+      for coll = 1,8 do
+        snapshots[i][kildare.drums[j]][coll] = {}
+        snapshot_overwrite[i][kildare.drums[j]][coll] = false
+      end
     end
   end
 
@@ -38,11 +42,20 @@ end
 
 function snapshot.pack(voice,coll)
   if type(voice) == "number" and voice <= 10 then
-    local d_voice = kildare.drums[voice]
+   
+    local d_voice, d_string;
+    if voice <= 7 then
+      d_voice = params:string('voice_model_'..voice)
+      d_string = voice..'_'..d_voice..'_'
+    else
+      d_voice = 'sample'..voice-7
+      d_string = d_voice..'_'
+    end
+
     for i = 1, #kildare_drum_params[d_voice] do
       local d = kildare_drum_params[d_voice][i]
       if d.type ~= 'separator' and not d.lfo_exclude then
-        snapshots[voice][coll][d.id] = params:get(d_voice.."_"..d.id)
+        snapshots[voice][d_voice][coll][d.id] = params:get(d_string..d.id)
       end
     end
   else
@@ -64,17 +77,28 @@ end
 
 function snapshot.unpack(voice, coll)
   if type(voice) == "number" and voice <= 10 then
+    
     if hills[voice].snapshot.partial_restore then
       clock.cancel(hills[voice].snapshot.fnl)
       hills[voice].snapshot.partial_restore = false
     end
-    local d_voice = kildare.drums[voice]
+
+    local d_voice, d_string;
+    if voice <= 7 then
+      d_voice = params:string('voice_model_'..voice)
+      d_string = voice..'_'..d_voice..'_'
+    else
+      d_voice = 'sample'..voice-7
+      d_string = d_voice..'_'
+    end
+
     for i = 1, #kildare_drum_params[d_voice] do
       local d = kildare_drum_params[d_voice][i]
-      if d.type ~= 'separator' and not d.lfo_exclude then
-        params:set(d_voice.."_"..d.id, snapshots[voice][coll][d.id])
+      if d.type ~= 'separator' and not d.lfo_exclude and snapshots[voice][d_voice][coll][d.id] ~= nil then
+        params:set(d_string..d.id, snapshots[voice][d_voice][coll][d.id])
       end
     end
+
   else
     if snapshots[voice].partial_restore then
       clock.cancel(snapshots[voice].fnl)
@@ -83,7 +107,7 @@ function snapshot.unpack(voice, coll)
     -- delay, reverb, main
     for i = 1, #kildare_fx_params[voice] do
       local d = kildare_fx_params[voice][i]
-      if d.type ~= 'separator' and not d.lfo_exclude then
+      if d.type ~= 'separator' and not d.lfo_exclude and snapshots[voice][coll][d.id] ~= nil then
         params:set(voice.."_"..d.id, snapshots[voice][coll][d.id])
       end
     end
@@ -120,9 +144,18 @@ function snapshot.save_to_slot(_t,slot)
 end
 
 function snapshot.clear(_t,slot)
-  local pre_clear_restore = snapshots[_t][slot].restore
-  snapshots[_t][slot] = {}
-  snapshots[_t][slot].restore = pre_clear_restore
+  local d_voice, _snap;
+  if type(_t) == 'number' then
+    if _t <= 7 then
+      d_voice = params:string('voice_model_'.._t)
+      snapshots[_t][d_voice][slot] = {}
+    elseif _t <= 10 then
+      d_voice = 'sample'.._t-7
+      snapshots[_t][d_voice][slot] = {}
+    end
+  else
+    snapshots[_t][slot] = {}
+  end
   if selected_snapshot[_t] == slot then
     selected_snapshot[_t] = 0
   end
@@ -188,14 +221,24 @@ function snapshot.route_funnel(voice,coll,mod_idx)
     end
     focus.partial_restore = true
 
-    local original_srcs = _t.deep_copy(snapshots[voice][coll])
+    local d_voice, d_string, original_srcs;
+    if voice <= 7 then
+      d_voice = params:string('voice_model_'..voice)
+      d_string = voice..'_'..d_voice..'_'
+      original_srcs = _t.deep_copy(snapshots[voice][d_voice][coll])
+    elseif voice <= 10 then
+      d_voice = 'sample'..voice-7
+      d_string = d_voice..'_'
+      original_srcs = _t.deep_copy(snapshots[voice][d_voice][coll])
+    else
+      original_srcs = _t.deep_copy(snapshots[voice][coll])
+    end
 
     if type(voice) == 'number' and voice <= 10 then
-      local d_voice = kildare.drums[voice]
       for i = 1, #kildare_drum_params[d_voice] do
         local d = kildare_drum_params[d_voice][i]
         if d.type ~= 'separator' and not d.lfo_exclude then
-          original_srcs[d.id] = params:get(d_voice.."_"..d.id)
+          original_srcs[d.id] = params:get(d_string..d.id)
         end
       end
     else
@@ -213,17 +256,16 @@ function snapshot.route_funnel(voice,coll,mod_idx)
         focus.current_value = r_val
 
         if type(voice) == 'number' and voice <=10 then
-          local d_voice = kildare.drums[voice]
           for i = 1, #kildare_drum_params[d_voice] do
             local d = kildare_drum_params[d_voice][i]
-            if d.type ~= 'separator' and not d.lfo_exclude then
-              params:set(d_voice.."_"..d.id, util.linlin(0,1,original_srcs[d.id],snapshots[voice][coll][d.id],r_val))
+            if d.type ~= 'separator' and not d.lfo_exclude and snapshots[voice][d_voice][coll][d.id] ~= nil then
+              params:set(d_string..d.id, util.linlin(0,1,original_srcs[d.id],snapshots[voice][d_voice][coll][d.id],r_val))
             end
           end
         else
           for i = 1, #kildare_fx_params[voice] do
             local d = kildare_fx_params[voice][i]
-            if d.type ~= 'separator' and not d.lfo_exclude then
+            if d.type ~= 'separator' and not d.lfo_exclude and snapshots[voice][coll][d.id] ~= nil then
               params:set(voice.."_"..d.id, util.linlin(0,1,original_srcs[d.id],snapshots[voice][coll][d.id],r_val))
             end
           end
