@@ -552,13 +552,17 @@ pass_note = function(i,j,seg,note_val,index,destination)
         if params:get("hill "..i.." sample probability") >= math.random(100) then
           local target = "sample"..params:get("hill "..i.." sample slot")
           if params:string(target..'_sampleMode') == 'chop' then
-            local slice = util.wrap(played_note - params:get("hill "..i.." base note"),0,15) + 1
+            local slice_count = params:get('hill '..i..' sample slice count') - 1
+            local slice = util.wrap(played_note - params:get("hill "..i.." base note"),0,slice_count) + 1
             _ca.play_slice(target,slice,hills[i][j].note_velocity[index],i,j,played_note)
           elseif params:string(target..'_sampleMode') == 'playthrough' then
             _ca.play_through(target,hills[i][j].note_velocity[index],i,j,played_note)
           elseif params:string(target..'_sampleMode') == 'distribute' then
-            local idx = util.wrap(played_note - params:get("hill "..i.." base note"),0,sample_info[target].sample_count-1) + 1
-            _ca.play_index(target,idx,hills[i][j].note_velocity[index],i,j,played_note) -- TODO: adjust for actual sample pool size
+            local scaled_idx = util.round(sample_info[target].sample_count * (params:get('hill '..i..' sample distribution')/100))
+            if scaled_idx ~= 0 then
+              local idx = util.wrap(played_note - params:get("hill "..i.." base note"),0,scaled_idx-1) + 1
+              _ca.play_index(target,idx,hills[i][j].note_velocity[index],i,j,played_note) -- TODO: adjust for actual sample pool size
+            end
           end
         end
       end
@@ -568,13 +572,17 @@ pass_note = function(i,j,seg,note_val,index,destination)
         if params:get("hill "..i.." sample probability") >= math.random(100) then
           local target = "sample"..i-7
           if params:string(target..'_sampleMode') == 'chop' then
-            local slice = util.wrap(played_note - params:get("hill "..i.." base note"),0,15) + 1
+            local slice_count = params:get('hill '..i..' sample slice count') - 1
+            local slice = util.wrap(played_note - params:get("hill "..i.." base note"),0,slice_count) + 1
             _ca.play_slice(target,slice,hills[i][j].note_velocity[index],i,j,played_note)
           elseif params:string(target..'_sampleMode') == 'playthrough' then
             _ca.play_through(target,hills[i][j].note_velocity[index],i,j,played_note)
           elseif params:string(target..'_sampleMode') == 'distribute' then
-            local idx = util.wrap(played_note - params:get("hill "..i.." base note"),0,sample_info[target].sample_count-1) + 1
-            _ca.play_index(target,idx,hills[i][j].note_velocity[index],i,j,played_note) -- TODO: adjust for actual sample pool size
+            local scaled_idx = util.round(sample_info[target].sample_count * (params:get('hill '..i..' sample distribution')/100))
+            if scaled_idx ~= 0 then
+              local idx = util.wrap(played_note - params:get("hill "..i.." base note"),0,scaled_idx-1) + 1
+              _ca.play_index(target,idx,hills[i][j].note_velocity[index],i,j,played_note) -- TODO: adjust for actual sample pool size
+            end
           end
         end
       end

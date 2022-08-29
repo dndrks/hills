@@ -91,10 +91,11 @@ function screen_actions.draw()
               if sample_info['sample'..target_sample_voice].sample_count == nil then
                 target_sample_string = ""
               else
-                target_sample_string = ' | sample: '..(util.wrap(note_number - params:get("hill "..hf.." base note"),0,sample_info['sample'..target_sample_voice].sample_count-1) + 1)
+                local scaled_idx = util.round(sample_info['sample'..target_sample_voice].sample_count * (params:get('hill '..hf..' sample distribution')/100))
+                target_sample_string = ' | sample: '..(util.wrap(note_number - params:get("hill "..hf.." base note"),0,scaled_idx-1) + 1)
               end
             elseif params:string('sample'..target_sample_voice..'_sampleMode') == 'chop' then
-              target_sample_string = ' | slice: '..(util.wrap(note_number - params:get("hill "..hf.." base note"),0,15) + 1)
+              target_sample_string = ' | slice: '..(util.wrap(note_number - params:get("hill "..hf.." base note"),0,params:get('hill '..hf..' sample slice count') - 1) + 1)
             end
           end
           screen.text(

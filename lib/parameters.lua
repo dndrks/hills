@@ -34,7 +34,7 @@ function parameters.init()
 
   params:add_separator('hills_main_header', 'hills')
   for i = 1,number_of_hills do
-    params:add_group('hill_'..i..'_group', hill_names[i], i > 7 and 59 or 61)
+    params:add_group('hill_'..i..'_group', hill_names[i], i > 7 and 61 or 63)
 
     params:add_separator('hill_'..i..'_note_header', "note management "..hill_names[i])
     params:add_option("hill "..i.." scale","scale",scale_names,1)
@@ -115,12 +115,26 @@ function parameters.init()
       function(x)
         if x == 1 then
           params:hide("hill "..i.." sample slot")
+          params:hide("hill "..i.." sample slice count")
+          params:hide("hill "..i.." sample distribution")
           params:hide("hill "..i.." sample probability")
           params:hide("hill "..i.." sample repitch")
           params:hide("hill "..i.." sample momentary")
           _menu.rebuild_params()
         elseif x == 2 then
-          params:show("hill "..i.." sample slot")
+          if i <= 7 then
+            params:show("hill "..i.." sample slot")
+          end
+          if params:string('sample'..params:string('hill '..i..' sample slot')..'_sampleMode') == 'distribute' then
+            params:show("hill "..i.." sample distribution")
+            params:hide("hill "..i.." sample slice count")
+          elseif params:string('sample'..params:string('hill '..i..' sample slot')..'_sampleMode') == 'chop' then
+            params:hide("hill "..i.." sample distribution")
+            params:show("hill "..i.." sample slice count")
+          else
+            params:hide("hill "..i.." sample distribution")
+            params:hide("hill "..i.." sample slice count")
+          end
           params:show("hill "..i.." sample probability")
           params:show("hill "..i.." sample repitch")
           params:show("hill "..i.." sample momentary")
@@ -129,6 +143,29 @@ function parameters.init()
       end
     )
     params:add_number("hill "..i.." sample slot", "sample slot",1,3,i<= 7 and 1 or i-7)
+    params:set_action("hill "..i.." sample slot", function(x)
+      if params:string('sample'..x..'_sampleMode') == 'distribute' then
+        params:show("hill "..i.." sample distribution")
+        params:hide("hill "..i.." sample slice count")
+      elseif params:string('sample'..x..'_sampleMode') == 'chop' then
+        params:hide("hill "..i.." sample distribution")
+        params:show("hill "..i.." sample slice count")
+      else
+        params:hide("hill "..i.." sample distribution")
+        params:hide("hill "..i.." sample slice count")
+      end
+      _menu.rebuild_params() 
+    end)
+    if i > 7 then
+      params:hide("hill "..i.." sample slot")
+      _menu.rebuild_params() 
+    end
+    params:add_number("hill "..i.." sample slice count", "slice count",2,48,16)
+    params:add_number("hill "..i.." sample distribution", "total distribution",0,100,100, 
+      function(param)
+        return(util.round(sample_info['sample'..params:get('hill '..i..' sample slot')].sample_count * (param:get()/100))..'/'..sample_info['sample'..params:get('hill '..i..' sample slot')].sample_count)
+      end
+    )   
     params:add_number("hill "..i.." sample probability", "playback probability",0,100,100, function(param) return(param:get().."%") end)
     params:add_option("hill "..i.." sample repitch", "send pitches?",{"no","yes"},1)
     params:add_option("hill "..i.." sample momentary", "stop when released?", {"no","yes"},1)
