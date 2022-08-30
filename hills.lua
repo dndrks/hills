@@ -270,8 +270,8 @@ function init()
       for i = 1,8 do
         local should_overwrite = snapshot_overwrite[voice][d_voice][i]
         if should_overwrite then
-          print(snapshot_overwrite, snapshot_overwrite[voice], snapshot_overwrite[voice][d_voice], voice,d_voice,i,param)
-          snapshot_overwrite[voice][d_voice][i][param] = val
+          print('overwriting', snapshots[voice][d_voice][i][param])
+          snapshots[voice][d_voice][i][param] = val
         end
       end
     end
@@ -288,6 +288,9 @@ function init()
     params.params[params.lookup['hill_'..hill..'_crow_header']].name = 'crow management '..hill..': '..model
     params.params[params.lookup['hill_'..hill..'_JF_header']].name = 'JF management '..hill..': '..model
     grid_dirty = true
+    for i = 1,8 do
+      snapshot_overwrite[hill][model][i] = false
+    end
     -- snapshot_overwrite_mod = false
   end
 
