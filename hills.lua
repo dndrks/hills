@@ -245,10 +245,10 @@ function init()
     -- local pset_string = string.sub(filename,string.len(filename) - 6, -1)
     -- local pset_number = pset_string:gsub(".pset","")
     print("saving hills data for PSET: "..number)
-    os.execute("mkdir -p ".._path.data.."hills/"..number.."/data")
-    os.execute("mkdir -p ".._path.data.."hills/"..number.."/patterns")
-    os.execute("mkdir -p ".._path.data.."hills/"..number.."/song")
-    os.execute("mkdir -p ".._path.data.."hills/"..number.."/snapshots")
+    util.make_dir(_path.data.."hills/"..number.."/data")
+    util.make_dir(_path.data.."hills/"..number.."/patterns")
+    util.make_dir(_path.data.."hills/"..number.."/song")
+    util.make_dir(_path.data.."hills/"..number.."/snapshots")
     for i = 1,number_of_hills do
       tab.save(hills[i],_path.data.."hills/"..number.."/data/"..i..".txt")
     end
@@ -260,6 +260,7 @@ function init()
     end
     tab.save(snapshots,_path.data.."hills/"..number.."/snapshots/all.txt")
     tab.save(snapshot_overwrite, _path.data.."hills/"..number.."/snapshots/overwrite_state.txt")
+    kildare.move_audio_into_perm(_path.audio..'kildare/'..number..'/')
   end
 
   -- development_stuff()
