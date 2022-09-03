@@ -245,6 +245,7 @@ function init()
     -- local pset_string = string.sub(filename,string.len(filename) - 6, -1)
     -- local pset_number = pset_string:gsub(".pset","")
     print("saving hills data for PSET: "..number)
+    kildare.move_audio_into_perm(_path.audio..'kildare/'..number..'/')
     util.make_dir(_path.data.."hills/"..number.."/data")
     util.make_dir(_path.data.."hills/"..number.."/patterns")
     util.make_dir(_path.data.."hills/"..number.."/song")
@@ -260,7 +261,27 @@ function init()
     end
     tab.save(snapshots,_path.data.."hills/"..number.."/snapshots/all.txt")
     tab.save(snapshot_overwrite, _path.data.."hills/"..number.."/snapshots/overwrite_state.txt")
-    kildare.move_audio_into_perm(_path.audio..'kildare/'..number..'/')
+    params_write_silent(filename,name)
+  end
+
+  function params_write_silent(filename,name)
+    print("pset >>>>>>> write: "..filename)
+    local fd = io.open(filename, "w+")
+    if fd then
+      io.output(fd)
+      io.write("-- "..name.."\n")
+      for _,param in ipairs(params.params) do
+        if param.id and param.save and param.t ~= params.tTRIGGER and param.t ~= params.tSEPARATOR then
+          io.write(string.format("%s: %s\n", quote(param.id), param:get()))
+        end
+      end
+      io.close(fd)
+    end
+  end
+
+  params.action_delete = function(filename, name, pset_number)
+    local delete_this_folder = _path.audio..'kildare/'..pset_number..'/'
+    os.execute('rm -r '..delete_this_folder)
   end
 
   -- development_stuff()

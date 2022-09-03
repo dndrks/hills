@@ -369,6 +369,97 @@ function parameters.init()
     )
   end
 
+  params:add_group('snapshot_crossfade_settings', 'snapshot crossfaders', 32 + 120)
+
+  local function spec_format(param, value, units)
+    return value.." "..(units or param.controlspec.units or "")
+  end
+
+  local function crossfade_widget(param)
+    local dots_per_side = 8
+    local widget
+    local function add_dots(num_dots)
+      for i=1,num_dots do widget = (widget or "").."." end
+    end
+    local function add_bar()
+      widget = (widget or "").."|"
+    end
+  
+    local value = param:get()
+    local pan_side = math.abs(value)
+    local pan_side_percentage = util.round(pan_side*100)
+    local descr
+    local dots_left
+    local dots_right
+  
+    if value > 0 then
+      dots_left = dots_per_side+util.round(pan_side*dots_per_side)
+      dots_right = util.round((1-pan_side)*dots_per_side)
+      if pan_side_percentage >= 1 then
+        descr = "R"..pan_side_percentage
+      end
+    elseif value < 0 then
+      dots_left = util.round((1-pan_side)*dots_per_side)
+      dots_right = dots_per_side+util.round(pan_side*dots_per_side)
+      if pan_side_percentage >= 1 then
+       descr = "L"..pan_side_percentage
+      end
+    else
+      dots_left = dots_per_side
+      dots_right = dots_per_side
+    end
+  
+    if descr == nil then
+      descr = "C"
+    end
+  
+    add_bar()
+    add_dots(dots_left)
+    add_bar()
+    add_dots(dots_right)
+    add_bar()
+  
+    return spec_format(param, descr.." "..widget, "")
+  end
+
+  for i = 1,8 do
+    params:add_separator('snapshot_crossfade_header_'..i, 'crossfader '..i)
+    params:add_number('snapshot_crossfade_left_'..i, 'left snapshot',1,16,1)
+    params:add_number('snapshot_crossfade_right_'..i, 'right snapshot',1,16,1)
+    params:add_control('snapshot_crossfade_value_'..i, 'crossfade', controlspec.PAN, crossfade_widget)
+    params:set_action('snapshot_crossfade_value_'..i,function(x)
+      _snapshots.crossfade(i,params:get('snapshot_crossfade_left_'..i), params:get('snapshot_crossfade_right_'..i), x)
+    end)
+    snapshot_lfos[i] = _lfo:add{
+      min = params:get('snapshot_crossfade_left_'..i),
+      max = params:get('snapshot_crossfade_right_'..i),
+      action = 
+      function(s,r) 
+        params:set(
+          'snapshot_crossfade_value_'..i,
+          util.scale(
+            params:get('snapshot_crossfade_left_'..i),
+            params:get('snapshot_crossfade_right_'..i),
+            -1,
+            1,
+            s
+          )
+        )
+      end,
+      ppqn = 32
+    }
+    snapshot_lfos[i]:add_params('snapshot_'..i, 'SNAPSHOT LFO '..i)
+    params:set_action('snapshot_crossfade_left_'..i, function(x)
+      snapshot_lfos[i]:set('min',x)
+      params.params[params.lookup['lfo_min_snapshot_1']].controlspec.maxval = x
+    end)
+
+    params:set_action('snapshot_crossfade_right_'..i, function(x)
+      snapshot_lfos[i]:set('max',x)
+      params.params[params.lookup['lfo_max_snapshot_1']].controlspec.maxval = x
+    end)
+  end
+
   for i = 1,16 do
     params:add_group('pattern_group_'..i, 'pattern '..i, (1 + 15) + (1 + 2))
     params:add_separator('pattern_'..i..'_options', 'general')

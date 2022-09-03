@@ -1,6 +1,7 @@
 local snapshot = {}
 
 function snapshot.init()
+  snapshot_lfos = {}
   selected_snapshot = {}
   snapshot_overwrite = {}
   snapshot_overwrite_mod = false
@@ -191,6 +192,51 @@ snapshot.funnel_done_action = function(voice,coll)
       snapshots[voice].partial_restore = false
     end
   end
+end
+
+snapshot.crossfade = function(voice,scene_a,scene_b,val)
+  -- 'val' will come in as -1 to 1
+
+  -- focus.partial_restore = true
+
+  local d_voice, d_string, original_srcs, focus;
+  if voice <= 7 then
+    d_voice = params:string('voice_model_'..voice)
+    d_string = voice..'_'..d_voice..'_'
+    focus = snapshots[voice][d_voice]
+    -- original_srcs = _t.deep_copy(snapshots[voice][d_voice][coll])
+  elseif voice <= 10 then
+    d_voice = 'sample'..voice-7
+    d_string = d_voice..'_'
+    focus = snapshots[voice][d_voice]
+    -- original_srcs = _t.deep_copy(snapshots[voice][d_voice][coll])
+  else
+    focus = snapshots[voice]
+    -- original_srcs = _t.deep_copy(snapshots[voice][coll])
+  end
+
+  local d = (type(voice) == 'number' and voice <=10) and kildare_drum_params[d_voice] or kildare_fx_params[voice]
+  for i = 1, #d do
+    local destination = d[i]
+    if destination.type ~= 'separator'
+    and not destination.lfo_exclude
+    and focus[scene_a][destination.id] ~= nil
+    and focus[scene_b][destination.id] ~= nil then
+      if val < 0 then
+        params:set(d_string..destination.id, focus[scene_a][destination.id] * util.linlin(-1,0,1,0,val))
+      elseif val > 0 then
+        params:set(d_string..destination.id, focus[scene_b][destination.id] * val)
+      end
+    end
+  end
+
+  if val == -1 or val == 0 or val == 1 then
+    -- focus.partial_restore = false
+  end
+
+  screen_dirty = true
+  grid_dirty = true
+  
 end
 
 
