@@ -42,6 +42,17 @@ function grid_lib.pattern_execute(data)
     else
       hills[data.x].snapshot.focus = data.y
     end
+  else
+    for voice,m in pairs(data) do
+      for model,p in pairs(m) do
+        for param,val in pairs(p) do
+          -- print(voice,model,param,val)
+          if model == params:string('voice_model_'..voice) then
+            prms.send_to_engine(voice, param, val)
+          end
+        end
+      end
+    end
   end
 end
 
@@ -73,7 +84,11 @@ for i = 1,16 do
     if tab.count(pattern_links[i]) ~= 0 then
       for k,v in pairs(pattern_links[i]) do
         if grid_pattern[k].rec == 0 and #grid_pattern[k].event > 0 then
-          grid_pattern[k]:start()
+          if grid_pattern[k].play == 1 then
+            grid_pattern[k].step = 0
+          else
+            grid_pattern[k]:start()
+          end
         end
       end
     end
@@ -87,13 +102,16 @@ function grid_lib.handle_grid_pat(i,alt)
       grid_pattern[i]:rec_stop() -- stop recording
       grid_pattern[i]:start() -- start playing
     elseif grid_pattern[i].count == 0 then -- otherwise, if there are no events recorded..
-      grid_pattern[i]:rec_start() -- start recording
       if params:string('pattern_'..i..'_start_rec_at') == 'when engaged' then
-        grid_pattern[i]:watch(
-          {
-            ['event'] = 'ignore'
-          }
-        )
+        grid_pattern[i]:rec_start() -- start recording
+        if not grid_pattern[i].event[1] then
+          grid_pattern[i].event[1] = {}
+        end
+        grid_pattern[i].event[1][1] = {
+          ['event'] = 'ignore'
+        }
+      else
+        grid_pattern[i].rec = 1
       end
     elseif grid_pattern[i].play == 1 then -- if we're playing...
       grid_lib.stop_pattern_playback(i)
@@ -299,14 +317,27 @@ function g.key(x,y,z)
       hills[x-1][y].perf_led = true
       grid_dirty = true
       for i = 1,16 do
-        grid_pattern[i]:watch(
-          {
+        if grid_pattern[i].rec == 1 and grid_pattern[i].step == 0 then
+          grid_pattern[i]:rec_start()
+          if not grid_pattern[i].event[1] then
+            grid_pattern[i].event[1] = {}
+          end
+          grid_pattern[i].event[1][1] = {
             ["event"] = "start",
             ["x"] = x-1,
             ["y"] = y,
             ["id"] = i
           }
-        )
+        else
+          grid_pattern[i]:watch(
+            {
+              ["event"] = "start",
+              ["x"] = x-1,
+              ["y"] = y,
+              ["id"] = i
+            }
+          )
+        end
       end
     end
     if z == 0 then
@@ -357,14 +388,14 @@ function g.key(x,y,z)
         x = x - 1
         
         local _snap;
-        if x <= 7 then
+        if x <= 7 and which_focus ~= 'snapshots_extended' then
           local d_voice = params:string('voice_model_'..x)
           _snap = snapshots[x][d_voice]
-        elseif x <= 10 then
+        elseif x <= 10 and which_focus ~= 'snapshots_extended' then
           local d_voice = 'sample'..x-7
           _snap = snapshots[x][d_voice]
-        else
-          _snap = snapshots[x]
+        elseif which_focus == 'snapshots_extended' then
+          _snap = snapshots[fx[x]]
         end
 
         local x = which_focus == 'snapshots_extended' and fx[x] or x
@@ -387,15 +418,29 @@ function g.key(x,y,z)
         end
         if z == 1 and tab.count(_snap[y]) > 0 then
           for i = 1,16 do
-            grid_pattern[i]:watch(
-              {
+            if grid_pattern[i].rec == 1 and grid_pattern[i].step == 0 then
+              grid_pattern[i]:rec_start()
+              if not grid_pattern[i].event[1] then
+                grid_pattern[i].event[1] = {}
+              end
+              grid_pattern[i].event[1][1] = {
                 ["event"] = "snapshot_restore",
                 ["x"] = x,
                 ["y"] = y,
                 ["id"] = i,
                 ['mod_index'] = snapshots.mod.index
               }
-            )
+            else
+              grid_pattern[i]:watch(
+                {
+                  ["event"] = "snapshot_restore",
+                  ["x"] = x,
+                  ["y"] = y,
+                  ["id"] = i,
+                  ['mod_index'] = snapshots.mod.index
+                }
+              )
+            end
           end
         end
       end
@@ -404,20 +449,18 @@ function g.key(x,y,z)
       local which_focus = (mods["snapshots"] and not mods['snapshots_extended']) and 'snapshots' or 'snapshots_extended'
       x = x - 1
       local _snap, _snapover;
-      if x <= 7 then
+      if  x <= 7 and which_focus ~= 'snapshots_extended' then
         local d_voice = params:string('voice_model_'..x)
         _snap = snapshots[x][d_voice]
         _snapover = snapshot_overwrite[x][d_voice]
-      elseif x <= 10 then
+      elseif x <= 10 and which_focus ~= 'snapshots_extended' then
         local d_voice = 'sample'..x-7
-        print(d_voice)
         _snap = snapshots[x][d_voice]
         _snapover = snapshot_overwrite[x][d_voice]
-      else
-        _snap = snapshots[x]
-        _snapover = snapshot_overwrite[x]
+      elseif which_focus == 'snapshots_extended' then
+        _snap = snapshots[fx[x]]
+        _snapover = snapshot_overwrite[fx[x]]
       end
-      local x = which_focus == 'snapshots_extended' and fx[x] or x
       if z == 1 then
         if tab.count(_snap[y]) ~= 0 then
           _snapover[y] = not _snapover[y]

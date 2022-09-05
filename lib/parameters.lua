@@ -27,7 +27,19 @@ end
 --   "[10] (s-3)"
 -- }
 
-local current_audio_route = 1
+function parameters.change_UI_name(id, new_name)
+  params.params[params.lookup[id]].name = new_name
+end
+
+function parameters.send_to_engine(voice,param,value)
+  if param == 'carHz' then
+    engine.set_voice_param(voice, param, mu.note_num_to_freq(value))
+  elseif param == 'poly' then
+    engine.set_voice_param(voice, param, value == 1 and 0 or 1)
+  else
+    engine.set_voice_param(voice, param, value)
+  end
+end
 
 function parameters.init()
   refresh_params_vports()
@@ -325,7 +337,7 @@ function parameters.init()
 
   params:add_separator('hills_pattern_header', 'pattern + snapshot settings')
   
-  params:add_group('global_pattern_group', 'global', 22)
+  params:add_group('global_pattern_group', 'global', 23)
   params:add_separator('global_pattern_settings','patterns')
   params:add_option('global_pattern_start_rec_at', 'start rec at', {'first event','when engaged'}, 1)
   params:set_action('global_pattern_start_rec_at', function(x)
@@ -333,10 +345,16 @@ function parameters.init()
       params:set('pattern_'..i..'_start_rec_at',x)
     end
   end)
-  params:add_option('global_pattern_snapshot_mod_restore', 'capture snapshot mods', {'no','yes'}, 1)
-  params:set_action('global_pattern_snapshot_mod_restore', function(x)
+  params:add_option('global_pattern_snapshot_mod_capture', 'capture snapshot mods', {'no','yes'}, 1)
+  params:set_action('global_pattern_snapshot_mod_capture', function(x)
     for i = 1,16 do
       params:set('pattern_'..i..'_snapshot_mod_restore',x)
+    end
+  end)
+  params:add_option('global_pattern_parameter_change_capture', 'capture param changes', {'no','yes'}, 1)
+  params:set_action('global_pattern_parameter_change_capture', function(x)
+    for i = 1,16 do
+      params:set('pattern_'..i..'_parameter_change_restore',x)
     end
   end)
 
@@ -369,13 +387,13 @@ function parameters.init()
     )
   end
 
-  params:add_group('snapshot_crossfade_settings', 'snapshot crossfaders', 32 + 120)
+  params:add_group('snapshot_crossfade_settings', 'snapshot crossfaders', 32 + 140)
 
   local function spec_format(param, value, units)
     return value.." "..(units or param.controlspec.units or "")
   end
 
-  local function crossfade_widget(param)
+  function crossfade_widget(param)
     local dots_per_side = 8
     local widget
     local function add_dots(num_dots)
@@ -422,49 +440,92 @@ function parameters.init()
     return spec_format(param, descr.." "..widget, "")
   end
 
-  for i = 1,8 do
-    params:add_separator('snapshot_crossfade_header_'..i, 'crossfader '..i)
+  local function lfo_params_visibility(state, i)
+    params[state](params, "lfo_baseline_"..i)
+    params[state](params, "lfo_offset_"..i)
+    params[state](params, "lfo_depth_"..i)
+    params:hide("lfo_scaled_"..i)
+    params:hide("lfo_raw_"..i)
+    params[state](params, "lfo_mode_"..i)
+    if state == "show" then
+      if params:get("lfo_mode_"..i) == 1 then
+        params:hide("lfo_free_"..i)
+        params:show("lfo_clocked_"..i)
+      elseif params:get("lfo_mode_"..i) == 2 then
+        params:hide("lfo_clocked_"..i)
+        params:show("lfo_free_"..i)
+      end
+    else
+      params:hide("lfo_clocked_"..i)
+      params:hide("lfo_free_"..i)
+    end
+    params[state](params, "lfo_shape_"..i)
+    params[state](params, "lfo_min_"..i)
+    params[state](params, "lfo_max_"..i)
+    params[state](params, "lfo_reset_"..i)
+    params[state](params, "lfo_reset_target_"..i)
+    _menu.rebuild_params()
+  end
+
+  local function lfo_bang(i)
+    local function lb(prm)
+      params:lookup_param("lfo_"..prm.."_"..i):bang()
+    end
+    lb('depth')
+    lb('min')
+    lb('max')
+    lb('baseline')
+    lb('offset')
+    lb('mode')
+    lb('clocked')
+    lb('free')
+    lb('shape')
+    lb('reset')
+    lb('reset_target')
+  end
+
+  for i = 1,10 do
+    params:add_separator('snapshot_crossfade_header_'..i, 'crossfader '..hill_names[i])
     params:add_number('snapshot_crossfade_left_'..i, 'left snapshot',1,16,1)
     params:add_number('snapshot_crossfade_right_'..i, 'right snapshot',1,16,1)
     params:add_control('snapshot_crossfade_value_'..i, 'crossfade', controlspec.PAN, crossfade_widget)
+    params:set('snapshot_crossfade_value_'..i,-1)
     params:set_action('snapshot_crossfade_value_'..i,function(x)
       _snapshots.crossfade(i,params:get('snapshot_crossfade_left_'..i), params:get('snapshot_crossfade_right_'..i), x)
     end)
     snapshot_lfos[i] = _lfo:add{
-      min = params:get('snapshot_crossfade_left_'..i),
-      max = params:get('snapshot_crossfade_right_'..i),
-      action = 
-      function(s,r) 
-        params:set(
-          'snapshot_crossfade_value_'..i,
-          util.scale(
-            params:get('snapshot_crossfade_left_'..i),
-            params:get('snapshot_crossfade_right_'..i),
-            -1,
-            1,
-            s
-          )
-        )
-      end,
+      min = -1,
+      max = 1,
+      action = function(s,r) params:set('snapshot_crossfade_value_'..i,s) end,
       ppqn = 32
     }
-    snapshot_lfos[i]:add_params('snapshot_'..i, 'SNAPSHOT LFO '..i)
-    params:set_action('snapshot_crossfade_left_'..i, function(x)
-      snapshot_lfos[i]:set('min',x)
-      params.params[params.lookup['lfo_min_snapshot_1']].controlspec.maxval = x
-    end)
 
-    params:set_action('snapshot_crossfade_right_'..i, function(x)
-      snapshot_lfos[i]:set('max',x)
-      params.params[params.lookup['lfo_max_snapshot_1']].controlspec.maxval = x
+    snapshot_lfos[i]:add_params('snapshot_'..i)
+    parameters.change_UI_name('lfo_snapshot_'..i,'lfo')
+    params.params[params.lookup['lfo_min_snapshot_'..i]].formatter = crossfade_widget
+    params.params[params.lookup['lfo_max_snapshot_'..i]].formatter = crossfade_widget
+    params:set_action("lfo_snapshot_"..i,function(x)
+      if x == 1 then
+        lfo_params_visibility("hide", 'snapshot_'..i)
+        params:set("lfo_scaled_snapshot_"..i,"")
+        params:set("lfo_raw_snapshot_"..i,"")
+        snapshot_lfos[i]:stop()
+      elseif x == 2 then
+        lfo_params_visibility("show", 'snapshot_'..i)
+        snapshot_lfos[i]:start()
+      end
+      snapshot_lfos[i]:set('enabled',x-1)
+      lfo_bang('snapshot_'..i)
     end)
+    
   end
 
   for i = 1,16 do
-    params:add_group('pattern_group_'..i, 'pattern '..i, (1 + 15) + (1 + 2))
+    params:add_group('pattern_group_'..i, 'pattern '..i, (1 + 15) + (1 + 3))
     params:add_separator('pattern_'..i..'_options', 'general')
     params:add_option('pattern_'..i..'_start_rec_at', 'start rec at', {'first event','when engaged'}, 1)
     params:add_option('pattern_'..i..'_snapshot_mod_restore', 'capture snapshot mods', {'no','yes'}, 1)
+    params:add_option('pattern_'..i..'_parameter_change_restore', 'capture param changes', {'no','yes'}, 1)
     params:add_separator('pattern_'..i..'_links_header', 'links')
     for j = 1,16 do
       if i ~= j then

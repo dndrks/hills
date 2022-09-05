@@ -77,6 +77,7 @@ function snapshot.seed_restore_state_to_all(voice,coll,_p)
 end
 
 function snapshot.unpack(voice, coll)
+  print(voice,coll)
   if type(voice) == "number" and voice <= 10 then
     
     if hills[voice].snapshot.partial_restore then
@@ -194,7 +195,7 @@ snapshot.funnel_done_action = function(voice,coll)
   end
 end
 
-snapshot.crossfade = function(voice,scene_a,scene_b,val)
+function snapshot.crossfade(voice,scene_a,scene_b,val)
   -- 'val' will come in as -1 to 1
 
   -- focus.partial_restore = true
@@ -221,12 +222,9 @@ snapshot.crossfade = function(voice,scene_a,scene_b,val)
     if destination.type ~= 'separator'
     and not destination.lfo_exclude
     and focus[scene_a][destination.id] ~= nil
-    and focus[scene_b][destination.id] ~= nil then
-      if val < 0 then
-        params:set(d_string..destination.id, focus[scene_a][destination.id] * util.linlin(-1,0,1,0,val))
-      elseif val > 0 then
-        params:set(d_string..destination.id, focus[scene_b][destination.id] * val)
-      end
+    and focus[scene_b][destination.id] ~= nil
+    and scene_a ~= scene_b then
+      params:set(d_string..destination.id, util.linlin(-1,1,focus[scene_a][destination.id],focus[scene_b][destination.id],val))
     end
   end
 
@@ -241,6 +239,7 @@ end
 
 
 function snapshot.route_funnel(voice,coll,mod_idx)
+  print('route funnel', voice, coll)
   local focus;
   if type(voice) == 'number' and voice <= 10 then
     focus = hills[voice].snapshot
@@ -268,11 +267,11 @@ function snapshot.route_funnel(voice,coll,mod_idx)
     focus.partial_restore = true
 
     local d_voice, d_string, original_srcs;
-    if voice <= 7 then
+    if type(voice) ~= 'string' and voice <= 7 then
       d_voice = params:string('voice_model_'..voice)
       d_string = voice..'_'..d_voice..'_'
       original_srcs = _t.deep_copy(snapshots[voice][d_voice][coll])
-    elseif voice <= 10 then
+    elseif type(voice) ~= 'string' and voice <= 10 then
       d_voice = 'sample'..voice-7
       d_string = d_voice..'_'
       original_srcs = _t.deep_copy(snapshots[voice][d_voice][coll])

@@ -26,7 +26,7 @@ local function development_stuff()
   params:set("hill 1 kildare_notes", 2)
 end
 
-pt = include 'lib/hills_pt'
+pt = include 'lib/hills_new_pt'
 curves = include 'lib/easing'
 prms = include 'lib/parameters'
 _t = include 'lib/transformations'
@@ -227,10 +227,10 @@ function init()
         _g.stop_pattern_playback(j)
       end
       local to_inherit = tab.load(_path.data.."hills/"..number.."/patterns/"..j..".txt")
-      grid_pattern[j].event = to_inherit.event
-      grid_pattern[j].count = #grid_pattern[j].event
-      grid_pattern[j].time = to_inherit.time
-      grid_pattern[j].loop = to_inherit.loop
+      local inheritances = {'end_point', 'count', 'event', 'loop'}
+      for k,v in pairs(inheritances) do
+        grid_pattern[j][v] = to_inherit[v]
+      end
     end
     for j = 1,#song_atoms do
       song_atoms[j] = tab.load(_path.data.."hills/"..number.."/song/"..j..".txt")
@@ -287,28 +287,55 @@ function init()
   -- development_stuff()
 
   function kildare.voice_param_callback(voice, param, val)
+    local d_voice = type(voice) ~= 'string' and params:string('voice_model_'..voice) or voice
     if snapshot_overwrite_mod then
-      local d_voice = params:string('voice_model_'..voice)
       for i = 1,8 do
         local should_overwrite = snapshot_overwrite[voice][d_voice][i]
-        if should_overwrite then
-          print('overwriting', snapshots[voice][d_voice][i][param])
+        if should_overwrite and params:string('lfo_snapshot_'..voice) == 'off' then
+          -- print('overwriting', snapshots[voice][d_voice][i][param])
           snapshots[voice][d_voice][i][param] = val
         end
+      end
+    end
+    for i = 1,16 do
+      if (grid_pattern[i].rec == 1 or grid_pattern[i].overdub == 1) and params:string('pattern_'..i..'_parameter_change_restore') == 'yes' then
+        grid_pattern[i]:watch_mono(
+          {
+            ['event'] = 'parameter_value_change',
+            ['voice'] = voice,
+            ['param'] = param,
+            ['value'] = val,
+            ['model'] = params:string('voice_model_'..voice),
+            ['id'] = i
+          }
+        )
+      end
+      if grid_pattern[i].clear_mono == 1 then
+        grid_pattern[i]:clear_mono_events(
+          {
+            ['voice'] = voice,
+            ['param'] = param,
+            ['value'] = val,
+            ['model'] = params:string('voice_model_'..voice),
+            ['id'] = i
+          }
+        )
       end
     end
   end
 
   function kildare.model_change_callback(hill,model)
     hill_names[hill] = hill..': '..model
-    params.params[params.lookup['hill_'..hill..'_group']].name = hill_names[hill]
-    params.params[params.lookup['hill_'..hill..'_note_header']].name = 'note management '..hill..': '..model
-    params.params[params.lookup['hill_'..hill..'_note_header']].name = 'note management '..hill..': '..model
-    params.params[params.lookup['hill_'..hill..'_kildare_header']].name = 'Kildare management '..hill..': '..model
-    params.params[params.lookup['hill_'..hill..'_sample_header']].name = 'sample management '..hill..': '..model
-    params.params[params.lookup['hill_'..hill..'_MIDI_header']].name = 'MIDI management '..hill..': '..model
-    params.params[params.lookup['hill_'..hill..'_crow_header']].name = 'crow management '..hill..': '..model
-    params.params[params.lookup['hill_'..hill..'_JF_header']].name = 'JF management '..hill..': '..model
+    
+    prms.change_UI_name('hill_'..hill..'_group', hill_names[hill])
+    prms.change_UI_name('hill_'..hill..'_note_header', 'note management '..hill_names[hill])
+    prms.change_UI_name('hill_'..hill..'_kildare_header', 'Kildare management '..hill_names[hill])
+    prms.change_UI_name('hill_'..hill..'_sample_header', 'sample management '..hill_names[hill])
+    prms.change_UI_name('hill_'..hill..'_MIDI_header', 'MIDI management '..hill_names[hill])
+    prms.change_UI_name('hill_'..hill..'_crow_header', 'crow management '..hill_names[hill])
+    prms.change_UI_name('hill_'..hill..'_JF_header', 'JF management '..hill_names[hill])
+    prms.change_UI_name('snapshot_crossfade_header_'..hill, 'crossfader '..hill_names[hill])
+
     grid_dirty = true
     for i = 1,8 do
       snapshot_overwrite[hill][model][i] = false
