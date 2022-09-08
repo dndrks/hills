@@ -532,7 +532,7 @@ function parameters.init()
         params:add_option('pattern_'..i..'_link_'..j, i..' -> '..j,{'no','yes'},1)
         params:set_action('pattern_'..i..'_link_'..j, function(x)
           if x == 1 then
-            pattern_links[i][j] = nil
+            pattern_links[i][j] = false
           else
             pattern_links[i][j] = true
           end

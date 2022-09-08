@@ -81,19 +81,22 @@ for i = 1,16 do
       end
     end
   grid_pattern[i].start_callback = function()
-    if tab.count(pattern_links[i]) ~= 0 then
-      for k,v in pairs(pattern_links[i]) do
-        if grid_pattern[k].rec == 0 and #grid_pattern[k].event > 0 then
-          if grid_pattern[k].play == 1 then
-            grid_pattern[k].step = 0
+    for j = 1,16 do
+      if pattern_links[i][j] then
+        if grid_pattern[j].rec == 0 and #grid_pattern[j].event > 0 then
+          if grid_pattern[j].play == 1 then
+            grid_pattern[j].step = 0
           else
-            grid_pattern[k]:start()
+            grid_pattern[j]:start()
           end
         end
       end
     end
   end
   pattern_links[i] = {}
+  for j = 1,16 do
+    pattern_links[i][j] = false
+  end
 end
 
 function grid_lib.handle_grid_pat(i,alt)
@@ -159,15 +162,15 @@ function grid_lib.stop_pattern_playback(i)
   for j = 1,#active_voices[i] do
     if active_voices[i][j] then
       stop(j,true)
-      _ca.stop_sample('sample'..params:get("hill "..i.." sample slot"))
+      _ca.stop_sample('sample'..params:get("hill "..j.." sample slot"))
       active_voices[i][j] = false
     end
   end
 
-  if tab.count(pattern_links[i]) ~= 0 then
-    for k,v in pairs(pattern_links[i]) do
-      if grid_pattern[k].play == 1 then
-       grid_lib.stop_pattern_playback(k)
+  for j = 1,16 do
+    if pattern_links[i][j] then
+      if grid_pattern[j].play == 1 then
+        grid_lib.stop_pattern_playback(j)
       end
     end
   end
@@ -322,7 +325,8 @@ function g.key(x,y,z)
           if not grid_pattern[i].event[1] then
             grid_pattern[i].event[1] = {}
           end
-          grid_pattern[i].event[1][1] = {
+          local current_count = #grid_pattern[i].event[1]
+          grid_pattern[i].event[1][current_count+1] = {
             ["event"] = "start",
             ["x"] = x-1,
             ["y"] = y,

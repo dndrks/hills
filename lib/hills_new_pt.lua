@@ -15,6 +15,8 @@ function pattern.new(id)
   i.count = 0
   i.end_point = 0
   i.step = 0
+  i.steps_with_mono_events = {}
+  i.mono_event_idx = 0
   i.loop = 1
   i.clear_mono = 0
   i.name = id
@@ -35,6 +37,8 @@ function pattern:clear()
   self.count = 0
   self.clear_mono = 0
   self.step = 0
+  self.steps_with_mono_events = {}
+  self.mono_event_idx = 0
 end
 
 --- start recording
@@ -61,10 +65,11 @@ function pattern:begin_playback()
         self.step = self.step + 1
         if self.end_point ~= 0 then
           if self.event[self.step] and next(self.event[self.step]) ~= nil then
-            for k,v in pairs(self.event[self.step]) do
-              self.process(v)
-            -- for i = 1,tab.count(self.event[self.step]) do
-            --   self.process(self.event[self.step][i])
+            for i = 1,#self.event[self.step] do
+              self.process(self.event[self.step][i])
+            end
+            if self.event[self.step].parameter_value_change ~= nil then
+              self.process(self.event[self.step].parameter_value_change)
             end
           end
           if self.step >= self.end_point then
@@ -119,12 +124,15 @@ function pattern:rec_event(e)
   if self.event[self.step] == nil then
     self.event[self.step] = {}
   end
-  table.insert(self.event[self.step],e)
+  -- table.insert(self.event[self.step],e) -- inefficient!
+  local current_size = #self.event[self.step] + 1
+  self.event[self.step][current_size] = e
   self.count = self.count + 1
 end
 
 --- record event (mono)
 function pattern:rec_event_mono(e)
+  -- 
   if not self.event[self.step] then
     self.event[self.step] = {
       [e.event] = {
@@ -135,6 +143,8 @@ function pattern:rec_event_mono(e)
         }
       }
     }
+    self.mono_event_idx = self.mono_event_idx + 1
+    self.steps_with_mono_events[self.mono_event_idx] = self.step
     -- print('creating first entry for mono event',self.step,e.param, e.value)
   else
     -- what if the step exists, but the data doesn't?
@@ -146,6 +156,8 @@ function pattern:rec_event_mono(e)
           }
         }
       }
+      self.mono_event_idx = self.mono_event_idx + 1
+      self.steps_with_mono_events[self.mono_event_idx] = self.step
     elseif not self.event[self.step][e.event][e.voice] then
       self.event[self.step][e.event][e.voice] = {
         [e.model] = {
@@ -163,15 +175,14 @@ function pattern:rec_event_mono(e)
     else
     end
   end
-
+  
   self.count = self.count + 1
 end
 
 function pattern:clear_mono_events(e)
-  for k,v in pairs(self.event) do
-    if v.parameter_value_change and v.parameter_value_change[e.voice][e.model][e.param] then
-      v.parameter_value_change[e.voice][e.model][e.param] = nil
-    end
+  for i = 1,self.mono_event_idx do
+    local id = self.steps_with_mono_events[i]
+    self.event[id].parameter_value_change[e.voice][e.model][e.param] = nil
   end
   if e.model == params:string('voice_model_'..e.voice) then
     prms.send_to_engine(e.voice, e.param, e.value)

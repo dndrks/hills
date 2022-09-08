@@ -123,6 +123,11 @@ function init()
     hills[i].snapshot.restore_times = {["beats"] = {1,2,4,8,16,32,64,128}, ["time"] = {1,2,4,8,16,32,64,128}, ["mode"] = "beats"}
     hills[i].snapshot.mod_index = 0
     hills[i].snapshot.focus = 0
+
+    hills[i].iter_links = {}
+    for j = 1,8 do
+      hills[i].iter_links[j] = false
+    end
     
     ui.seq_controls[i] =
     {
@@ -228,8 +233,8 @@ function init()
       end
       local to_inherit = tab.load(_path.data.."hills/"..number.."/patterns/"..j..".txt")
       local inheritances = {'end_point', 'count', 'event', 'loop'}
-      for k,v in pairs(inheritances) do
-        grid_pattern[j][v] = to_inherit[v]
+      for adj = 1, #inheritances do
+        grid_pattern[j][inheritances[adj]] = to_inherit[inheritances[adj]]
       end
     end
     for j = 1,#song_atoms do
@@ -584,6 +589,7 @@ end
 
 pass_note = function(i,j,seg,note_val,index,destination)
   local midi_notes = hills[i][j].note_ocean
+  print(i,j,note_val,midi_notes[note_val])
   local played_note = get_random_offset(i,midi_notes[note_val])
   if played_note ~= nil and hills[i][j].note_num.active[index] then
     if i <= 7 then
@@ -630,6 +636,7 @@ pass_note = function(i,j,seg,note_val,index,destination)
         end
       end
     end
+    manual_iter(i,j)
     if params:string("hill "..i.." MIDI output") == "yes" then
       local ch = params:get("hill "..i.." MIDI note channel")
       local dev = params:get("hill "..i.." MIDI device")
@@ -697,6 +704,17 @@ pass_note = function(i,j,seg,note_val,index,destination)
       end
     end
     pre_note[i] = played_note
+  end
+end
+
+function manual_iter(i,j)
+  for idx = 1,#hills[i].iter_links do
+    if hills[i].iter_links[idx] then
+      if hills[idx][j].note_num.pool[hills[idx][j].index] ~= nil then
+        pass_note(idx,j,hills[idx][j],hills[idx][j].note_num.pool[hills[idx][j].index],hills[idx][j].index)
+      end
+      hills[idx][j].index = util.wrap(hills[idx][j].index + 1, hills[idx][j].low_bound.note + 1,hills[idx][j].high_bound.note+1)
+    end
   end
 end
 
