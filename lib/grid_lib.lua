@@ -43,15 +43,8 @@ function grid_lib.pattern_execute(data)
       hills[data.x].snapshot.focus = data.y
     end
   else
-    for voice,m in pairs(data) do
-      for model,p in pairs(m) do
-        for param,val in pairs(p) do
-          -- print(voice,model,param,val)
-          if model == params:string('voice_model_'..voice) then
-            prms.send_to_engine(voice, param, val)
-          end
-        end
-      end
+    if params:string('voice_model_'..data.voice) == data.model then
+      prms.send_to_engine(data.voice, data.param, data.value)
     end
   end
 end

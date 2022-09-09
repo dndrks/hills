@@ -134,55 +134,73 @@ end
 function pattern:rec_event_mono(e)
   -- 
   if not self.event[self.step] then
-    self.event[self.step] = {
-      [e.event] = {
-        [e.voice] = {
-          [e.model] = {
-            [e.param] = e.value
-          }
-        }
-      }
+    self.event[self.step] = {}
+    self.event[self.step][1] = {
+      ['event'] = e.event,
+      ['voice'] = e.voice,
+      ['model'] = e.model,
+      ['param'] = e.param,
+      ['value'] = e.value
     }
-    self.mono_event_idx = self.mono_event_idx + 1
-    self.steps_with_mono_events[self.mono_event_idx] = self.step
+    self.steps_with_mono_events[self.step] = true
+    self.count = self.count + 1
     -- print('creating first entry for mono event',self.step,e.param, e.value)
   else
-    -- what if the step exists, but the data doesn't?
-    if not self.event[self.step][e.event] then
-      self.event[self.step][e.event] = {
-        [e.voice] = {
-          [e.model] = {
-            [e.param] = e.value
-          }
-        }
-      }
-      self.mono_event_idx = self.mono_event_idx + 1
-      self.steps_with_mono_events[self.mono_event_idx] = self.step
-    elseif not self.event[self.step][e.event][e.voice] then
-      self.event[self.step][e.event][e.voice] = {
-        [e.model] = {
-          [e.param] = e.value
-        }
-      }
-    elseif not self.event[self.step][e.event][e.voice][e.model] then
-      self.event[self.step][e.event][e.voice][e.model] = { [e.param] = e.value }
-    elseif not self.event[self.step][e.event][e.voice][e.model][e.param] then
-      self.event[self.step][e.event][e.voice][e.model][e.param] = e.value
+    -- what if the step exists, but the mono data doesn't?
+    local register_a_new_mono_step, already_registered_index;
+    for i = 1,#self.event[self.step] do
+      if self.event[self.step][i].event == e.event
+      and self.event[self.step][i].voice == e.voice
+      and self.event[self.step][i].model == e.model
+      and self.event[self.step][i].param == e.param
+      then
+        register_a_new_mono_step = false
+        already_registered_index = i
+        print(already_registered_index)
+        break
+      else
+        register_a_new_mono_step = true
+      end
     end
-    if self.event[self.step][e.event][e.voice][e.model][e.param] and self.event[self.step][e.event][e.voice][e.model][e.param] ~= e.value then
-      -- print('overwriting data for step '..self.step, e.event, e.voice, e.model, e.param, k)
-      self.event[self.step][e.event][e.voice][e.model][e.param] = e.value
-    else
+    if register_a_new_mono_step == true then
+      self.event[self.step][#self.event[self.step] + 1] = {
+        ['event'] = e.event,
+        ['voice'] = e.voice,
+        ['model'] = e.model,
+        ['param'] = e.param,
+        ['value'] = e.value
+      }
+      self.steps_with_mono_events[self.step] = true
+      -- print('baking a new mono data step',self.step,e.param, e.value)
+    elseif register_a_new_mono_step == false then
+      self.event[self.step][already_registered_index] = {
+        ['event'] = e.event,
+        ['voice'] = e.voice,
+        ['model'] = e.model,
+        ['param'] = e.param,
+        ['value'] = e.value
+      }
+      -- print('overwriting a mono data step',self.step, already_registered_index, e.param, e.value)
     end
   end
-  
-  self.count = self.count + 1
 end
 
 function pattern:clear_mono_events(e)
-  for i = 1,self.mono_event_idx do
-    local id = self.steps_with_mono_events[i]
-    self.event[id].parameter_value_change[e.voice][e.model][e.param] = nil
+  for i = 0,self.end_point do
+    if self.event[i] then
+      for j = 1,#self.event[i] do
+        if self.event[i][j]
+        and self.event[i][j].voice == e.voice
+        and self.event[i][j].model == e.model
+        and self.event[i][j].param == e.param
+        then
+          self.event[i][j] = nil
+          if #self.event[i] == 0 then
+            self.event[i] = nil
+          end
+        end
+      end
+    end
   end
   if e.model == params:string('voice_model_'..e.voice) then
     prms.send_to_engine(e.voice, e.param, e.value)

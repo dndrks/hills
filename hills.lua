@@ -100,8 +100,10 @@ function init()
   end
 
   scale_names = {}
+  local scale_count = 1
   for i = 1,#mu.SCALES do
-    table.insert(scale_names,mu.SCALES[i].name)
+    scale_names[scale_count] = mu.SCALES[i].name
+    scale_count = scale_count + 1
   end
 
   prms.init()
@@ -425,12 +427,8 @@ iterate = function(i)
           if seg.note_timestamp[seg.index] ~= nil then
             if util.round(seg.note_timestamp[seg.index],0.01) == util.round(seg.step,0.01) then
               pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index)
-              screen_dirty = true
               seg.index = seg.index + 1
               seg.perf_led = true
-              grid_dirty = true 
-            else
-              grid_dirty = true
             end
             seg.step = util.round(seg.step + 0.01,0.01)
             local reasonable_max = seg.note_timestamp[seg.high_bound.note+1] ~= nil and seg.note_timestamp[seg.high_bound.note+1] or seg.note_timestamp[seg.high_bound.note] + seg.note_timedelta[seg.high_bound.note]
@@ -445,29 +443,19 @@ iterate = function(i)
         else
           if util.round(seg.note_timestamp[seg.index+1],0.01) == util.round(seg.step,0.01) then
             pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index)
-            screen_dirty = true
             seg.step = seg.note_timestamp[seg.index]
             seg.perf_led = true
-            grid_dirty = true 
           else
-            screen_dirty = true
             seg.step = util.round(seg.step + 0.01,0.01)
-            grid_dirty = true
           end
         end
       else
         seg.iterated = false
         if seg.index <= seg.high_bound.note then
           if util.round(seg.note_timestamp[seg.index],0.01) == util.round(seg.step,0.01) then
-            -- print(seg.index,seg.note_timestamp[seg.index],seg.note_num.pool[seg.index],seg.step)
             pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index)
-            screen_dirty = true
             seg.index = seg.index + 1
             seg.perf_led = true
-            grid_dirty = true
-          else
-            -- seg.perf_led = false
-            grid_dirty = true
           end
           seg.step = util.round(seg.step + 0.01,0.01)
           local comparator;
@@ -482,6 +470,8 @@ iterate = function(i)
         end
       end
     end
+    screen_dirty = true
+    grid_dirty = true
   end
 end
 
@@ -589,7 +579,6 @@ end
 
 pass_note = function(i,j,seg,note_val,index,destination)
   local midi_notes = hills[i][j].note_ocean
-  print(i,j,note_val,midi_notes[note_val])
   local played_note = get_random_offset(i,midi_notes[note_val])
   if played_note ~= nil and hills[i][j].note_num.active[index] then
     if i <= 7 then
