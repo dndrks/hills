@@ -35,11 +35,11 @@ _g = include 'lib/grid_lib'
 _e = include 'lib/enc_actions'
 _k = include 'lib/key_actions'
 _s = include 'lib/screen_actions'
-_flow = include 'lib/flow'
+local _flow = include 'lib/flow'
 _song = include 'lib/song'
 _ca = include 'lib/clip'
 _snapshots = include 'lib/snapshot'
-sc_lfos = require 'lfo'
+_fkprm = include 'lib/fkprm'
 mu = require 'musicutil'
 
 r = function()
@@ -58,6 +58,9 @@ function midi_to_hz(note)
   return (440 / 32) * (2 ^ ((note - 9) / 12))
 end
 
+local pre_note = {}
+local midi_device = {}
+
 function init()
   kildare.init(true)
   _ca.init() -- initialize clips
@@ -66,6 +69,7 @@ function init()
   _song.init()
   math.randomseed(os.time())
   _g.init()
+  _fkprm.init()
   key1_hold = false
   key2_hold = false
 
@@ -93,8 +97,6 @@ function init()
 
   hills = {}
 
-  pre_note = {}
-  midi_device = {}
   for i = 1,#midi.vports do -- query all ports
     midi_device[i] = midi.connect(i) -- connect each device
   end
@@ -248,6 +250,21 @@ function init()
     grid_dirty = true
   end
 
+  local function params_write_silent(filename,name)
+    print("pset >>>>>>> write: "..filename)
+    local fd = io.open(filename, "w+")
+    if fd then
+      io.output(fd)
+      io.write("-- "..name.."\n")
+      for _,param in ipairs(params.params) do
+        if param.id and param.save and param.t ~= params.tTRIGGER and param.t ~= params.tSEPARATOR then
+          io.write(string.format("%s: %s\n", quote(param.id), param:get()))
+        end
+      end
+      io.close(fd)
+    end
+  end
+
   params.action_write = function(filename,name,number)
     -- local pset_string = string.sub(filename,string.len(filename) - 6, -1)
     -- local pset_number = pset_string:gsub(".pset","")
@@ -269,21 +286,6 @@ function init()
     tab.save(snapshots,_path.data.."hills/"..number.."/snapshots/all.txt")
     tab.save(snapshot_overwrite, _path.data.."hills/"..number.."/snapshots/overwrite_state.txt")
     params_write_silent(filename,name)
-  end
-
-  function params_write_silent(filename,name)
-    print("pset >>>>>>> write: "..filename)
-    local fd = io.open(filename, "w+")
-    if fd then
-      io.output(fd)
-      io.write("-- "..name.."\n")
-      for _,param in ipairs(params.params) do
-        if param.id and param.save and param.t ~= params.tTRIGGER and param.t ~= params.tSEPARATOR then
-          io.write(string.format("%s: %s\n", quote(param.id), param:get()))
-        end
-      end
-      io.close(fd)
-    end
   end
 
   params.action_delete = function(filename, name, pset_number)
@@ -352,8 +354,15 @@ function init()
 
 end
 
-process_events = function(i)
-  _G[hills[i].mode](i)
+local function pass_data_into_storage(i,j,index,data)
+  hills[i][j].note_num.pool[index] = data[1]
+  hills[i][j].note_timestamp[index] = data[2]
+  hills[i][j].high_bound.note = #hills[i][j].note_num.pool
+  hills[i][j].note_num.active[index] = true
+  hills[i][j].note_velocity[index] = 127
+
+  hills[i][j].sample_controls.loop[index] = false
+  hills[i][j].sample_controls.rate[index] = 9
 end
 
 construct = function(i,j,shuffle)
@@ -393,17 +402,6 @@ reconstruct = function(i,j,new_shape)
   end
   calculate_timedeltas(i,j)
   screen_dirty = true
-end
-
-pass_data_into_storage = function(i,j,index,data)
-  hills[i][j].note_num.pool[index] = data[1]
-  hills[i][j].note_timestamp[index] = data[2]
-  hills[i][j].high_bound.note = #hills[i][j].note_num.pool
-  hills[i][j].note_num.active[index] = true
-  hills[i][j].note_velocity[index] = 127
-
-  hills[i][j].sample_controls.loop[index] = false
-  hills[i][j].sample_controls.rate[index] = 9
 end
 
 calculate_timedeltas = function(i,j)
@@ -515,7 +513,21 @@ stop = function(i,clock_synced_loop)
   end
 end
 
-inject = function(shape,i,injection_point,duration)
+local function inject_data_into_storage(i,j,index,data)
+  table.insert(hills[i][j].note_num.pool, index, data[1])
+  table.insert(hills[i][j].note_timestamp, index, data[2])
+  hills[i][j].high_bound.note = #hills[i][j].note_num.pool
+end
+
+local function adjust_timestamps_for_injection(i,j,index,duration)
+  for k = index,#hills[i][j].note_timestamp do
+    hills[i][j].note_timestamp[k] = hills[i][j].note_timestamp[k] + duration
+  end
+  hills[i][j].high_bound.time = hills[i][j].note_timestamp[#hills[i][j].note_timestamp]
+  calculate_timedeltas(i,j)
+end
+
+local function inject(shape,i,injection_point,duration)
   local h = hills[i]
   local seg = h[h.segment]
   local total_notes = util.round(#seg.note_ocean*seg.population)
@@ -534,21 +546,7 @@ inject = function(shape,i,injection_point,duration)
   adjust_timestamps_for_injection(i,h.segment,index+1,duration)
 end
 
-inject_data_into_storage = function(i,j,index,data)
-  table.insert(hills[i][j].note_num.pool, index, data[1])
-  table.insert(hills[i][j].note_timestamp, index, data[2])
-  hills[i][j].high_bound.note = #hills[i][j].note_num.pool
-end
-
-adjust_timestamps_for_injection = function(i,j,index,duration)
-  for k = index,#hills[i][j].note_timestamp do
-    hills[i][j].note_timestamp[k] = hills[i][j].note_timestamp[k] + duration
-  end
-  hills[i][j].high_bound.time = hills[i][j].note_timestamp[#hills[i][j].note_timestamp]
-  calculate_timedeltas(i,j)
-end
-
-get_random_offset = function(i,note)
+local function get_random_offset(i,note)
   if params:get("hill "..i.." random offset probability") == 0 then
     return note
   elseif params:get("hill "..i.." random offset probability") >= math.random(0,100) then

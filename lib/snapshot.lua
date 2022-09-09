@@ -2,7 +2,6 @@ local snapshot = {}
 
 function snapshot.init()
   snapshot_lfos = {}
-  selected_snapshot = {}
   snapshot_overwrite = {}
   snapshot_overwrite_mod = false
   snapshots = {}
@@ -69,7 +68,6 @@ function snapshot.pack(voice,coll)
     end
   end
 
-  selected_snapshot[voice] = coll
 end
 
 function snapshot.seed_restore_state_to_all(voice,coll,_p)
@@ -115,8 +113,6 @@ function snapshot.unpack(voice, coll)
     end
   end
 
-  selected_snapshot[voice] = coll
-
   -- print("restored snapshot", voice, coll)
 
   -- TODO: ADD OPTIONAL SHIT?
@@ -157,9 +153,6 @@ function snapshot.clear(_t,slot)
     end
   else
     snapshots[_t][slot] = {}
-  end
-  if selected_snapshot[_t] == slot then
-    selected_snapshot[_t] = 0
   end
 end
 
