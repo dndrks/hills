@@ -384,6 +384,7 @@ construct = function(i,j,shuffle)
   if shuffle then
     _t.shuffle(i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
   end
+  -- TODO: redraws for every construct
   screen_dirty = true
 end
 
@@ -468,8 +469,6 @@ iterate = function(i)
         end
       end
     end
-    screen_dirty = true
-    grid_dirty = true
   end
 end
 
@@ -511,6 +510,8 @@ stop = function(i,clock_synced_loop)
       _a.kill_clock(i)
     end
   end
+  screen_dirty = true
+  grid_dirty = true
 end
 
 local function inject_data_into_storage(i,j,index,data)
@@ -692,6 +693,8 @@ pass_note = function(i,j,seg,note_val,index,destination)
     end
     pre_note[i] = played_note
   end
+  screen_dirty = true
+  grid_dirty = true
 end
 
 function manual_iter(i,j)

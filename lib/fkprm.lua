@@ -4,6 +4,9 @@ local m = {
   group = false,
   groupid = 0,
   alt = false,
+  voice_focus = 1,
+  hill_focus = 1,
+  step_focus = 1
 }
 
 local page
@@ -45,6 +48,11 @@ m.key = function(n,z)
   local i = page[m.pos+1]
   local t = params:t(i)
   if n==2 and z==1 then
+    if m.group==true then
+      m.group = false
+      build_page()
+      m.pos = m.oldpos
+    end
   elseif n==3 and z==1 and m.alt then
   elseif n==3 and z==1 then
     if t == params.tGROUP then
@@ -92,22 +100,57 @@ m.enc = function(n,d)
   -- adjust value
   elseif n==3 and params.count > 0 then
     local dx = m.fine and (d/20) or d
-    params:delta(page[m.pos+1],dx)
+    m:delta(page[m.pos+1], dx, m.voice_focus, m.hill_focus, m.step_focus)
     m.redraw()
+  elseif n == 1 then
+    local i = m.voice_focus
+    local j = m.hill_focus
+    m.step_focus = util.clamp(m.step_focus+d,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
+  end
+end
+
+function m:delta(index, d, voice, hill, step)
+  -- ah, index is coming in as number...need to couple with 'params:set_raw(index,value)'
+
+  -- basically, want to snag the parameter info and build out a copy with the delta...
+  if m.adjusted_params[voice] == nil then
+    m.adjusted_params[voice] = {
+      [hill] = {
+        [step] = {
+          ['params'] = {},
+          ['ids_idx'] = {},
+        }
+      }
+    }
+  elseif m.adjusted_params[voice][hill][step] == nil then
+    m.adjusted_params[voice][hill][step] = {
+      ['params'] = {},
+      ['ids_idx'] = {},
+    }
+  end
+  if m.adjusted_params[voice][hill][step].params[index] == nil then
+    -- write index and value
+    local raw_val = params:lookup_param(index).raw
+    local delta_val = params:lookup_param(index).controlspec.quantum
+    m.adjusted_params[voice][hill][step].params[index] = raw_val + d * delta_val
+  else
+    -- adjust value at index
+    local current_val = m.adjusted_params[voice][hill][step].params[index]
+    local delta_val = params:lookup_param(index).controlspec.quantum
+    m.adjusted_params[voice][hill][step].params[index] = current_val + d * delta_val
   end
 end
 
 m.redraw = function()
+  -- print(m.pos, 2 - m.pos, #page - m.pos + 3)
   screen.clear()
   screen.font_size(8)
-  if m.pos == 0 then
-    local n = "STEP PARAMETERS"
-    if m.group then n = n .. " / " .. m.groupname end
-    screen.level(4)
-    screen.move(0,10)
-    screen.text(n)
-  end
-  for i=1,6 do
+  local n = "STEP "..m.step_focus.." PARAMS"
+  if m.group then n = n .. " / " .. m.groupname end
+  screen.level(4)
+  screen.move(0,10)
+  screen.text(n)
+  for i=3,6 do
     if (i > 2 - m.pos) and (i < #page - m.pos + 3) then
       if i==3 then screen.level(15) else screen.level(4) end
       local p = page[i+m.pos-2]
@@ -122,6 +165,13 @@ m.redraw = function()
         screen.move(0,10*i)
         screen.text(params:get_name(p) .. " >")
       else
+        if m.adjusted_params[m.voice_focus] ~= nil
+        and m.adjusted_params[m.voice_focus][m.hill_focus][m.step_focus].params[p] ~= nil then
+          screen.rect(0,(10*i)-7,128,8)
+          screen.fill()
+          screen.stroke()
+          screen.level(0)
+        end
         screen.move(0,10*i)
         screen.text(params:get_name(p))
         screen.move(127,10*i)
@@ -136,6 +186,7 @@ m.init = function()
   if page == nil then build_page() end
   m.alt = false
   m.fine = false
+  m.adjusted_params = {}
 end
 
 return m
