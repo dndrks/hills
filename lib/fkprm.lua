@@ -52,6 +52,10 @@ m.key = function(n,z)
       m.group = false
       build_page()
       m.pos = m.oldpos
+    else
+      ui.control_set = 'edit'
+      ignore_key2_up = true
+      key2_hold = false
     end
   elseif n==3 and z==1 and m.alt then
   elseif n==3 and z==1 then
@@ -132,12 +136,45 @@ function m:delta(index, d, voice, hill, step)
     -- write index and value
     local raw_val = params:lookup_param(index).raw
     local delta_val = params:lookup_param(index).controlspec.quantum
-    m.adjusted_params[voice][hill][step].params[index] = raw_val + d * delta_val
+    m.adjusted_params[voice][hill][step].params[index] = util.clamp(raw_val + d * delta_val,0,1)
   else
     -- adjust value at index
     local current_val = m.adjusted_params[voice][hill][step].params[index]
     local delta_val = params:lookup_param(index).controlspec.quantum
-    m.adjusted_params[voice][hill][step].params[index] = current_val + d * delta_val
+    m.adjusted_params[voice][hill][step].params[index] = util.clamp(current_val + d * delta_val,0,1)
+  end
+  if util.round(m.adjusted_params[voice][hill][step].params[index],0.001) == util.round(params:get_raw(index),0.001) then
+    m.adjusted_params[voice][hill][step].params[index] = nil
+  end
+end
+
+function m:map(p)
+  local value = self.adjusted_params[self.voice_focus][self.hill_focus][self.step_focus].params[p]
+  local clamped = util.clamp(value, 0, 1)
+  local cs = params:lookup_param(p).controlspec
+  local rounded = util.round(cs.warp.map(cs, clamped), cs.step)
+  return rounded
+end
+
+function m:string(p)
+  if params:lookup_param(p).formatter then
+    return params:lookup_param(p).formatter(self:map(p))
+  else
+    local value = self.adjusted_params[self.voice_focus][self.hill_focus][self.step_focus].params[p]
+    local a = util.round(value, 0.01)
+    return a.." "..params:lookup_param(p).controlspec.units
+  end
+end
+
+local function check_subtables(p)
+  if m.adjusted_params[m.voice_focus] ~= nil
+  and m.adjusted_params[m.voice_focus][m.hill_focus] ~= nil
+  and m.adjusted_params[m.voice_focus][m.hill_focus][m.step_focus] ~= nil
+  and m.adjusted_params[m.voice_focus][m.hill_focus][m.step_focus].params ~= nil
+  and m.adjusted_params[m.voice_focus][m.hill_focus][m.step_focus].params[p] ~= nil then
+    return true
+  else
+    return false
   end
 end
 
@@ -145,10 +182,13 @@ m.redraw = function()
   -- print(m.pos, 2 - m.pos, #page - m.pos + 3)
   screen.clear()
   screen.font_size(8)
-  local n = "STEP "..m.step_focus.." PARAMS"
-  if m.group then n = n .. " / " .. m.groupname end
+  local n = m.voice_focus..' / hill: '..m.hill_focus
   screen.level(4)
   screen.move(0,10)
+  screen.text(n)
+  n = "STEP "..m.step_focus.." PARAMS"
+  if m.group then n = n .. " / " .. m.groupname end
+  screen.move(0,20)
   screen.text(n)
   for i=3,6 do
     if (i > 2 - m.pos) and (i < #page - m.pos + 3) then
@@ -165,17 +205,20 @@ m.redraw = function()
         screen.move(0,10*i)
         screen.text(params:get_name(p) .. " >")
       else
-        if m.adjusted_params[m.voice_focus] ~= nil
-        and m.adjusted_params[m.voice_focus][m.hill_focus][m.step_focus].params[p] ~= nil then
-          screen.rect(0,(10*i)-7,128,8)
+        if check_subtables(p) then
+          screen.rect(0,(10*i)-7,127,8)
           screen.fill()
           screen.stroke()
           screen.level(0)
         end
-        screen.move(0,10*i)
+        screen.move(2,10*i)
         screen.text(params:get_name(p))
-        screen.move(127,10*i)
-        screen.text_right(params:string(p))
+        screen.move(125,10*i)
+        if check_subtables(p) then
+          screen.text_right(m:string(p))
+        else
+          screen.text_right(params:string(p))
+        end
       end
     end
   end

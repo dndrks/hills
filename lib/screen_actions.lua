@@ -12,7 +12,7 @@ function screen_actions.draw()
   screen.fill()
   screen.aa(0)
   if ui.control_set ~= "seq" then
-    if not parameter_screen then
+    if ui.control_set ~= 'step parameters' then
       local focus = h.screen_focus
       local seg = h[focus]
       local sorted = _t.deep_copy(hills[hf][focus].note_num.pool)
@@ -147,6 +147,11 @@ function screen_actions.draw()
               screen.text_right("K3: "..ui.screen_controls[hf][focus]["samples"]["transform"])
             end
           end
+        end
+
+        if key2_hold then
+          screen.move(0,64)
+          screen.text("K3: PER-STEP PARAMS")
         end
       end
       local menus = {"hill: "..focus,"bound","notes","loop","smpl"}

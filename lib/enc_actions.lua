@@ -1,7 +1,7 @@
 local enc_actions = {}
 
 function enc_actions.parse(n,d)
-  if parameter_screen then
+  if ui.control_set == 'step parameters' then
     _fkprm.enc(n,d)
   else
     local s_c = ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]
