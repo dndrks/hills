@@ -20,13 +20,14 @@ end
 
 local function build_page()
   page = {}
+  local ignore_range = {params.lookup['kildare_st_header'], params.lookup['kildare_st_preload']}
   local i = params.lookup['kildare_1_group']
   repeat
-    if params:visible(i) then table.insert(page, i) end
+    if params:visible(i) and (i < ignore_range[1] or i > ignore_range[2]) then table.insert(page, i) end
     if params:t(i) == params.tGROUP then
       i = i + params:get(i) + 1
     else i = i + 1 end
-  until i > params.count
+  until i == params.lookup['hills_main_header']
 end
 
 local function build_sub(sub)
@@ -103,9 +104,11 @@ m.enc = function(n,d)
     m.pos = i-1
   -- adjust value
   elseif n==3 and params.count > 0 then
-    local dx = m.fine and (d/20) or d
-    m:delta(page[m.pos+1], dx, m.voice_focus, m.hill_focus, m.step_focus)
-    m.redraw()
+    if params:lookup_param(page[m.pos+1]).t == 3 then
+      local dx = m.fine and (d/20) or d
+      m:delta(page[m.pos+1], dx, m.voice_focus, m.hill_focus, m.step_focus)
+      m.redraw()
+    end
   elseif n == 1 then
     local i = m.voice_focus
     local j = m.hill_focus
@@ -192,7 +195,20 @@ m.redraw = function()
   screen.text(n)
   for i=3,6 do
     if (i > 2 - m.pos) and (i < #page - m.pos + 3) then
-      if i==3 then screen.level(15) else screen.level(4) end
+      local highlight = {[0] = true, [3] = true, [7] = true}
+      if i==3 then
+        if highlight[params:lookup_param(page[m.pos+1]).t] then
+          screen.level(15)
+        else
+          screen.level(1)
+        end
+      else
+        if highlight[params:lookup_param(page[i+m.pos-2]).t] then
+          screen.level(4)
+        else
+          screen.level(1)
+        end
+      end
       local p = page[i+m.pos-2]
       local t = params:t(p)
       if t == params.tSEPARATOR then
@@ -206,7 +222,7 @@ m.redraw = function()
         screen.text(params:get_name(p) .. " >")
       else
         if check_subtables(p) then
-          screen.rect(0,(10*i)-7,127,8)
+          screen.rect(0,(10*i)-7,127,9)
           screen.fill()
           screen.stroke()
           screen.level(0)

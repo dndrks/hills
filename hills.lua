@@ -69,7 +69,6 @@ function init()
   _song.init()
   math.randomseed(os.time())
   _g.init()
-  _fkprm.init()
   key1_hold = false
   key2_hold = false
 
@@ -109,6 +108,7 @@ function init()
   end
 
   prms.init()
+  _fkprm.init()
   -- prms.reload_engine(params:string("global engine"),true)
 
   for i = 1,number_of_hills do
@@ -593,7 +593,7 @@ for i = 1,7 do
   per_step_params_adjusted[i] = {param = {}, value = {}}
 end
 
-local non_indexed_voices = {'delay_', 'reverb_', 'main_'}
+local non_indexed_voices = {'delay', 'reverb', 'main'}
 
 function fkmap(i,j,index,p)
   local value = _fkprm.adjusted_params[i][j][index].params[p]
@@ -603,115 +603,57 @@ function fkmap(i,j,index,p)
   return rounded
 end
 
+local function extract_voice_from_string(s)
+  for i = 1,#non_indexed_voices do
+    if util.string_starts(s,non_indexed_voices[i]) then
+      return non_indexed_voices[i]
+    end
+  end
+end
+
 pass_note = function(i,j,seg,note_val,index,destination)
   local midi_notes = hills[i][j].note_ocean
   local played_note = get_random_offset(i,midi_notes[note_val])
   if played_note ~= nil and hills[i][j].note_num.active[index] then
     -- per-step params //
-    -- if i <= 7 then
-    --   -- FIXME: somewhere, the entries are getting swapped up...
-    --   if check_subtables(i,j,index) then
-    --     print('adjusted_params for ', i, j, index, 'cleared')
-        
-    --     -- if there was a previous value sent, it'll be recalled and cleared:
-    --     for k = 1,#per_step_params_adjusted[i].param do
-    --       local target = params:get_id(per_step_params_adjusted[i].param[k])
-    --       local is_drum_voice = true
-    --       local non_voice_target;
-    --       for non_idx = 1,#non_indexed_voices do
-    --         if string.find(target,non_indexed_voices[non_idx]) ~= nil then
-    --           is_drum_voice = false
-    --           non_voice_target = string.gsub(non_indexed_voices[non_idx],'_','')
-    --           break
-    --         end
-    --       end
-    --       if is_drum_voice then
-    --         local sc_target = string.gsub(target,i..'_'..params:string('voice_model_'..i)..'_','')
-    --         prms.send_to_engine(i, sc_target, params:get(per_step_params_adjusted[i].param[k])) -- this is fine
-    --         tab.print(per_step_params_adjusted[i].param)
-    --         print('restoring from prior changes',i, sc_target, params:get(per_step_params_adjusted[i].param[k]))
-    --       else
-    --         -- TODO STRIP??
-    --         engine['set_'..non_voice_target..'_param'](target,params:get(per_step_params_adjusted[i].param[k]))
-    --       end
-    --     end
-    --     per_step_params_adjusted[i] = {param = {}, value = {}}
-    --     for k,v in next,_fkprm.adjusted_params[i][j][index].params do
-    --       local target = params:get_id(k)
-    --       local is_drum_voice = true
-    --       local non_voice_target;
-    --       print(_fkprm:map(k))
-    --       for non_idx = 1,#non_indexed_voices do
-    --         if string.find(target,non_indexed_voices[non_idx]) ~= nil then
-    --           is_drum_voice = false
-    --           non_voice_target = string.gsub(non_indexed_voices[non_idx],'_','')
-    --           break
-    --         end
-    --       end
-    --       local param;
-    --       if is_drum_voice then
-    --         print('making changes')
-    --         param = string.gsub(params:get_id(k),i..'_'..params:string('voice_model_'..i)..'_','')
-    --         -- prms.send_to_engine(i, param, v) -- 'v' needs to be mapped
-    --         prms.send_to_engine(i, param, _fkprm:map(k))
-    --       else
-    --         param = string.gsub(target, non_voice_target..'_', '')
-    --         print('set_'..non_voice_target..'_param',param, v)
-    --         -- engine['set_'..non_voice_target..'_param'](plain_target,v) -- 'v' needs to be mapped
-    --         engine['set_'..non_voice_target..'_param'](param,_fkprm:map(k)) -- 'v' needs to be mapped
-    --       end
-    --       print('inserting', #per_step_params_adjusted[i].param)
-    --       per_step_params_adjusted[i].param[#per_step_params_adjusted[i].param+1] = k
-    --       per_step_params_adjusted[i].value[#per_step_params_adjusted[i].value+1] = v
-    --       print(per_step_params_adjusted, per_step_params_adjusted[i],per_step_params_adjusted[i].param,per_step_params_adjusted[i].param[#per_step_params_adjusted[i].param])
-    --     end
-    --   else
-    --     -- FIXME: still thinks non-voice params are for voices...
-    --     for k = 1,#per_step_params_adjusted[i].param do
-    --       local target = params:get_id(per_step_params_adjusted[i].param[k])
-    --       local is_drum_voice = true
-    --       local non_voice_target;
-    --       for non_idx = 1,#non_indexed_voices do
-    --         if string.find(target,non_indexed_voices[non_idx]) ~= nil then
-    --           is_drum_voice = false
-    --           non_voice_target = string.gsub(non_indexed_voices[non_idx],'_','')
-    --           break
-    --         end
-    --       end
-    --       if is_drum_voice then
-    --         print('restoring vals for voice')
-    --         local sc_target = string.gsub(target,i..'_'..params:string('voice_model_'..i)..'_','')
-    --         print(i, sc_target, params:get(per_step_params_adjusted[i].param[k]))
-    --         prms.send_to_engine(i, sc_target, params:get(per_step_params_adjusted[i].param[k])) -- fine!
-    --       else
-    --         print('restoring vals non-voice')
-    --         local plain_target = string.gsub(target, non_voice_target..'_', '')
-    --         engine['set_'..non_voice_target..'_param'](plain_target,params:get(per_step_params_adjusted[i].param[k])) -- fine!
-    --       end
-    --     end
-    --     per_step_params_adjusted[i] = {param = {}, value = {}}
-    --   end
-    -- end
-    -- // per-step params
     if i <= 7 then
       if check_subtables(i,j,index) then
-        print('sending step param to voice', i, j, index)
+        per_step_params_adjusted[i] = {param = {}, value = {}}
         for k,v in next,_fkprm.adjusted_params[i][j][index].params do
-          local p_name = string.gsub(params:get_id(k),i..'_'..params:string('voice_model_'..i)..'_','')
-          prms.send_to_engine(i,p_name,fkmap(i,j,index,k))
+          local is_drum_voice = k <= params.lookup['sample3_reverbSend']
+          if is_drum_voice then
+            local p_name = string.gsub(params:get_id(k),i..'_'..params:string('voice_model_'..i)..'_','')
+            -- print('sending step param to voice', i, j, index, k)
+            prms.send_to_engine(i,p_name,fkmap(i,j,index,k))
+          else
+            local p_name = extract_voice_from_string(params:get_id(k))
+            local sc_target = string.gsub(params:get_id(k),p_name..'_','')
+            -- print('sending step param to fx', i, j, index, k)
+            engine['set_'..p_name..'_param'](sc_target,fkmap(i,j,index,k))
+          end
           per_step_params_adjusted[i].param[#per_step_params_adjusted[i].param+1] = k
           per_step_params_adjusted[i].value[#per_step_params_adjusted[i].value+1] = v
         end
       else
-        print('reseeding default value for voice', i, j, index)
         for k = 1,#per_step_params_adjusted[i].param do
-          local p_name = string.gsub(params:get_id(per_step_params_adjusted[i].param[k]),i..'_'..params:string('voice_model_'..i)..'_','')
-          prms.send_to_engine(i,p_name,params:get(per_step_params_adjusted[i].param[k]))
+          local is_drum_voice = per_step_params_adjusted[i].param[k] <= params.lookup['sample3_reverbSend']
+          local id = per_step_params_adjusted[i].param[k]
+          if is_drum_voice then
+            local p_name = string.gsub(params:get_id(id),i..'_'..params:string('voice_model_'..i)..'_','')
+            -- print('reseeding default value for voice', i, j, index, id)
+            prms.send_to_engine(i,p_name,params:get(id))
+          else
+            local p_name = extract_voice_from_string(params:get_id(id))
+            local sc_target = string.gsub(params:get_id(id),p_name..'_','')
+            -- print('reseeding default value to fx', i, j, index, id)
+            engine['set_'..p_name..'_param'](sc_target,params:get(id))
+          end
         end
-        -- here's where we'll need to know what the previous parameters affected are...
+        per_step_params_adjusted[i] = {param = {}, value = {}}
       end
     end
-    print('done with fkprm stuff')
+    -- // per-step params
+    -- print('done with fkprm stuff')
     if i <= 7 then
       if params:string("hill "..i.." kildare_notes") == "yes" then
         engine.set_voice_param(i,"carHz",midi_to_hz(played_note))
