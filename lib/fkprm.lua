@@ -23,10 +23,15 @@ local function build_page()
   local ignore_range = {params.lookup['kildare_st_header'], params.lookup['kildare_st_preload']}
   local i = params.lookup['kildare_1_group']
   repeat
-    if params:visible(i) and (i < ignore_range[1] or i > ignore_range[2]) then table.insert(page, i) end
+    if params:visible(i)
+    and (i < ignore_range[1] or i > ignore_range[2]) then
+      page[#page+1] = i
+    end
     if params:t(i) == params.tGROUP then
       i = i + params:get(i) + 1
-    else i = i + 1 end
+    else
+      i = i + 1
+    end
   until i == params.lookup['hills_main_header']
 end
 
@@ -34,7 +39,7 @@ local function build_sub(sub)
   page = {}
   for i = 1,params:get(sub) do
     if params:visible(i + sub) then
-      table.insert(page, i + sub)
+      page[#page+1] = i+sub
     end
   end
 end
@@ -54,7 +59,7 @@ m.key = function(n,z)
       build_page()
       m.pos = m.oldpos
     else
-      ui.control_set = 'edit'
+      ui.control_set = pre_step_page
       ignore_key2_up = true
       key2_hold = false
     end

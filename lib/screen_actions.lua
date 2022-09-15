@@ -46,7 +46,14 @@ function screen_actions.draw()
         end
         screen.stroke()
       end
-      if ui.control_set == "edit" then
+      if ui.control_set == 'play' then
+        if key2_hold then
+          screen.font_size(8)
+          screen.level(15)
+          screen.move(128,64)
+          screen.text_right("K3: PER-STEP PARAMS")
+        end
+      elseif ui.control_set == "edit" then
         screen.font_size(8)
         if ui.menu_focus == 1 then
           screen.level(s_c["loop"]["focus"] == 1 and (key1_hold and 3 or 15) or 3)
@@ -150,8 +157,10 @@ function screen_actions.draw()
         end
 
         if key2_hold then
-          screen.move(0,64)
-          screen.text("K3: PER-STEP PARAMS")
+          screen.font_size(8)
+          screen.level(15)
+          screen.move(128,64)
+          screen.text_right("K3: PER-STEP PARAMS")
         end
       end
       local menus = {"hill: "..focus,"bound","notes","loop","smpl"}

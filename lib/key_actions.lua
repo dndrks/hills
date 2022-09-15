@@ -12,11 +12,8 @@ function key_actions.parse(n,z)
         key1_hold = true
       elseif n == 2 then
         if not key1_hold then
-          if ui.control_set == "edit" then
+          if ui.control_set == "edit" or ui.control_set == 'play' then
             key2_hold_counter:start()
-          elseif ui.control_set == "play" then
-            ui.control_set = "song"
-            ignore_key2_up = true
           end
         else
           if ui.control_set == "edit" then
@@ -31,7 +28,17 @@ function key_actions.parse(n,z)
         end
       elseif n == 3 then
         if ui.control_set == "play" then
-          ui.control_set = "edit"
+          if key2_hold and not key1_hold then
+            if ui.menu_focus == 1 or ui.menu_focus == 3 then
+              _fkprm.voice_focus = ui.hill_focus
+              _fkprm.hill_focus = hills[ui.hill_focus].screen_focus
+              _fkprm.step_focus = ui.screen_controls[_fkprm.voice_focus][_fkprm.hill_focus][ui.menu_focus == 1 and 'hills' or 'notes'].focus
+            end
+            pre_step_page = 'play'
+            ui.control_set = 'step parameters'
+          else
+            ui.control_set = "edit"
+          end
           if ui.menu_focus == 3 then
             if s_c["notes"]["focus"] < hills[i][j].low_bound.note then
               s_c["notes"]["focus"] = hills[i][j].low_bound.note
@@ -60,6 +67,7 @@ function key_actions.parse(n,z)
               _fkprm.hill_focus = hills[ui.hill_focus].screen_focus
               _fkprm.step_focus = ui.screen_controls[_fkprm.voice_focus][_fkprm.hill_focus][ui.menu_focus == 1 and 'hills' or 'notes'].focus
             end
+            pre_step_page = 'edit'
             ui.control_set = 'step parameters'
           end
         elseif ui.control_set == 'step parameters' then
@@ -78,7 +86,7 @@ function key_actions.parse(n,z)
       elseif n == 2 and not ignore_key2_up then
         if key2_hold == false then
           key2_hold_counter:stop()
-          ui.control_set = "play"
+          ui.control_set = ui.control_set ~= 'play' and 'play' or 'song'
         else
           key2_hold = false
         end

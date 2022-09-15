@@ -22,9 +22,7 @@ hill_names = {
   "10: s3"
 }
 
-local function development_stuff()
-  params:set("hill 1 kildare_notes", 2)
-end
+local pre_step_page = 'play'
 
 pt = include 'lib/hills_new_pt'
 curves = include 'lib/easing'
@@ -292,8 +290,6 @@ function init()
     local delete_this_folder = _path.audio..'kildare/'..pset_number..'/'
     os.execute('rm -r '..delete_this_folder)
   end
-
-  -- development_stuff()
 
   function kildare.voice_param_callback(voice, param, val)
     local d_voice = type(voice) ~= 'string' and params:string('voice_model_'..voice) or voice
