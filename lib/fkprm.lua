@@ -6,7 +6,8 @@ local m = {
   alt = false,
   voice_focus = 1,
   hill_focus = 1,
-  step_focus = 1
+  step_focus = 1,
+  alt_menu_focus = 1,
 }
 
 local page
@@ -46,9 +47,9 @@ end
 
 m.key = function(n,z)
   if n==1 and z==1 then
-    m.alt = true
+    key1_hold = true
   elseif n==1 and z==0 then
-    m.alt = false
+    key1_hold = false
   end
 
   local i = page[m.pos+1]
@@ -63,7 +64,7 @@ m.key = function(n,z)
       ignore_key2_up = true
       key2_hold = false
     end
-  elseif n==3 and z==1 and m.alt then
+  elseif n==3 and z==1 and key1_hold then
   elseif n==3 and z==1 then
     if t == params.tGROUP then
       build_sub(i)
@@ -93,31 +94,50 @@ m.key = function(n,z)
 end
 
 m.enc = function(n,d)
-  if n==2 and m.alt==false then
-    local prev = m.pos
-    m.pos = util.clamp(m.pos + d, 0, #page - 1)
-    if m.pos ~= prev then m.redraw() end
-  -- jump section
-  elseif n==2 and m.alt==true then
-    d = d>0 and 1 or -1
-    local i = m.pos+1
-    repeat
-      i = i+d
-      if i > #page then i = 1 end
-      if i < 1 then i = #page end
-    until params:t(page[i]) == params.tSEPARATOR or i==1
-    m.pos = i-1
-  -- adjust value
-  elseif n==3 and params.count > 0 then
-    if params:lookup_param(page[m.pos+1]).t == 3 then
-      local dx = m.fine and (d/20) or d
-      m:delta(page[m.pos+1], dx, m.voice_focus, m.hill_focus, m.step_focus)
-      m.redraw()
+  if not key1_hold then
+    if n==2 then
+      local prev = m.pos
+      m.pos = util.clamp(m.pos + d, 0, #page - 1)
+      if m.pos ~= prev then m.redraw() end
+    elseif n==3 and params.count > 0 then
+      if params:lookup_param(page[m.pos+1]).t == 3 then
+        local dx = m.fine and (d/20) or d
+        m:delta(page[m.pos+1], dx, m.voice_focus, m.hill_focus, m.step_focus)
+        m.redraw()
+      end
+    elseif n == 1 then
+      local i = m.voice_focus
+      local j = m.hill_focus
+      m.step_focus = util.clamp(m.step_focus+d,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
     end
-  elseif n == 1 then
-    local i = m.voice_focus
-    local j = m.hill_focus
-    m.step_focus = util.clamp(m.step_focus+d,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
+  else
+    if n == 2 then
+      m.alt_menu_focus = util.clamp(m.alt_menu_focus+d,1,3)
+    elseif n == 3 then
+      if m.alt_menu_focus == 1 then
+        m.voice_focus = util.clamp(m.voice_focus+d,1,10)
+        local i = m.voice_focus
+        local j = m.hill_focus
+        if m.step_focus < hills[i][j].low_bound.note then
+          m.step_focus = hills[i][j].low_bound.note
+        elseif m.step_focus > hills[i][j].high_bound.note then
+          m.step_focus = hills[i][j].high_bound.note
+        end
+      elseif m.alt_menu_focus == 2 then
+        m.hill_focus = util.clamp(m.hill_focus+d,1,8)
+        local i = m.voice_focus
+        local j = m.hill_focus
+        if m.step_focus < hills[i][j].low_bound.note then
+          m.step_focus = hills[i][j].low_bound.note
+        elseif m.step_focus > hills[i][j].high_bound.note then
+          m.step_focus = hills[i][j].high_bound.note
+        end
+      elseif m.alt_menu_focus == 3 then
+        local i = m.voice_focus
+        local j = m.hill_focus
+        m.step_focus = util.clamp(m.step_focus+d,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
+      end
+    end
   end
 end
 
@@ -203,7 +223,7 @@ m.redraw = function()
       local highlight = {[0] = true, [3] = true, [7] = true}
       if i==3 then
         if highlight[params:lookup_param(page[m.pos+1]).t] then
-          screen.level(15)
+          screen.level(key1_hold and 4 or 15)
         else
           screen.level(1)
         end
@@ -243,12 +263,34 @@ m.redraw = function()
       end
     end
   end
+  if key1_hold then
+    screen.rect(7,10,112,42)
+    screen.level(15)
+    screen.fill()
+    screen.rect(8,11,110,40)
+    screen.level(0)
+    screen.fill()
+    screen.font_size(15)
+    screen.level(15)
+    screen.move(14,34)
+    screen.text("///_")
+    screen.font_size(8)
+    screen.move(70,23)
+    screen.level(m.alt_menu_focus == 1 and 15 or 4)
+    screen.text('VOICE: '..m.voice_focus)
+    screen.move(70,33)
+    screen.level(m.alt_menu_focus == 2 and 15 or 4)
+    screen.text('HILL: '..m.hill_focus)
+    screen.move(70,43)
+    screen.level(m.alt_menu_focus == 3 and 15 or 4)
+    screen.text('STEP: '..m.step_focus)
+  end
   screen.update()
 end
 
 m.init = function()
   if page == nil then build_page() end
-  m.alt = false
+  key1_hold = false
   m.fine = false
   m.adjusted_params = {}
 end
