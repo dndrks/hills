@@ -264,17 +264,7 @@ m.redraw = function()
     end
   end
   if key1_hold then
-    screen.rect(7,10,112,42)
-    screen.level(15)
-    screen.fill()
-    screen.rect(8,11,110,40)
-    screen.level(0)
-    screen.fill()
-    screen.font_size(15)
-    screen.level(15)
-    screen.move(14,34)
-    screen.text("///_")
-    screen.font_size(8)
+    draw_popup("///_")
     screen.move(70,23)
     screen.level(m.alt_menu_focus == 1 and 15 or 4)
     screen.text('VOICE: '..m.voice_focus)

@@ -27,7 +27,7 @@ function enc_actions.parse(n,d)
           if not key1_hold then
             s_c["hills"]["focus"] = util.clamp(s_c["hills"]["focus"]+d,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
           else
-            hills[i][j].population = util.clamp((hills[i][j].population*100)+d,10,100)/100
+            _s.popup_focus[1] = util.clamp(_s.popup_focus[1]+d,1,2)
           end
         elseif ui.menu_focus == 2 then
           s_c["bounds"]["focus"] = util.clamp(s_c["bounds"]["focus"]+d,1,s_c["bounds"]["max"])
@@ -59,7 +59,11 @@ function enc_actions.parse(n,d)
             if not key1_hold then
               _t.nudge(i,j,ui.screen_controls[i][j].hills.focus,d)
             else
-              params:delta("hill "..i.." quant value",d)
+              if _s.popup_focus[1] == 1 then
+                hills[i][j].population = util.clamp((hills[i][j].population*100)+d,10,100)/100
+              elseif _s.popup_focus[1] == 2 then
+                params:delta("hill "..i.." quant value",d)
+              end
             end
           end
         elseif ui.menu_focus == 2 then

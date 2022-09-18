@@ -128,7 +128,10 @@ function init()
 
     hills[i].iter_links = {}
     for j = 1,8 do
-      hills[i].iter_links[j] = false
+      hills[i].iter_links[j] = {}
+      for k = 1,10 do
+        hills[i].iter_links[j][k] = 0
+      end
     end
     
     ui.seq_controls[i] =
@@ -653,6 +656,19 @@ pass_note = function(i,j,seg,note_val,index,destination)
     if i <= 7 then
       if params:string("hill "..i.." kildare_notes") == "yes" then
         engine.set_voice_param(i,"carHz",midi_to_hz(played_note))
+        if params:string(i..'_'..params:string('voice_model_'..i)..'_poly') == 'poly' then
+          local shell_notes = mu.generate_chord_scale_degree(
+            played_note,
+            params:string('hill '..i..' scale'),
+            params:get('hill '..i..' kildare_chord_degree'),
+            true
+          )
+          engine.set_voice_param(i,"carHz",midi_to_hz(shell_notes[1]))
+          engine.trig(i,hills[i][j].note_velocity[index])
+          engine.set_voice_param(i,"carHz",midi_to_hz(shell_notes[2]))
+          engine.trig(i,hills[i][j].note_velocity[index])
+          engine.set_voice_param(i,"carHz",midi_to_hz(shell_notes[4]))
+        end
       end
       engine.trig(i,hills[i][j].note_velocity[index])
       if params:string("hill "..i.." sample output") == "yes" then
@@ -768,12 +784,13 @@ pass_note = function(i,j,seg,note_val,index,destination)
 end
 
 function manual_iter(i,j)
-  for idx = 1,#hills[i].iter_links do
-    if hills[i].iter_links[idx] then
-      if hills[idx][j].note_num.pool[hills[idx][j].index] ~= nil then
-        pass_note(idx,j,hills[idx][j],hills[idx][j].note_num.pool[hills[idx][j].index],hills[idx][j].index)
+  for idx = 1,#hills[i].iter_links[j] do
+    if hills[i].iter_links[j][idx] ~= 0 then
+      local c_hill = hills[i].iter_links[j][idx]
+      if hills[idx][c_hill].note_num.pool[hills[idx][c_hill].index] ~= nil then
+        pass_note(idx,j,hills[idx][c_hill],hills[idx][c_hill].note_num.pool[hills[idx][c_hill].index],hills[idx][c_hill].index)
       end
-      hills[idx][j].index = util.wrap(hills[idx][j].index + 1, hills[idx][j].low_bound.note + 1,hills[idx][j].high_bound.note+1)
+      hills[idx][c_hill].index = util.wrap(hills[idx][c_hill].index + 1, hills[idx][c_hill].low_bound.note + 1,hills[idx][c_hill].high_bound.note+1)
     end
   end
 end

@@ -38,6 +38,10 @@ function parameters.send_to_engine(voice,param,value)
     engine.set_voice_param(voice, param, value == 1 and 0 or 1)
   else
     engine.set_voice_param(voice, param, value)
+    -- if params:string(voice..'_'..params:string('voice_model_'..voice)..'_poly') == 'poly' then
+    --   engine.set_voice_param(voice, param, value)
+    --   engine.set_voice_param(voice, param, value)
+    -- end
   end
 end
 
@@ -46,7 +50,7 @@ function parameters.init()
 
   params:add_separator('hills_main_header', 'hills')
   for i = 1,number_of_hills do
-    params:add_group('hill_'..i..'_group', hill_names[i], i > 7 and 61 or 63)
+    params:add_group('hill_'..i..'_group', hill_names[i], i > 7 and 61 or 64)
 
     params:add_separator('hill_'..i..'_note_header', "note management "..hill_names[i])
     params:add_option("hill "..i.." scale","scale",scale_names,1)
@@ -119,6 +123,7 @@ function parameters.init()
           end
         end
       )
+      params:add_number("hill "..i.." kildare_chord_degree","chord degree",1,7,1)
     end
 
     params:add_separator('hill_'..i..'_sample_header', "sample management "..hill_names[i])

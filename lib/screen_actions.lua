@@ -1,5 +1,21 @@
 local screen_actions = {}
 
+function draw_popup(text)
+  screen.rect(7,11,112,42)
+  screen.level(15)
+  screen.fill()
+  screen.rect(8,12,110,40)
+  screen.level(0)
+  screen.fill()
+  screen.font_size(15)
+  screen.level(15)
+  screen.move(14,34)
+  screen.text(text)
+  screen.font_size(8)
+end
+
+screen_actions.popup_focus = {1,1,1,1,1}
+
 function screen_actions.draw()
   local hf = ui.hill_focus
   local h = hills[hf]
@@ -15,9 +31,6 @@ function screen_actions.draw()
     if ui.control_set ~= 'step parameters' then
       local focus = h.screen_focus
       local seg = h[focus]
-      local sorted = _t.deep_copy(hills[hf][focus].note_num.pool)
-      table.sort(sorted)
-      -- local peak_pitch = sorted[#sorted]
       local peak_pitch = util.clamp(seg.note_num.max,1,#seg.note_ocean)
       screen.level(1)
       screen.rect(40,15,80,40)
@@ -46,6 +59,32 @@ function screen_actions.draw()
         end
         screen.stroke()
       end
+      local menus = {"hill: "..focus,"bound","notes","loop","smpl"}
+      screen.font_size(8)
+      if ui.control_set == "edit" and ui.menu_focus ~= 1 then
+        screen.move(0,22)
+        screen.level(3)
+        screen.text("hill: "..focus)
+      end
+      local upper_bound;
+      if ui.hill_focus <= 7 then
+        if params:string("hill "..ui.hill_focus.." sample output") == "yes" then
+          upper_bound = 5
+        else
+          upper_bound = 4
+        end
+      else
+        upper_bound = 5
+      end
+      for i = 1,upper_bound do
+        screen.level(ui.menu_focus == i and (key1_hold and ((ui.menu_focus > 2 and  ui.control_set == "edit") and 3 or 15) or 15) or 3)
+        screen.move(0,12+(10*i))
+        if ui.control_set == "edit" and ui.menu_focus == i then
+          screen.text("["..menus[i].."]")
+        elseif ui.control_set ~= "edit" then
+          screen.text(menus[i])
+        end
+      end
       if ui.control_set == 'play' then
         if key2_hold then
           screen.font_size(8)
@@ -62,16 +101,25 @@ function screen_actions.draw()
           local current_focus = s_c.hills.focus
           if current_focus < tab.count(seg.note_timestamp) then
             duration_marker = seg.note_timestamp[current_focus+1] - seg.note_timestamp[current_focus]
-            screen.text_right("step duration: "..string.format("%0.6g",duration_marker))
+            screen.text_right("step duration: "..string.format("%0.4g",duration_marker))
           else
-            screen.text_right("total duration: "..string.format("%0.6g",seg.note_timestamp[current_focus] - seg.note_timestamp[1]))
+            screen.text_right("total duration: "..string.format("%0.4g",seg.note_timestamp[current_focus] - seg.note_timestamp[1]))
           end
           if key1_hold then
+            draw_popup("|\\_\\|")
+            screen.move(64,26)
+            screen.level(screen_actions.popup_focus[1] == 1 and 15 or 4)
+            screen.text("SEED: "..util.round(seg.population*100).."%")
+            screen.move(64,36)
+            screen.level(screen_actions.popup_focus[1] == 2 and 15 or 4)
+            screen.text("QUANT: "..params:string("hill "..hf.." quant value"))
+            screen.move(14,48)
             screen.level(15)
-            screen.move(0,64)
-            screen.text("K2: SEED ("..util.round(seg.population*100).."%)")
-            screen.move(128,64)
-            screen.text_right("K3: QUANT "..params:string("hill "..hf.." quant value"))
+            screen.text('K3: send '..(screen_actions.popup_focus[1] == 1 and 'seed' or 'quant'))
+            -- screen.move(0,64)
+            -- screen.text("K2: SEED ("..util.round(seg.population*100).."%)")
+            -- screen.move(128,64)
+            -- screen.text_right("K3: QUANT "..params:string("hill "..hf.." quant value"))
           end
         elseif ui.menu_focus == 2 then
           screen.level(s_c["bounds"]["focus"] == 1 and 15 or 3)
@@ -161,32 +209,6 @@ function screen_actions.draw()
           screen.level(15)
           screen.move(128,64)
           screen.text_right("K3: PER-STEP PARAMS")
-        end
-      end
-      local menus = {"hill: "..focus,"bound","notes","loop","smpl"}
-      screen.font_size(8)
-      if ui.control_set == "edit" and ui.menu_focus ~= 1 then
-        screen.move(0,22)
-        screen.level(3)
-        screen.text("hill: "..focus)
-      end
-      local upper_bound;
-      if ui.hill_focus <= 7 then
-        if params:string("hill "..ui.hill_focus.." sample output") == "yes" then
-          upper_bound = 5
-        else
-          upper_bound = 4
-        end
-      else
-        upper_bound = 5
-      end
-      for i = 1,upper_bound do
-        screen.level(ui.menu_focus == i and (key1_hold and ((ui.menu_focus > 2 and  ui.control_set == "edit") and 3 or 15) or 15) or 3)
-        screen.move(0,12+(10*i))
-        if ui.control_set == "edit" and ui.menu_focus == i then
-          screen.text("["..menus[i].."]")
-        elseif ui.control_set ~= "edit" then
-          screen.text(menus[i])
         end
       end
     else

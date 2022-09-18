@@ -15,6 +15,16 @@ for i = 1,16 do
   end
 end
 
+iter_link_held = {0,0}
+iter_link_source = {}
+function iter_link(p_voice, p_hill, c_voice, c_hill)
+  if hills[p_voice].iter_links[p_hill][c_voice] == c_hill then
+    hills[p_voice].iter_links[p_hill][c_voice] = 0
+  else
+    hills[p_voice].iter_links[p_hill][c_voice] = c_hill
+  end
+end
+
 function grid_lib.pattern_execute(data)
   if data.event == "start" then
     _a.start(data.x,data.y,true)
@@ -54,7 +64,6 @@ grid_overdub_state = {}
 overdubbing_pattern = false
 toggles = {overdub = false, loop = false, duplicate = false, copy = false, link = false}
 pattern_clipboard = {event = {}, time = {}, count = 0}
-
 pattern_link_source = 0
 pattern_links = {}
 pattern_link_clocks = {}
@@ -191,7 +200,7 @@ function grid_lib.init()
   grid_dirty = true
 end
 
-mods = {["hill"] = false,["bound"] = false,["notes"] = false,["loop"] = false,["playmode"] = false,["copy"] = false,["snapshots"] = false,["snapshots_extended"] = false,["alt"] = false}
+mods = {["hill"] = false,["bound"] = false,["notes"] = false,["loop"] = false,["playmode"] = false, ['playmode_extended'] = false, ["copy"] = false,["snapshots"] = false,["snapshots_extended"] = false,["alt"] = false}
 local modkeys = {"hill","bound","notes","loop","playmode","copy","snapshots","alt"}
 
 local function is_toggle_state_off()
@@ -236,13 +245,16 @@ function g.key(x,y,z)
           ui.control_set = "play"
         end
       end
-    elseif y == 5 or y == 6 then
+    elseif (y == 5 or y == 6) and z == 1 then
       for i = 1,#modkeys do
         if i ~= y then
           mods[modkeys[i]] = false
         else
           mods[modkeys[y]] = not mods[modkeys[y]]
           mod_held = mods[modkeys[y]]
+          if mods['playmode'] == false then
+            mods['playmode_extended'] = false
+          end
         end
       end
       if ui.control_set ~= "song" then
@@ -263,6 +275,9 @@ function g.key(x,y,z)
             mods[modkeys[y]] = not mods[modkeys[y]]
             if not mods["alt"] then
               mod_held = mods[modkeys[y]]
+              if mods['snapshots'] == false then
+                mods['snapshots_extended'] = false
+              end
             end
           end
         end
@@ -273,9 +288,6 @@ function g.key(x,y,z)
           clipboard = nil
           copied = nil
         end
-        -- if not mods['snapshots'] then
-        --   mods['snapshots_extended'] = false
-        -- end
 
       else
 
@@ -284,12 +296,14 @@ function g.key(x,y,z)
     if y == 8 then
       for i = 1,#modkeys do
         if i ~= y then
-          if modkeys[i] ~= "snapshots" then
+          if modkeys[i] ~= "snapshots"
+          and modkeys[i] ~= "playmode"
+          and modkeys[i] ~= "copy" then
             mods[modkeys[i]] = false
           end
         else
           mods[modkeys[y]] = not mods[modkeys[y]]
-          if not mods["snapshots"] then
+          if not mods["snapshots"] and not mods['playmode'] and not mods['copy'] then
             mod_held = mods[modkeys[y]]
           end
         end
@@ -365,8 +379,28 @@ function g.key(x,y,z)
     elseif mods["hill"] or mods["bound"] or mods["notes"] or mods["loop"] then
       ui.hill_focus = x-1
       hills[ui.hill_focus].screen_focus = y
-    elseif mods["playmode"] and z == 0 then
-      hills[x-1][y].playmode = hills[x-1][y].playmode == "momentary" and "latch" or "momentary"
+    elseif mods["playmode"] and z == 1 then
+      if mods['playmode_extended'] then
+        if #iter_link_source == 0 then
+          iter_link_source[1] = x-1
+          iter_link_source[2] = y
+          iter_link_held[1] = x-1
+          iter_link_held[2] = y
+        else
+          iter_link(iter_link_source[1],iter_link_source[2],x-1,y)
+        end
+      else
+        hills[x-1][y].playmode = hills[x-1][y].playmode == "momentary" and "latch" or "momentary"
+      end
+    elseif mods['playmode'] and z == 0 then
+      if mods['playmode_extended'] then
+        if x-1 == iter_link_held[1] then
+          iter_link_held = {0,0}
+        end
+        if #iter_link_source ~= 0 and iter_link_held[1] == 0 then
+          iter_link_source = {}
+        end
+      end
     elseif mods["copy"] and z == 1 then
       if not clipboard then
         print("copied...")
@@ -506,6 +540,8 @@ function g.key(x,y,z)
     snapshot_overwrite_mod = not snapshot_overwrite_mod
   elseif x == 12 and y == 1 and z == 1 and mods['snapshots'] then
     mods["snapshots_extended"] = not mods["snapshots_extended"]
+  elseif x == 16 and y == 8 and z == 1 and mods['playmode'] then
+    mods['playmode_extended'] = not mods['playmode_extended']
   end
   if mod_held and not mods["alt"] and not mods["copy"] and not mods["snapshots"] then
     if x == 14 and y == 8 then
@@ -592,12 +628,30 @@ function grid_redraw()
           end
         elseif mods["playmode"] then
           local display_level;
-          if hills[i-1][j].playmode == "momentary" then
-            display_level = 4
+          if mods['playmode_extended'] then
+            if iter_link_held[1] == i-1 then
+              g:led(i,iter_link_held[2],15)
+              for k = 1,#hills[iter_link_held[1]].iter_links[iter_link_held[2]] do
+                if hills[iter_link_held[1]].iter_links[iter_link_held[2]][k] ~= 0 then
+                  g:led(k+1,hills[iter_link_held[1]].iter_links[iter_link_held[2]][k],10)
+                end
+              end
+            elseif iter_link_held[1] == 0 then
+              for k = 1,#hills[i-1].iter_links[j] do
+                if hills[i-1].iter_links[j][k] ~= 0 then
+                  g:led(i,j,6)
+                  break
+                end
+              end
+            end
           else
-            display_level = 15
+            if hills[i-1][j].playmode == "momentary" then
+              display_level = 4
+            else
+              display_level = 15
+            end
+            g:led(i,j,display_level)
           end
-          g:led(i,j,display_level)
         elseif snapshot_overwrite_mod then
 
           if mods["snapshots"] then
@@ -791,8 +845,8 @@ function grid_redraw()
     g:led(16,8,15)
   end
 
-  if mod_held and mods["playmode"] then
-
+  if mods['playmode'] then
+    g:led(16,8,mods['playmode_extended'] and 15 or 4)
   end
 
   for i = 1,16 do
