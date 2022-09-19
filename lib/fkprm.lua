@@ -154,6 +154,14 @@ function m:delta(index, d, voice, hill, step)
         }
       }
     }
+  elseif m.adjusted_params[voice][hill] == nil then
+    m.adjusted_params[voice][hill] = {
+      
+      [step] = {
+        ['params'] = {},
+        ['ids_idx'] = {},
+      }
+    }
   elseif m.adjusted_params[voice][hill][step] == nil then
     m.adjusted_params[voice][hill][step] = {
       ['params'] = {},

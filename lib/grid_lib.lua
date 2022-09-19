@@ -53,8 +53,10 @@ function grid_lib.pattern_execute(data)
       hills[data.x].snapshot.focus = data.y
     end
   else
-    if params:string('voice_model_'..data.voice) == data.model then
-      prms.send_to_engine(data.voice, data.param, data.value)
+    if data.voice ~= nil then
+      if params:string('voice_model_'..data.voice) == data.model then
+        prms.send_to_engine(data.voice, data.param, data.value)
+      end
     end
   end
 end
