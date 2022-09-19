@@ -247,6 +247,9 @@ function init()
     end
     snapshots = tab.load(_path.data.."hills/"..number.."/snapshots/all.txt")
     snapshot_overwrite = tab.load(_path.data.."hills/"..number.."/snapshots/overwrite_state.txt")
+    if util.file_exists(_path.data.."hills/"..number.."/per-step/_fkprm.txt") then
+      _fkprm.adjusted_params = tab.load(_path.data.."hills/"..number.."/per-step/_fkprm.txt")
+    end
     -- params:bang() -- TODO VERIFY IF THIS IS OKAY TO LEAVE OUT
     grid_dirty = true
   end
@@ -275,6 +278,7 @@ function init()
     util.make_dir(_path.data.."hills/"..number.."/patterns")
     util.make_dir(_path.data.."hills/"..number.."/song")
     util.make_dir(_path.data.."hills/"..number.."/snapshots")
+    util.make_dir(_path.data.."hills/"..number.."/per-step")
     for i = 1,number_of_hills do
       tab.save(hills[i],_path.data.."hills/"..number.."/data/"..i..".txt")
     end
@@ -286,6 +290,7 @@ function init()
     end
     tab.save(snapshots,_path.data.."hills/"..number.."/snapshots/all.txt")
     tab.save(snapshot_overwrite, _path.data.."hills/"..number.."/snapshots/overwrite_state.txt")
+    tab.save(_fkprm.adjusted_params, _path.data.."hills/"..number.."/per-step/_fkprm.txt")
     params_write_silent(filename,name)
   end
 
@@ -437,6 +442,7 @@ iterate = function(i)
                 stop(i)
               end
             end
+          grid_dirty = true
           end
         else
           if util.round(seg.note_timestamp[seg.index+1],0.01) == util.round(seg.step,0.01) then
@@ -446,6 +452,7 @@ iterate = function(i)
           else
             seg.step = util.round(seg.step + 0.01,0.01)
           end
+          grid_dirty = true
         end
       else
         seg.iterated = false
@@ -465,6 +472,7 @@ iterate = function(i)
           if comparator then -- if `>` then this get us a final tick, which is technically duration + 0.01
             stop(i,true)
           end
+          grid_dirty = true
         end
       end
     end
@@ -617,13 +625,45 @@ pass_note = function(i,j,seg,note_val,index,destination)
     -- per-step params //
     if i <= 7 then
       if check_subtables(i,j,index) then
+        -- tab.print(per_step_params_adjusted[i].param)
+        for k = 1,#per_step_params_adjusted[i].param do
+          local check_prm = per_step_params_adjusted[i].param[k]
+          if _fkprm.adjusted_params[i][j][index].params[check_prm] == nil then
+            local is_drum_voice = check_prm <= params.lookup['sample3_reverbSend']
+            local id = check_prm
+            if is_drum_voice then
+              -- local p_name = string.gsub(params:get_id(id),i..'_'..params:string('voice_model_'..i)..'_','')
+              -- print('reseeding non-adjusted value for voice', i, j, index, id)
+              -- prms.send_to_engine(i,p_name,params:get(id))
+              local target_voice = string.match(params:get_id(id),"%d+")
+              local target_drum = params:get_id(id):match('(.*_)')
+              target_drum = string.gsub(target_drum, target_voice..'_', '')
+              target_drum = string.gsub(target_drum, '_', '')
+              local p_name = string.gsub(params:get_id(id),target_voice..'_'..target_drum..'_','')
+              -- prms.send_to_engine(i,p_name,fkmap(i,j,index,k))
+              prms.send_to_engine(target_voice,p_name,params:get(id))
+              print('reseeding non-adjusted value for voice', target_voice, j, index, id, p_name)
+            else
+              local p_name = extract_voice_from_string(params:get_id(id))
+              local sc_target = string.gsub(params:get_id(id),p_name..'_','')
+              -- print('reseeding non-adjusted value for fx', i, j, index, id)
+              engine['set_'..p_name..'_param'](sc_target,params:get(id))
+            end
+          end
+        end
         per_step_params_adjusted[i] = {param = {}, value = {}}
         for k,v in next,_fkprm.adjusted_params[i][j][index].params do
           local is_drum_voice = k <= params.lookup['sample3_reverbSend']
           if is_drum_voice then
-            local p_name = string.gsub(params:get_id(k),i..'_'..params:string('voice_model_'..i)..'_','')
+            -- local p_name = string.gsub(params:get_id(k),i..'_'..params:string('voice_model_'..i)..'_','')
             -- print('sending step param to voice', i, j, index, k)
-            prms.send_to_engine(i,p_name,fkmap(i,j,index,k))
+            local target_voice = string.match(params:get_id(k),"%d+")
+            local target_drum = params:get_id(k):match('(.*_)')
+            target_drum = string.gsub(target_drum, target_voice..'_', '')
+            target_drum = string.gsub(target_drum, '_', '')
+            local p_name = string.gsub(params:get_id(k),target_voice..'_'..target_drum..'_','')
+            -- prms.send_to_engine(i,p_name,fkmap(i,j,index,k))
+            prms.send_to_engine(target_voice,p_name,fkmap(i,j,index,k))
           else
             local p_name = extract_voice_from_string(params:get_id(k))
             local sc_target = string.gsub(params:get_id(k),p_name..'_','')
@@ -639,7 +679,7 @@ pass_note = function(i,j,seg,note_val,index,destination)
           local id = per_step_params_adjusted[i].param[k]
           if is_drum_voice then
             local p_name = string.gsub(params:get_id(id),i..'_'..params:string('voice_model_'..i)..'_','')
-            -- print('reseeding default value for voice', i, j, index, id)
+            print('reseeding default value for voice', i, j, index, id)
             prms.send_to_engine(i,p_name,params:get(id))
           else
             local p_name = extract_voice_from_string(params:get_id(id))
