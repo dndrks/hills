@@ -182,7 +182,8 @@ function init()
         ["min"] = 1, -- defines the lowest note degree
         ["max"] = 15, -- defines the highest note degree
         ["pool"] = {}, -- gets filled with the constructed hill's notes
-        ["active"] = {} -- tracks whether the note should play
+        ["active"] = {}, -- tracks whether the note should play
+        ["chord_degree"] = {}, -- defines the shell voicing chord degree
       }
       hills[i][j].note_velocity = {}
 
@@ -363,6 +364,7 @@ local function pass_data_into_storage(i,j,index,data)
   hills[i][j].note_timestamp[index] = data[2]
   hills[i][j].high_bound.note = #hills[i][j].note_num.pool
   hills[i][j].note_num.active[index] = true
+  hills[i][j].note_num.chord_degree[index] = 1
   hills[i][j].note_velocity[index] = 127
 
   hills[i][j].sample_controls.loop[index] = false
@@ -714,7 +716,8 @@ pass_note = function(i,j,seg,note_val,index,destination)
           local shell_notes = mu.generate_chord_scale_degree(
             played_note,
             params:string('hill '..i..' scale'),
-            params:get('hill '..i..' kildare_chord_degree'),
+            -- params:get('hill '..i..' kildare_chord_degree'),
+            hills[i][j].note_num.chord_degree[index],
             true
           )
           engine.set_voice_param(i,"carHz",midi_to_hz(shell_notes[1]))
