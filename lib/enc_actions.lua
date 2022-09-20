@@ -32,7 +32,11 @@ function enc_actions.parse(n,d)
         elseif ui.menu_focus == 2 then
           s_c["bounds"]["focus"] = util.clamp(s_c["bounds"]["focus"]+d,1,s_c["bounds"]["max"])
         elseif ui.menu_focus == 3 then
-          s_c["notes"]["focus"] = util.clamp(s_c["notes"]["focus"]+d,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
+          if not key1_hold then
+            s_c["notes"]["focus"] = util.clamp(s_c["notes"]["focus"]+d,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
+          else
+            _s.popup_focus[3] = util.clamp(_s.popup_focus[3]+d,1,3)
+          end
         elseif ui.menu_focus == 4 then
           s_c["loop"]["focus"] = util.clamp(s_c["loop"]["focus"]+d,1,s_c["loop"]["max"])
         elseif ui.menu_focus == 5 then
@@ -81,15 +85,22 @@ function enc_actions.parse(n,d)
         elseif ui.menu_focus == 3 then
           if ui.control_set == "edit" then
             if not key1_hold then
-              if ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus].notes.velocity then
-                _t.adjust_velocity(i,j,s_c["notes"]["focus"],d)
-              else
-                _t.transpose(i,j,s_c["notes"]["focus"],d)
-              end
+              -- if ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus].notes.velocity then
+              --   _t.adjust_velocity(i,j,s_c["notes"]["focus"],d)
+              -- else
+              --   _t.transpose(i,j,s_c["notes"]["focus"],d)
+              -- end
+              _t.transpose(i,j,s_c["notes"]["focus"],d)
             else
-              local note_adjustments = {"shuffle","reverse","rotate","rand fill","static","shuffle vel","reverse vel","rotate vel","rand vel","static vel"}
-              local current_adjustment = tab.key(note_adjustments,s_c["notes"]["transform"])
-              s_c["notes"]["transform"] = note_adjustments[util.clamp(current_adjustment+d,1,#note_adjustments)]
+              if _s.popup_focus[3] == 1 then
+                _t.adjust_velocity(i,j,s_c["notes"]["focus"],d)
+              elseif _s.popup_focus[3] == 2 then
+                hills[i][j].note_num.chord_degree[s_c["notes"]["focus"]] = util.clamp(hills[i][j].note_num.chord_degree[s_c["notes"]["focus"]]+d, 1, 7)
+              elseif _s.popup_focus[3] == 3 then
+                local note_adjustments = {"mute step", "shuffle notes","reverse notes","rotate notes","rand fill notes","static notes","shuffle vel","reverse vel","rotate vel","rand vel","static vel"}
+                local current_adjustment = tab.key(note_adjustments,s_c["notes"]["transform"])
+                s_c["notes"]["transform"] = note_adjustments[util.clamp(current_adjustment+d,1,#note_adjustments)]
+              end
             end
           end
         elseif ui.menu_focus == 4 then

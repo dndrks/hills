@@ -259,9 +259,9 @@ function g.key(x,y,z)
           end
         end
       end
-      if ui.control_set ~= "song" then
-        ui.control_set = "play"
-      end
+      -- if ui.control_set ~= "song" then
+      --   ui.control_set = "play"
+      -- end
       if not mods["copy"] and clipboard then
         clipboard = nil
         copied = nil
@@ -283,9 +283,9 @@ function g.key(x,y,z)
             end
           end
         end
-        if ui.control_set ~= "song" then
-          ui.control_set = "play"
-        end
+        -- if ui.control_set ~= "song" then
+        --   ui.control_set = "play"
+        -- end
         if not mods["copy"] and clipboard then
           clipboard = nil
           copied = nil
@@ -310,9 +310,9 @@ function g.key(x,y,z)
           end
         end
       end
-      if ui.control_set ~= "song" then
-        ui.control_set = "play"
-      end
+      -- if ui.control_set ~= "song" then
+      --   ui.control_set = "play"
+      -- end
       if not mods["copy"] and clipboard then
         clipboard = nil
         copied = nil

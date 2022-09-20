@@ -19,7 +19,7 @@ function key_actions.parse(n,z)
           if ui.control_set == "edit" then
             if ui.menu_focus == 1 then
             elseif ui.menu_focus == 3 then
-              _t.mute(i,j,s_c.notes.focus)
+              -- _t.mute(i,j,s_c.notes.focus)
             elseif ui.menu_focus == 5 then
               _t.toggle_loop(i,j,s_c.samples.focus)
             end
@@ -47,11 +47,7 @@ function key_actions.parse(n,z)
           end
         elseif ui.control_set == "edit" then
           if not key1_hold and not key2_hold then
-            if ui.menu_focus ~= 3 then
-              _a.start(i,j,true)
-            else
-              ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus].notes.velocity = not ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus].notes.velocity
-            end
+            _a.start(i,j,true)
           elseif key1_hold and not key2_hold then
             if ui.menu_focus == 1 then
               if _s.popup_focus[1] == 1 then
@@ -60,7 +56,9 @@ function key_actions.parse(n,z)
                 _t.quantize(i,j,params:string("hill "..i.." quant value"),hills[i][j].low_bound.note,hills[i][j].high_bound.note)
               end
             elseif ui.menu_focus == 3 then
-              _t[s_c["notes"]["transform"]](i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note,s_c.notes.focus)
+              if _s.popup_focus[3] == 3 then
+                _t[s_c["notes"]["transform"]](i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note,s_c.notes.focus)
+              end
             elseif ui.menu_focus == 5 then
               _t[s_c["samples"]["transform"]](i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note,s_c.samples.focus,true)
             end

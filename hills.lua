@@ -127,10 +127,16 @@ function init()
     hills[i].snapshot.focus = 0
 
     hills[i].iter_links = {}
+    hills[i].iter_pulses = {}
+    hills[i].iter_counter = {}
     for j = 1,8 do
       hills[i].iter_links[j] = {}
+      hills[i].iter_pulses[j] = {}
+      hills[i].iter_counter[j] = {}
       for k = 1,10 do
         hills[i].iter_links[j][k] = 0
+        hills[i].iter_pulses[j][k] = 1
+        hills[i].iter_counter[j][k] = 1
       end
     end
     
@@ -203,7 +209,7 @@ function init()
       {
         ["hills"] = {["focus"] = 1, ["max"] = 12}
       , ["bounds"] = {["focus"] = 1, ["max"] = 2}
-      , ["notes"] = {["focus"] = 1, ["max"] = 12, ["transform"] = "shuffle", ["velocity"] = false}
+      , ["notes"] = {["focus"] = 1, ["max"] = 12, ["transform"] = "mute step", ["velocity"] = false}
       , ["loop"] = {["focus"] = 1, ["max"] = 2}
       , ["samples"] = {["focus"] = 1, ["max"] = 12, ["transform"] = "shuffle"}
       }
@@ -388,7 +394,7 @@ construct = function(i,j,shuffle)
   end
   calculate_timedeltas(i,j)
   if shuffle then
-    _t.shuffle(i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
+    _t['shuffle notes'](i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
   end
   -- TODO: redraws for every construct
   screen_dirty = true
@@ -843,11 +849,14 @@ end
 function manual_iter(i,j)
   for idx = 1,#hills[i].iter_links[j] do
     if hills[i].iter_links[j][idx] ~= 0 then
-      local c_hill = hills[i].iter_links[j][idx]
-      if hills[idx][c_hill].note_num.pool[hills[idx][c_hill].index] ~= nil then
-        pass_note(idx,j,hills[idx][c_hill],hills[idx][c_hill].note_num.pool[hills[idx][c_hill].index],hills[idx][c_hill].index)
+      if hills[i].iter_counter[j][idx] == 1 then
+        local c_hill = hills[i].iter_links[j][idx]
+        if hills[idx][c_hill].note_num.pool[hills[idx][c_hill].index] ~= nil then
+          pass_note(idx,j,hills[idx][c_hill],hills[idx][c_hill].note_num.pool[hills[idx][c_hill].index],hills[idx][c_hill].index)
+        end
+        hills[idx][c_hill].index = util.wrap(hills[idx][c_hill].index + 1, hills[idx][c_hill].low_bound.note,hills[idx][c_hill].high_bound.note)
       end
-      hills[idx][c_hill].index = util.wrap(hills[idx][c_hill].index + 1, hills[idx][c_hill].low_bound.note + 1,hills[idx][c_hill].high_bound.note+1)
+      hills[i].iter_counter[j][idx] = util.wrap(hills[i].iter_counter[j][idx]+1, 1, hills[i].iter_pulses[j][idx])
     end
   end
 end

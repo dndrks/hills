@@ -36,19 +36,21 @@ function screen_actions.draw()
       screen.rect(40,15,80,40)
       screen.fill()
       local s_c = ui.screen_controls[hf][focus]
+      local iter_index = seg.index-1 ~= 0 and seg.index-1 or hills[hf][focus].high_bound.note
       for i = hills[hf][focus].low_bound.note,hills[hf][focus].high_bound.note do
         local horizontal = util.linlin(hills[hf][focus].note_timestamp[hills[hf][focus].low_bound.note], hills[hf][focus].note_timestamp[hills[hf][focus].high_bound.note],40,120,hills[hf][focus].note_timestamp[i])
         local vertical = util.linlin(hills[hf][focus].note_ocean[1],hills[hf][focus].note_ocean[peak_pitch],55,15,hills[hf][focus].note_ocean[hills[hf][focus].note_num.pool[i]])
         if ui.control_set == "edit" and (ui.menu_focus == 1 or ui.menu_focus == 3 or ui.menu_focus == 5) then
           if ui.menu_focus == 1 then
-            screen.level(s_c["hills"]["focus"] == i and 15 or (seg.index-1 == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0)))
+            screen.level(s_c["hills"]["focus"] == i and 15 or (iter_index == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0)))
           elseif ui.menu_focus == 3 then
-            screen.level(s_c["notes"]["focus"] == i and 15 or (seg.index-1 == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0)))
+            screen.level(s_c["notes"]["focus"] == i and 15 or (iter_index == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0)))
           elseif ui.menu_focus == 5 then
-            screen.level(s_c["samples"]["focus"] == i and 15 or (seg.index-1 == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0)))
+            screen.level(s_c["samples"]["focus"] == i and 15 or (iter_index == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0)))
           end
         else
-          screen.level(seg.index-1 == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0))
+          print(seg.index, iter_index)
+          screen.level(iter_index == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0))
         end
         if hills[hf][focus].note_timedelta[i] > hills[hf][focus].duration/#hills[hf][focus].note_num.pool then
           screen.circle(horizontal+util.round_up(hills[hf][focus].note_timedelta[i]*2),vertical,util.round_up(hills[hf][focus].note_timedelta[i]*2))
@@ -161,11 +163,23 @@ function screen_actions.draw()
             )
           end
           if key1_hold then
-            screen.level(key1_hold == true and 15 or 3)
-            screen.move(0,64)
-            screen.text("K2: "..(hills[hf][focus].note_num.active[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["notes"]["focus"]] and "mute" or "un-mute"))
-            screen.move(128,64)
-            screen.text_right("K3: "..ui.screen_controls[hf][focus]["notes"]["transform"])
+            draw_popup("\\/\\|")
+            screen.move(60,24)
+            screen.level(screen_actions.popup_focus[3] == 1 and 15 or 4)
+            screen.text('velocity: '..(hills[hf][focus].note_velocity[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["notes"]["focus"]]))
+            screen.move(60,34)
+            screen.level(screen_actions.popup_focus[3] == 2 and 15 or 4)
+            screen.text('degree: '..hills[hf][focus].note_num.chord_degree[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["notes"]["focus"]])
+            screen.move(14,44)
+            screen.level(screen_actions.popup_focus[3] == 3 and 15 or 4)
+            screen.text("K3: "..ui.screen_controls[hf][focus]["notes"]["transform"])
+            -- screen.move(14,48)
+            -- screen.level(15)
+            -- screen.text('K3: send '..(screen_actions.popup_focus[1] == 1 and 'seed' or 'quant'))
+            -- screen.move(0,64)
+            -- screen.text("K2: "..(hills[hf][focus].note_num.active[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["notes"]["focus"]] and "mute" or "un-mute"))
+            -- screen.move(128,64)
+            -- screen.text_right("K3: "..ui.screen_controls[hf][focus]["notes"]["transform"])
           end
         elseif ui.menu_focus == 4 then
           screen.level(s_c["loop"]["focus"] == 1 and (key1_hold and 3 or 15) or 3)

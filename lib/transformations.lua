@@ -28,6 +28,18 @@ m.sample_transpose = function(i,j,pos,delta)
 end
 
 -- 2. REVERSAL
+m['reverse notes'] = function(i,j,start_point,end_point,focus,sc)
+  local target = sc ~= nil and hills[i][j].sample_controls.rate or hills[i][j].note_num.pool
+  local rev = {}
+  for k = end_point, start_point, -1 do
+    rev[end_point - k + 1] = target[k]
+  end
+  for k = start_point, end_point do
+    local range = (end_point-start_point)+1
+    target[k] = rev[util.linlin(start_point,end_point,1,range,k)]
+  end
+end
+
 m.reverse = function(i,j,start_point,end_point,focus,sc)
   local target = sc ~= nil and hills[i][j].sample_controls.rate or hills[i][j].note_num.pool
   local rev = {}
@@ -53,6 +65,17 @@ m['reverse vel'] = function(i,j,start_point,end_point,focus)
 end
 
 -- 3. ROTATION
+m['rotate notes'] = function(i,j,start_point,end_point,focus,sc)
+  local target = sc ~= nil and hills[i][j].sample_controls.rate or hills[i][j].note_num.pool
+  local originals = {}
+  for k = start_point,end_point do
+    table.insert(originals,target[k])
+  end
+  for k = 1,#originals do
+    target[util.wrap(start_point+k,start_point,end_point)] = originals[k]
+  end
+end
+
 m.rotate = function(i,j,start_point,end_point,focus,sc)
   local target = sc ~= nil and hills[i][j].sample_controls.rate or hills[i][j].note_num.pool
   local originals = {}
@@ -130,7 +153,7 @@ m.random_window = function(i,j)
 end
 
 -- 9. SUBSTITUTION -- this should commit!
-m.shuffle = function(i,j,lo,hi,focus,sc)
+m['shuffle notes'] = function(i,j,lo,hi,focus,sc)
   local target = sc ~= nil and hills[i][j].sample_controls.rate or hills[i][j].note_num.pool
   local shuffled = {}
   for m = lo,hi do
@@ -156,7 +179,7 @@ m['shuffle vel'] = function(i,j,lo,hi,focus)
   end
 end
 
-m["rand fill"] = function(i,j,start_point,end_point,focus,sc)
+m["rand fill notes"] = function(i,j,start_point,end_point,focus,sc)
   if sc == nil then
     for m = start_point,end_point do
       hills[i][j].note_num.pool[m] = math.random(1,hills[i][j].note_num.max)
@@ -197,7 +220,7 @@ m["rand loop"] = function(i,j,start_point,end_point,focus,sc)
   end
 end
 
-m.mute = function(i,j,pos)
+m['mute step'] = function(i,j,pos)
   hills[i][j].note_num.active[pos] = not hills[i][j].note_num.active[pos]
 end
 
@@ -254,6 +277,20 @@ m.deep_copy = function(orig)
 end
 
 m.static = function(i,j,start_point,end_point,pos)
+  local e_p = end_point
+  if e_p == nil then
+    e_p = hills[i][j].high_bound.note
+  end
+  if start_point ~= end_point then
+    for k = start_point,e_p do
+      hills[i][j].note_num.pool[k] = hills[i][j].note_num.pool[pos]
+    end
+  else
+    print("this is the last note, can't change any more!")
+  end
+end
+
+m['static notes'] = function(i,j,start_point,end_point,pos)
   local e_p = end_point
   if e_p == nil then
     e_p = hills[i][j].high_bound.note
@@ -422,7 +459,8 @@ m.reseed = function(i,j)
     ["min"] = 1, -- defines the lowest note degree
     ["max"] = 15, -- defines the highest note degree
     ["pool"] = {}, -- gets filled with the constructed hill's notes
-    ["active"] = {} -- tracks whether the note should play
+    ["active"] = {}, -- tracks whether the note should play
+    ["chord_degree"] = {}, -- defines the shell voicing chord degree
   }
   construct(i,j)
 end
