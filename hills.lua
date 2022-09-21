@@ -235,6 +235,19 @@ function init()
         stop(i,true)
       end
       hills[i] = tab.load(_path.data.."hills/"..number.."/data/"..i..".txt")
+      -- TODO: this is temporary for performance loading...
+      if hills[i].iter_pulses == nil then
+        hills[i].iter_pulses = {}
+        hills[i].iter_counter = {}
+        for j = 1,8 do
+          hills[i].iter_pulses[j] = {}
+          hills[i].iter_counter[j] = {}
+          for k = 1,10 do
+            hills[i].iter_pulses[j][k] = 1
+            hills[i].iter_counter[j][k] = 1
+          end
+        end
+      end
       if hills[i].active then
         stop(i,true)
       end
@@ -718,7 +731,7 @@ pass_note = function(i,j,seg,note_val,index,destination)
     if i <= 7 then
       if params:string("hill "..i.." kildare_notes") == "yes" then
         engine.set_voice_param(i,"carHz",midi_to_hz(played_note))
-        if params:string(i..'_'..params:string('voice_model_'..i)..'_poly') == 'poly' then
+        if params:string("hill "..i.." kildare_chords") == 'yes' then
           local shell_notes = mu.generate_chord_scale_degree(
             played_note,
             params:string('hill '..i..' scale'),
@@ -726,11 +739,8 @@ pass_note = function(i,j,seg,note_val,index,destination)
             hills[i][j].note_num.chord_degree[index],
             true
           )
-          engine.set_voice_param(i,"carHz",midi_to_hz(shell_notes[1]))
-          engine.trig(i,hills[i][j].note_velocity[index])
-          engine.set_voice_param(i,"carHz",midi_to_hz(shell_notes[2]))
-          engine.trig(i,hills[i][j].note_velocity[index])
-          engine.set_voice_param(i,"carHz",midi_to_hz(shell_notes[4]))
+          engine.set_voice_param(i,"thirdHz",midi_to_hz(shell_notes[2]))
+          engine.set_voice_param(i,"seventhHz",midi_to_hz(shell_notes[4]))
         end
       end
       engine.trig(i,hills[i][j].note_velocity[index])

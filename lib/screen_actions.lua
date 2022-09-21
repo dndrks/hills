@@ -49,7 +49,7 @@ function screen_actions.draw()
             screen.level(s_c["samples"]["focus"] == i and 15 or (iter_index == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0)))
           end
         else
-          print(seg.index, iter_index)
+          -- print(seg.index, iter_index)
           screen.level(iter_index == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0))
         end
         if hills[hf][focus].note_timedelta[i] > hills[hf][focus].duration/#hills[hf][focus].note_num.pool then

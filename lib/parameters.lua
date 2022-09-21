@@ -50,7 +50,7 @@ function parameters.init()
 
   params:add_separator('hills_main_header', 'hills')
   for i = 1,number_of_hills do
-    params:add_group('hill_'..i..'_group', hill_names[i], i > 7 and 61 or 63)
+    params:add_group('hill_'..i..'_group', hill_names[i], i > 7 and 61 or 64)
 
     params:add_separator('hill_'..i..'_note_header', "note management "..hill_names[i])
     params:add_option("hill "..i.." scale","scale",scale_names,1)
@@ -120,6 +120,16 @@ function parameters.init()
         function(x)
           if x == 1 then
             engine.set_voice_param(i,"carHz", mu.note_num_to_freq(params:get(i.."_"..(params:string('voice_model_'..i)).."_carHz")))
+          end
+        end
+      )
+      params:add_option("hill "..i.." kildare_chords","send chords?",{"no","yes"},1)
+      params:set_action("hill "..i.." kildare_chords",
+        function(x)
+          if x == 1 then
+            local return_to = mu.note_num_to_freq(params:get(i.."_"..(params:string('voice_model_'..i)).."_carHz"))
+            engine.set_voice_param(i,"thirdHz", return_to)
+            engine.set_voice_param(i,"seventhHz", return_to)
           end
         end
       )
