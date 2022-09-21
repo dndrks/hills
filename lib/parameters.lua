@@ -34,6 +34,11 @@ end
 function parameters.send_to_engine(voice,param,value)
   if param == 'carHz' then
     engine.set_voice_param(voice, param, mu.note_num_to_freq(value))
+    -- if params:string('hill '..voice..' kildare_notes') == 'yes'
+    -- and params:string('hill '..voice..' kildare_chords') == 'no' then
+    --   engine.set_voice_param(voice, 'thirdHz', mu.note_num_to_freq(value))
+    --   engine.set_voice_param(voice, 'seventhHz', mu.note_num_to_freq(value))
+    -- end
   elseif param == 'poly' then
     engine.set_voice_param(voice, param, value == 1 and 0 or 1)
   else
@@ -120,7 +125,12 @@ function parameters.init()
         function(x)
           if x == 1 then
             engine.set_voice_param(i,"carHz", mu.note_num_to_freq(params:get(i.."_"..(params:string('voice_model_'..i)).."_carHz")))
+            params:hide("hill "..i.." kildare_chords")
+            params:set("hill "..i.." kildare_chords",1)
+          elseif x == 2 then
+            params:show("hill "..i.." kildare_chords")
           end
+          _menu.rebuild_params()
         end
       )
       params:add_option("hill "..i.." kildare_chords","send chords?",{"no","yes"},1)

@@ -663,7 +663,7 @@ pass_note = function(i,j,seg,note_val,index,destination)
               target_drum = string.gsub(target_drum, '_', '')
               local p_name = string.gsub(params:get_id(id),target_voice..'_'..target_drum..'_','')
               prms.send_to_engine(target_voice,p_name,params:get(id))
-              -- print('reseeding non-adjusted value for voice', target_voice, j, index, id, p_name)
+              print('reseeding non-adjusted value for voice', target_voice, j, index, id, p_name)
             elseif is_drum_voice and i >= 8 then
               local target_voice = 'sample'..(i-7)
               local p_name = string.gsub(params:get_id(id),target_voice..'_','')
@@ -680,16 +680,27 @@ pass_note = function(i,j,seg,note_val,index,destination)
         -- entry handling:
         per_step_params_adjusted[i] = {param = {}, value = {}}
         for k,v in next,_fkprm.adjusted_params[i][j][index].params do
+
           local is_drum_voice = k <= params.lookup['sample3_reverbSend']
-          if is_drum_voice and i <= 7 then
-            local target_voice = string.match(params:get_id(k),"%d+")
+          local id = k
+          local drum_target;
+          if id < params.lookup['sample1_sampleMode'] then
+            drum_target = params:get_id(id):match('(.+)_(.+)_(.+)')
+            drum_target = tonumber(drum_target)
+          else
+            drum_target = params:get_id(id):match('(.+)_(.+)')
+          end
+
+          if is_drum_voice and type(drum_target) == 'number' and drum_target <= 7 then
+            local target_voice = drum_target
             local target_drum = params:get_id(k):match('(.*_)')
             target_drum = string.gsub(target_drum, target_voice..'_', '')
             target_drum = string.gsub(target_drum, '_', '')
             local p_name = string.gsub(params:get_id(k),target_voice..'_'..target_drum..'_','')
+            -- print('sending voice param')
             prms.send_to_engine(target_voice,p_name,fkmap(i,j,index,k))
-          elseif is_drum_voice and i >= 8 then
-            local target_voice = 'sample'..(i-7)
+          elseif is_drum_voice and type(drum_target) == 'string' then
+            local target_voice = drum_target
             local p_name = string.gsub(params:get_id(k),target_voice..'_','')
             prms.send_to_engine(target_voice,p_name,fkmap(i,j,index,k))
             -- print('sending sample param')
@@ -699,20 +710,30 @@ pass_note = function(i,j,seg,note_val,index,destination)
             -- print('sending step param to fx', i, j, index, k)
             engine['set_'..p_name..'_param'](sc_target,fkmap(i,j,index,k))
           end
+          
           per_step_params_adjusted[i].param[#per_step_params_adjusted[i].param+1] = k
           per_step_params_adjusted[i].value[#per_step_params_adjusted[i].value+1] = v
+        
         end
       else
         -- restore default param value:
         for k = 1,#per_step_params_adjusted[i].param do
           local is_drum_voice = per_step_params_adjusted[i].param[k] <= params.lookup['sample3_reverbSend']
           local id = per_step_params_adjusted[i].param[k]
-          if is_drum_voice and i <= 7 then
-            local p_name = string.gsub(params:get_id(id),i..'_'..params:string('voice_model_'..i)..'_','')
-            -- print('reseeding default value for voice', i, j, index, id)
-            prms.send_to_engine(i,p_name,params:get(id))
-          elseif is_drum_voice and i >= 8 then
-            local target_voice = 'sample'..(i-7)
+          local drum_target;
+          if id < params.lookup['sample1_sampleMode'] then
+            drum_target = params:get_id(id):match('(.+)_(.+)_(.+)')
+            drum_target = tonumber(drum_target)
+          else
+            drum_target = params:get_id(id):match('(.+)_(.+)')
+          end
+
+          if is_drum_voice and type(drum_target) == 'number' and drum_target <= 7 then
+            local p_name = string.gsub(params:get_id(id),drum_target..'_'..params:string('voice_model_'..drum_target)..'_','')
+            print('reseeding default value for voice', drum_target, j, index, id)
+            prms.send_to_engine(drum_target,p_name,params:get(id))
+          elseif is_drum_voice and type(drum_target) == 'string' then
+            local target_voice = drum_target
             local p_name = string.gsub(params:get_id(id),target_voice..'_','')
             prms.send_to_engine(target_voice,p_name,params:get(id))
             -- print('reseeding default value for sample voice', i, j, index, id)
