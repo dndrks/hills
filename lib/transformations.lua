@@ -21,6 +21,7 @@ end
 
 m.transpose = function(i,j,pos,delta)
   hills[i][j].note_num.pool[pos] = util.clamp(hills[i][j].note_num.pool[pos]+delta,1,hills[i][j].note_num.max)
+  hills[i][j].note_num.chord_degree[pos] = util.wrap(hills[i][j].note_num.pool[pos], 1, 7)
 end
 
 m.sample_transpose = function(i,j,pos,delta)
@@ -37,6 +38,9 @@ m['reverse notes'] = function(i,j,start_point,end_point,focus,sc)
   for k = start_point, end_point do
     local range = (end_point-start_point)+1
     target[k] = rev[util.linlin(start_point,end_point,1,range,k)]
+    if target == hills[i][j].note_num.pool then
+      hills[i][j].note_num.chord_degree[k] = util.wrap(hills[i][j].note_num.pool[k], 1, 7)
+    end
   end
 end
 
@@ -49,6 +53,9 @@ m.reverse = function(i,j,start_point,end_point,focus,sc)
   for k = start_point, end_point do
     local range = (end_point-start_point)+1
     target[k] = rev[util.linlin(start_point,end_point,1,range,k)]
+    if target == hills[i][j].note_num.pool then
+      hills[i][j].note_num.chord_degree[k] = util.wrap(hills[i][j].note_num.pool[k], 1, 7)
+    end
   end
 end
 
@@ -73,6 +80,9 @@ m['rotate notes'] = function(i,j,start_point,end_point,focus,sc)
   end
   for k = 1,#originals do
     target[util.wrap(start_point+k,start_point,end_point)] = originals[k]
+    if target == hills[i][j].note_num.pool then
+      hills[i][j].note_num.chord_degree[util.wrap(start_point+k,start_point,end_point)] = util.wrap(target[util.wrap(start_point+k,start_point,end_point)], 1, 7)
+    end
   end
 end
 
@@ -84,6 +94,9 @@ m.rotate = function(i,j,start_point,end_point,focus,sc)
   end
   for k = 1,#originals do
     target[util.wrap(start_point+k,start_point,end_point)] = originals[k]
+    if target == hills[i][j].note_num.pool then
+      hills[i][j].note_num.chord_degree[util.wrap(start_point+k,start_point,end_point)] = util.wrap(target[util.wrap(start_point+k,start_point,end_point)], 1, 7)
+    end
   end
 end
 
@@ -163,6 +176,9 @@ m['shuffle notes'] = function(i,j,lo,hi,focus,sc)
   for k,v in pairs(shuffled) do
     -- print(k,v)
     target[lo-1+k] = v
+    if target == hills[i][j].note_num.pool then
+      hills[i][j].note_num.chord_degree[lo-1+k] = util.wrap(target[lo-1+k], 1, 7)
+    end
   end
 end
 
@@ -183,6 +199,7 @@ m["rand fill notes"] = function(i,j,start_point,end_point,focus,sc)
   if sc == nil then
     for m = start_point,end_point do
       hills[i][j].note_num.pool[m] = math.random(1,hills[i][j].note_num.max)
+      hills[i][j].note_num.chord_degree[m] = util.wrap(hills[i][j].note_num.pool[m], 1, 7)
     end
   else
     for m = start_point,end_point do
@@ -201,6 +218,7 @@ m["rand rate"] = function(i,j,start_point,end_point,focus,sc)
   if sc == nil then
     for m = start_point,end_point do
       hills[i][j].note_num.pool[m] = math.random(1,hills[i][j].note_num.max)
+      hills[i][j].note_num.chord_degree[m] = util.wrap(hills[i][j].note_num.pool[m], 1, 7)
     end
   else
     for m = start_point,end_point do
@@ -284,6 +302,7 @@ m.static = function(i,j,start_point,end_point,pos)
   if start_point ~= end_point then
     for k = start_point,e_p do
       hills[i][j].note_num.pool[k] = hills[i][j].note_num.pool[pos]
+      hills[i][j].note_num.chord_degree[k] = util.wrap(hills[i][j].note_num.pool[k], 1, 7)
     end
   else
     print("this is the last note, can't change any more!")
@@ -298,6 +317,7 @@ m['static notes'] = function(i,j,start_point,end_point,pos)
   if start_point ~= end_point then
     for k = start_point,e_p do
       hills[i][j].note_num.pool[k] = hills[i][j].note_num.pool[pos]
+      hills[i][j].note_num.chord_degree[k] = util.wrap(hills[i][j].note_num.pool[k], 1, 7)
     end
   else
     print("this is the last note, can't change any more!")

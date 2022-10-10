@@ -4,6 +4,11 @@
 -- ____/\\\\\___/\_
 -- /\///_____/\\\__
 
+if tonumber(norns.version.update) < 220802 then
+  norns.script.clear()
+  norns.script.load('code/hills/lib/fail_state.lua')
+end
+
 kildare = include('kildare/lib/kildare')
 
 engine.name = "Kildare"
@@ -201,6 +206,7 @@ function init()
 
       hills[i][j].note_timestamp = {}
       hills[i][j].note_timedelta = {}
+      hills[i][j].mute = false
 
       construct(i,j,true)
 
@@ -235,7 +241,8 @@ function init()
         stop(i,true)
       end
       hills[i] = tab.load(_path.data.."hills/"..number.."/data/"..i..".txt")
-      -- TODO: this is temporary for performance loading...
+      -- // TODO: this is temporary for luck dragon performance loading...
+      -- shouldn't be needed for release.
       if hills[i].iter_pulses == nil then
         hills[i].iter_pulses = {}
         hills[i].iter_counter = {}
@@ -248,6 +255,12 @@ function init()
           end
         end
       end
+      for j = 1,8 do
+        if hills[i][j].mute == nil then
+          hills[i][j].mute = false
+        end
+      end
+      -- //
       if hills[i].active then
         stop(i,true)
       end
@@ -383,7 +396,7 @@ local function pass_data_into_storage(i,j,index,data)
   hills[i][j].note_timestamp[index] = data[2]
   hills[i][j].high_bound.note = #hills[i][j].note_num.pool
   hills[i][j].note_num.active[index] = true
-  hills[i][j].note_num.chord_degree[index] = 1
+  hills[i][j].note_num.chord_degree[index] = util.wrap(hills[i][j].note_num.pool[index], 1, 7)
   hills[i][j].note_velocity[index] = 127
 
   hills[i][j].sample_controls.loop[index] = false
@@ -506,7 +519,9 @@ stop = function(i,clock_synced_loop)
   seg.perf_led = true
   hills[i].active = false
   seg.iterated = true
-  seg.step = seg.note_timestamp[seg.low_bound.note] -- reset
+  if params:string('hill '..i..' reset at stop') == 'yes' then
+    seg.step = seg.note_timestamp[seg.low_bound.note] -- reset
+  end
   screen_dirty = true
   local ch = params:get("hill "..i.." MIDI note channel")
   local dev = params:get("hill "..i.." MIDI device")
@@ -545,6 +560,7 @@ end
 local function inject_data_into_storage(i,j,index,data)
   table.insert(hills[i][j].note_num.pool, index, data[1])
   table.insert(hills[i][j].note_timestamp, index, data[2])
+  table.insert(hills[i][j].note_num.chord_degree, index, util.wrap(data[1], 1, 7))
   hills[i][j].high_bound.note = #hills[i][j].note_num.pool
 end
 
@@ -668,7 +684,7 @@ pass_note = function(i,j,seg,note_val,index,destination)
               local target_voice = 'sample'..(i-7)
               local p_name = string.gsub(params:get_id(id),target_voice..'_','')
               prms.send_to_engine(target_voice,p_name,params:get(id))
-              -- print('reseeding non-adjusted value for sample voice', target_voice, j, index, id, p_name, check_prm)
+              print('reseeding non-adjusted value for sample voice', target_voice, j, index, id, p_name, check_prm)
             else
               local p_name = extract_voice_from_string(params:get_id(id))
               local sc_target = string.gsub(params:get_id(id),p_name..'_','')
@@ -754,14 +770,18 @@ pass_note = function(i,j,seg,note_val,index,destination)
         engine.set_voice_param(i,"carHz",midi_to_hz(played_note))
         if params:string("hill "..i.." kildare_chords") == 'yes' then
           local shell_notes = mu.generate_chord_scale_degree(
-            played_note,
+            -- played_note,
+            params:get('hill '..i..' base note'),
             params:string('hill '..i..' scale'),
-            -- params:get('hill '..i..' kildare_chord_degree'),
             hills[i][j].note_num.chord_degree[index],
+            -- util.wrap(hills[i][j].note_num.pool[index], 1, 7),
             true
           )
           engine.set_voice_param(i,"thirdHz",midi_to_hz(shell_notes[2]))
           engine.set_voice_param(i,"seventhHz",midi_to_hz(shell_notes[4]))
+        else
+          engine.set_voice_param(i,"thirdHz",midi_to_hz(played_note))
+          engine.set_voice_param(i,"seventhHz",midi_to_hz(played_note))
         end
       end
       engine.trig(i,hills[i][j].note_velocity[index])

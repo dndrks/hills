@@ -32,6 +32,13 @@ function grid_lib.pattern_execute(data)
     screen_dirty = true
     hills[data.x][data.y].perf_led = true
     grid_dirty = true
+  elseif data.event == 'start with reset' then
+    hills[data.x][data.y].index = hills[data.x][data.y].low_bound.note
+    hills[data.x][data.y].step = hills[data.x][data.y].note_timestamp[hills[data.x][data.y].index] -- reset
+    _a.start(data.x,data.y,true)
+    screen_dirty = true
+    hills[data.x][data.y].perf_led = true
+    grid_dirty = true
   elseif data.event == "stop" and hills[data.x][data.y].playmode == "momentary" then
     stop(data.x,true)
     active_voices[data.id][data.x] = false
@@ -304,7 +311,8 @@ function g.key(x,y,z)
             mods[modkeys[i]] = false
           end
         else
-          mods[modkeys[y]] = not mods[modkeys[y]]
+          mods[modkeys[y]] = z == 1 and true or false
+          -- mods[modkeys[y]] = not mods[modkeys[y]]
           if not mods["snapshots"] and not mods['playmode'] and not mods['copy'] then
             mod_held = mods[modkeys[y]]
           end
@@ -376,8 +384,57 @@ function g.key(x,y,z)
       end
     end
   elseif x > 1 and x <= number_of_hills+1 and mod_held then
-    if mods["alt"] and z == 1 and not mods.snapshots then
+    if mods["alt"] and z == 1 and not mods.snapshots and not mods.playmode then
+      if hills[x-1][y].playmode == 'latch' then
+        stop(x-1,true)
+      elseif params:string('hill '..(x-1)..' reset at stop') == 'no' then
+        hills[x-1][y].index = hills[x-1][y].low_bound.note
+        hills[x-1][y].step = hills[x-1][y].note_timestamp[hills[x-1][y].index] -- reset
+        _a.start(x-1,y,true)
+        hills[x-1].screen_focus = y
+        screen_dirty = true
+        hills[x-1][y].perf_led = true
+        grid_dirty = true
+        for i = 1,16 do
+          if grid_pattern[i].rec == 1 and grid_pattern[i].step == 0 then
+            grid_pattern[i]:rec_start()
+            if not grid_pattern[i].event[1] then
+              grid_pattern[i].event[1] = {}
+            end
+            local current_count = #grid_pattern[i].event[1]
+            grid_pattern[i].event[1][current_count+1] = {
+              ["event"] = "start with reset",
+              ["x"] = x-1,
+              ["y"] = y,
+              ["id"] = i
+            }
+          else
+            grid_pattern[i]:watch(
+              {
+                ["event"] = "start with reset",
+                ["x"] = x-1,
+                ["y"] = y,
+                ["id"] = i
+              }
+            )
+          end
+        end
+      end
+    elseif mods["alt"] and z == 0 and not mods.snapshots and not mods.playmode then
       stop(x-1,true)
+      if params:string("hill "..(x-1).." sample momentary") == "yes" then
+        _ca.stop_sample('sample'..params:get("hill "..(x-1).." sample slot"))
+      end
+      for i = 1,16 do
+        grid_pattern[i]:watch(
+          {
+            ["event"] = "stop",
+            ["x"] = x-1,
+            ["y"] = y,
+            ["id"] = i
+          }
+        )
+      end
     elseif mods["hill"] or mods["bound"] or mods["notes"] or mods["loop"] then
       ui.hill_focus = x-1
       hills[ui.hill_focus].screen_focus = y
@@ -392,7 +449,11 @@ function g.key(x,y,z)
           iter_link(iter_link_source[1],iter_link_source[2],x-1,y)
         end
       else
-        hills[x-1][y].playmode = hills[x-1][y].playmode == "momentary" and "latch" or "momentary"
+        if mods['alt'] then
+          hills[x-1][y].mute = not hills[x-1][y].mute
+        else
+          hills[x-1][y].playmode = hills[x-1][y].playmode == "momentary" and "latch" or "momentary"
+        end
       end
     elseif mods['playmode'] and z == 0 then
       if mods['playmode_extended'] then
@@ -647,10 +708,14 @@ function grid_redraw()
               end
             end
           else
-            if hills[i-1][j].playmode == "momentary" then
-              display_level = 4
+            if mods['alt'] then
+              display_level = hills[i-1][j].mute and 2 or 15
             else
-              display_level = 15
+              if hills[i-1][j].playmode == "momentary" then
+                display_level = 4
+              else
+                display_level = 15
+              end
             end
             g:led(i,j,display_level)
           end
