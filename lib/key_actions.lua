@@ -9,7 +9,11 @@ function key_actions.parse(n,z)
       local i = ui.hill_focus
       local j = hills[i].screen_focus
       if n == 1 then
-        key1_hold = true
+        if ui.control_set == 'edit' then
+          key1_hold = not key1_hold
+        else
+          key1_hold = true
+        end
       elseif n == 2 then
         if not key1_hold then
           if ui.control_set == "edit" or ui.control_set == 'play' then
@@ -56,9 +60,10 @@ function key_actions.parse(n,z)
                 _t.quantize(i,j,params:string("hill "..i.." quant value"),hills[i][j].low_bound.note,hills[i][j].high_bound.note)
               end
             elseif ui.menu_focus == 3 then
-              if _s.popup_focus[3] == 3 then
-                _t[s_c["notes"]["transform"]](i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note,s_c.notes.focus)
-              end
+              -- if _s.popup_focus[3] == 3 then
+              --   _t[s_c["notes"]["transform"]](i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note,s_c.notes.focus)
+              -- end
+              _t[s_c["notes"]["transform"]](i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note,s_c.notes.focus)
             elseif ui.menu_focus == 5 then
               _t[s_c["samples"]["transform"]](i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note,s_c.samples.focus,true)
             end
@@ -82,12 +87,15 @@ function key_actions.parse(n,z)
         end
       end
     elseif z == 0 then
-      if n == 1 then
+      if n == 1 and ui.control_set ~= 'edit' then
         key1_hold = false
       elseif n == 2 and not ignore_key2_up then
         if key2_hold == false then
           key2_hold_counter:stop()
           ui.control_set = ui.control_set ~= 'play' and 'play' or 'song'
+          if key1_hold and ui.control_set ~= 'edit' then
+            key1_hold = false
+          end
         else
           key2_hold = false
         end

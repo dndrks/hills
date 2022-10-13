@@ -450,9 +450,9 @@ function g.key(x,y,z)
         end
       else
         if mods['alt'] then
-          hills[x-1][y].mute = not hills[x-1][y].mute
-        else
           hills[x-1][y].playmode = hills[x-1][y].playmode == "momentary" and "latch" or "momentary"
+        else
+          hills[x-1][y].mute = not hills[x-1][y].mute
         end
       end
     elseif mods['playmode'] and z == 0 then
@@ -709,13 +709,13 @@ function grid_redraw()
             end
           else
             if mods['alt'] then
-              display_level = hills[i-1][j].mute and 2 or 15
-            else
               if hills[i-1][j].playmode == "momentary" then
                 display_level = 4
               else
                 display_level = 15
               end
+            else
+              display_level = hills[i-1][j].mute and 2 or 10
             end
             g:led(i,j,display_level)
           end

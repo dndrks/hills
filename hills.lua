@@ -43,10 +43,18 @@ _song = include 'lib/song'
 _ca = include 'lib/clip'
 _snapshots = include 'lib/snapshot'
 _fkprm = include 'lib/fkprm'
+_hsteps = include 'lib/highway_steps'
+_htracks = include 'lib/highway_tracks'
 mu = require 'musicutil'
 
 r = function()
   norns.script.load("code/hills/hills.lua")
+end
+
+draw_highway = function()
+  screen.clear()
+  _hsteps.draw_menu()
+  screen.update()
 end
 
 function grid.add(dev)
@@ -74,6 +82,10 @@ function init()
   _g.init()
   key1_hold = false
   key2_hold = false
+  _hsteps.init()
+  for i = 1,10 do
+    _htracks.init(i)
+  end
 
   key2_hold_counter = metro.init()
   key2_hold_counter.time = 0.25
@@ -119,6 +131,7 @@ function init()
 
     hills[i] = {}
     hills[i].mode = "iterate"
+    hills[i].highway = false
     hills[i].active = false
     hills[i].crow_change_queued = false
 
