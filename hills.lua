@@ -46,15 +46,19 @@ _fkprm = include 'lib/fkprm'
 _hsteps = include 'lib/highway_steps'
 _htracks = include 'lib/highway_tracks'
 mu = require 'musicutil'
+euclid = require 'er'
 
 r = function()
   norns.script.load("code/hills/hills.lua")
 end
 
-draw_highway = function()
-  screen.clear()
-  _hsteps.draw_menu()
-  screen.update()
+development_state = function()
+  song_atoms.transport_active = true
+  for i = 1,10 do
+    hills[i].highway = true
+  end
+  _htracks.sync_playheads()
+  screen_dirty = true
 end
 
 function grid.add(dev)
@@ -171,7 +175,6 @@ function init()
 
     for j = 1,8 do
       hills[i][j] = {}
-      hills[i][j].edit_position = 1
       hills[i][j].duration = util.round(clock.get_beat_sec() * 16,0.01)
       hills[i][j].eject = hills[i][j].duration
       hills[i][j].base_step = 0
@@ -401,6 +404,13 @@ function init()
     end
     -- snapshot_overwrite_mod = false
   end
+
+  clock.run(
+    function()
+      clock.sleep(0.25)
+      development_state()
+    end
+  )
 
 end
 
@@ -673,7 +683,8 @@ end
 pass_note = function(i,j,seg,note_val,index,destination)
   local midi_notes = hills[i][j].note_ocean
   local played_note = get_random_offset(i,midi_notes[note_val])
-  if played_note ~= nil and hills[i][j].note_num.active[index] then
+  if (played_note ~= nil and hills[i].highway == false and hills[i][j].note_num.active[index]) or
+    (played_note ~= nil and hills[i].highway == true) then
     -- per-step params //
     if i <= 10 then
       if check_subtables(i,j,index) then
@@ -782,12 +793,13 @@ pass_note = function(i,j,seg,note_val,index,destination)
       if params:string("hill "..i.." kildare_notes") == "yes" then
         engine.set_voice_param(i,"carHz",midi_to_hz(played_note))
         if params:string("hill "..i.." kildare_chords") == 'yes' then
+          local chord_target = hills[i].highway == false and hills[i][j].note_num.chord_degree[index] or track[i][j].chord_degrees[index]
           local shell_notes = mu.generate_chord_scale_degree(
             -- played_note,
             params:get('hill '..i..' base note'),
             params:string('hill '..i..' scale'),
-            hills[i][j].note_num.chord_degree[index],
-            -- util.wrap(hills[i][j].note_num.pool[index], 1, 7),
+            -- hills[i][j].note_num.chord_degree[index],  -- TODO: this won't always be hill-active...track-active!!
+            chord_target,
             true
           )
           engine.set_voice_param(i,"thirdHz",midi_to_hz(shell_notes[2]))
@@ -797,41 +809,45 @@ pass_note = function(i,j,seg,note_val,index,destination)
           engine.set_voice_param(i,"seventhHz",midi_to_hz(played_note))
         end
       end
-      engine.trig(i,hills[i][j].note_velocity[index])
+      local vel_target = hills[i].highway == false and hills[i][j].note_velocity[index] or track[i][j].velocities[index]
+      -- engine.trig(i,hills[i][j].note_velocity[index])  -- TODO: this won't always be hill-active...track-active!!
+      engine.trig(i,vel_target)
       if params:string("hill "..i.." sample output") == "yes" then
         if params:get("hill "..i.." sample probability") >= math.random(100) then
           local target = "sample"..params:get("hill "..i.." sample slot")
           if params:string(target..'_sampleMode') == 'chop' then
             local slice_count = params:get('hill '..i..' sample slice count') - 1
             local slice = util.wrap(played_note - params:get("hill "..i.." base note"),0,slice_count) + 1
-            _ca.play_slice(target,slice,hills[i][j].note_velocity[index],i,j,played_note)
+            _ca.play_slice(target,slice,vel_target,i,j,played_note)  -- TODO: this won't always be hill-active...track-active!!
           elseif params:string(target..'_sampleMode') == 'playthrough' then
-            _ca.play_through(target,hills[i][j].note_velocity[index],i,j,played_note)
+            _ca.play_through(target,vel_target,i,j,played_note)  -- TODO: this won't always be hill-active...track-active!!
           elseif params:string(target..'_sampleMode') == 'distribute' then
             local scaled_idx = util.round(sample_info[target].sample_count * (params:get('hill '..i..' sample distribution')/100))
             if scaled_idx ~= 0 then
               local idx = util.wrap(played_note - params:get("hill "..i.." base note"),0,scaled_idx-1) + 1
-              _ca.play_index(target,idx,hills[i][j].note_velocity[index],i,j,played_note) -- TODO: adjust for actual sample pool size
+               -- TODO: this won't always be hill-active...track-active!!:
+              _ca.play_index(target,idx,vel_target,i,j,played_note) -- TODO: adjust for actual sample pool size
             end
           end
         end
       end
     else
       -- TRIGGER SAMPLE
+      local vel_target = hills[i].highway == false and hills[i][j].note_velocity[index] or track[i][j].velocities[index]
       if params:string("hill "..i.." sample output") == "yes" then
         if params:get("hill "..i.." sample probability") >= math.random(100) then
           local target = "sample"..i-7
           if params:string(target..'_sampleMode') == 'chop' then
             local slice_count = params:get('hill '..i..' sample slice count') - 1
             local slice = util.wrap(played_note - params:get("hill "..i.." base note"),0,slice_count) + 1
-            _ca.play_slice(target,slice,hills[i][j].note_velocity[index],i,j,played_note)
+            _ca.play_slice(target,slice,vel_target,i,j,played_note)
           elseif params:string(target..'_sampleMode') == 'playthrough' then
-            _ca.play_through(target,hills[i][j].note_velocity[index],i,j,played_note)
+            _ca.play_through(target,vel_target,i,j,played_note)
           elseif params:string(target..'_sampleMode') == 'distribute' then
             local scaled_idx = util.round(sample_info[target].sample_count * (params:get('hill '..i..' sample distribution')/100))
             if scaled_idx ~= 0 then
               local idx = util.wrap(played_note - params:get("hill "..i.." base note"),0,scaled_idx-1) + 1
-              _ca.play_index(target,idx,hills[i][j].note_velocity[index],i,j,played_note) -- TODO: adjust for actual sample pool size
+              _ca.play_index(target,idx,vel_target,i,j,played_note) -- TODO: adjust for actual sample pool size
             end
           end
         end
@@ -945,8 +961,10 @@ end
 
 redraw = function()
   screen.clear()
-  if ui.control_set ~= "song" then
+  if ui.control_set ~= "song" and hills[ui.hill_focus].highway == false then
     _s.draw()
+  elseif ui.control_set ~= "song" and hills[ui.hill_focus].highway then
+    _hsteps.draw_menu()
   else
     if not key2_hold then
       _flow.draw_song_menu()

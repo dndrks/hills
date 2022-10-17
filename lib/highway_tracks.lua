@@ -6,6 +6,22 @@ track_clock = {}
 
 track_paste_style = 1
 
+local function wrap(n, min, max)
+  if max >= min then
+    local y = n
+    local d = max - min + 1
+    while y > max do
+      y = y - d
+    end
+    while y < min do
+      y = y + d
+    end
+    return y
+  else
+    error("max needs to be greater than min")
+  end
+end
+
 track_paramset = paramset.new()
 local track_retrig_lookup = 
 {
@@ -38,121 +54,145 @@ local track_retrig_lookup =
 
 function track_actions.init(target)
   track[target] = {}
-  track[target].playing = false
-  track[target].pause = false
-  track[target].hold = false
-  track[target].enabled = false
-  track[target].time = 1/4
-  track[target].step = 1
-  track[target].notes = {}
-  track[target].prob = {}
-  track[target].last_condition = true
-  track[target].conditional = {}
-  track[target].conditional.cycle = 0
-  track[target].conditional.A = {}
-  track[target].conditional.B = {}
-  track[target].conditional.mode = {}
-  track[target].conditional.retrig_clock = nil
-  track[target].conditional.retrig_count = {}
-  track[target].conditional.retrig_time = {}
-  track[target].focus = "main"
-  track[target].fill =
-  {
-    ["notes"] = {},
-    ["prob"] = {},
-    ["conditional"] = {["A"] = {}, ["B"] = {}, ["mode"] = {}, ["retrig_count"] = {}, ["retrig_time"] = {}}
-  }
-  for i = 1,128 do
-    track[target].prob[i] = 100
-    track[target].conditional.A[i] = 1
-    track[target].conditional.B[i] = 1
-    track[target].conditional.mode[i] = "A:B"
-    track[target].conditional.retrig_count[i] = 0
-    track_paramset:add_option("track_retrig_time_"..target.."_"..i,"",
-    {
-      "1/32",
-      "1/24",
-      "1/16",
-      "1/12",
-      "1/8",
-      "1/6",
-      "3/16",
-      "1/4",
-      "5/16",
-      "1/3",
-      "3/8",
-      "2/3",
-      "1/2",
-      "3/4",
-      "1",
-      "1.33",
-      "1.5",
-      "2",
-      "2.33",
-      "3",
-      "4",
-      "6",
-      "8",
-      "16",
-      "32"
-    },
-    8)
-    track_paramset:set_action("track_retrig_time_"..target.."_"..i, function(x)
-      track[target].conditional.retrig_time[i] = track_retrig_lookup[x]
-    end)
-
-    track_paramset:add_option("track_fill_retrig_time_"..target.."_"..i,"",
-    {
-      "1/32",
-      "1/24",
-      "1/16",
-      "1/12",
-      "1/8",
-      "1/6",
-      "3/16",
-      "1/4",
-      "5/16",
-      "1/3",
-      "3/8",
-      "2/3",
-      "1/2",
-      "3/4",
-      "1",
-      "1.33",
-      "1.5",
-      "2",
-      "2.33",
-      "3",
-      "4",
-      "6",
-      "8",
-      "16",
-      "32"
-    },
-    8)
-    track_paramset:set_action("track_fill_retrig_time_"..target.."_"..i, function(x)
-      track[target].fill.conditional.retrig_time[i] = track_retrig_lookup[x]
-    end)
-    track[target].conditional.retrig_time[i] = track_retrig_lookup[track_paramset:get("track_retrig_time_"..target.."_"..i)]
+  track[target].active_hill = 1
+  track[target].seed_prob = 100
+  for hill_count = 1,8 do
+    track[target][hill_count] = {}
+    track[target][hill_count].playing = false
+    track[target][hill_count].pause = false
+    track[target][hill_count].hold = false
+    track[target][hill_count].enabled = false
+    track[target][hill_count].time = 1/4
+    track[target][hill_count].step = 1
+    track[target][hill_count].ui_position = 1
+    track[target][hill_count].ui_page = 1
     
-    track[target].fill.prob[i] = 100
-    track[target].fill.conditional.A[i] = 1
-    track[target].fill.conditional.B[i] = 1
-    track[target].fill.conditional.mode[i] = "A:B"
-    track[target].fill.conditional.retrig_count[i] = 0
-    track[target].fill.conditional.retrig_time[i] = track_retrig_lookup[track_paramset:get("track_fill_retrig_time_"..target.."_"..i)]
-  end
+    track[target][hill_count].notes = {}
+    track[target][hill_count].chord_degrees = {}
+    track[target][hill_count].velocities = {}
+    track[target][hill_count].trigs = {}
+    track[target][hill_count].prob = {}
+    track[target][hill_count].last_condition = false
+    track[target][hill_count].conditional = {}
+    track[target][hill_count].conditional.cycle = 0
+    track[target][hill_count].conditional.A = {}
+    track[target][hill_count].conditional.B = {}
+    track[target][hill_count].conditional.mode = {}
+    track[target][hill_count].conditional.retrig_clock = nil
+    track[target][hill_count].conditional.retrig_count = {}
+    track[target][hill_count].conditional.retrig_time = {}
+    track[target][hill_count].focus = "main"
+    track[target][hill_count].fill =
+    {
+      ["notes"] = {},
+      ["chord_degrees"] = {},
+      ["velocities"] = {},
+      ["trigs"] = {},
+      ["prob"] = {},
+      ["conditional"] = {["A"] = {}, ["B"] = {}, ["mode"] = {}, ["retrig_count"] = {}, ["retrig_time"] = {}}
+    }
+    for i = 1,128 do
+      track[target][hill_count].notes[i] = 1
+      track[target][hill_count].chord_degrees[i] = 1
+      track[target][hill_count].velocities[i] = 127
+      track[target][hill_count].trigs[i] = false
+      track[target][hill_count].prob[i] = 100
+      track[target][hill_count].conditional.A[i] = 1
+      track[target][hill_count].conditional.B[i] = 1
+      track[target][hill_count].conditional.mode[i] = "A:B"
+      track[target][hill_count].conditional.retrig_count[i] = 0
+      track_paramset:add_option("track_retrig_time_"..target.."_"..hill_count..'_'..i,"",
+      {
+        "1/32",
+        "1/24",
+        "1/16",
+        "1/12",
+        "1/8",
+        "1/6",
+        "3/16",
+        "1/4",
+        "5/16",
+        "1/3",
+        "3/8",
+        "2/3",
+        "1/2",
+        "3/4",
+        "1",
+        "1.33",
+        "1.5",
+        "2",
+        "2.33",
+        "3",
+        "4",
+        "6",
+        "8",
+        "16",
+        "32"
+      },
+      8)
+      track_paramset:set_action("track_retrig_time_"..target.."_"..hill_count..'_'..i, function(x)
+        track[target][hill_count].conditional.retrig_time[i] = track_retrig_lookup[x]
+      end)
 
-  track[target].gate = {}
-  track[target].gate.active = false
-  track[target].gate.prob = 0
-  track[target].swing = 50
-  track[target].mode = "fwd"
-  track[target].start_point = 1
-  track[target].end_point = 16
-  track[target].down = 0
-  track[target].loop = true
-  track_clock[target] = clock.run(track_actions.iterate,target)
+      track_paramset:add_option("track_fill_retrig_time_"..target.."_"..hill_count..'_'..i,"",
+      {
+        "1/32",
+        "1/24",
+        "1/16",
+        "1/12",
+        "1/8",
+        "1/6",
+        "3/16",
+        "1/4",
+        "5/16",
+        "1/3",
+        "3/8",
+        "2/3",
+        "1/2",
+        "3/4",
+        "1",
+        "1.33",
+        "1.5",
+        "2",
+        "2.33",
+        "3",
+        "4",
+        "6",
+        "8",
+        "16",
+        "32"
+      },
+      8)
+      track_paramset:set_action("track_fill_retrig_time_"..target.."_"..hill_count..'_'..i, function(x)
+        track[target][hill_count].fill.conditional.retrig_time[i] = track_retrig_lookup[x]
+      end)
+      track[target][hill_count].conditional.retrig_time[i] = track_retrig_lookup[track_paramset:get("track_retrig_time_"..target.."_"..hill_count..'_'..i)]
+      
+      track[target][hill_count].fill.notes[i] = 1
+      track[target][hill_count].fill.chord_degrees[i] = 1
+      track[target][hill_count].fill.velocities[i] = 127
+      track[target][hill_count].fill.trigs[i] = false
+      track[target][hill_count].fill.prob[i] = 100
+      track[target][hill_count].fill.conditional.A[i] = 1
+      track[target][hill_count].fill.conditional.B[i] = 1
+      track[target][hill_count].fill.conditional.mode[i] = "A:B"
+      track[target][hill_count].fill.conditional.retrig_count[i] = 0
+      track[target][hill_count].fill.conditional.retrig_time[i] = track_retrig_lookup[track_paramset:get("track_fill_retrig_time_"..target.."_"..hill_count..'_'..i)]
+    end
+
+    track[target][hill_count].gate = {}
+    track[target][hill_count].gate.active = false
+    track[target][hill_count].gate.prob = 0
+    track[target][hill_count].swing = 50
+    track[target][hill_count].mode = "fwd"
+    track[target][hill_count].start_point = 1
+    track[target][hill_count].end_point = 16
+    track[target][hill_count].down = 0
+    track[target][hill_count].loop = true
+    if hill_count == track[target].active_hill then
+      track_clock[target] = clock.run(track_actions.iterate,target)
+    end
+  end
 end
 
 -- function track_actions.find_index(tab,el)
@@ -164,14 +204,15 @@ end
 -- end
 
 function track_actions.add(target, value)
-  if track[target].hold then
-    table.insert(track[target].notes, value)
-    track[target].end_point = #track[target].notes
+  local _active = track[target][track[target].active_hill]
+  if _active.hold then
+    table.insert(_active.notes, value)
+    _active.end_point = #_active.notes
   end
 end
 
 function track_actions.enable(target,state)
-  track[target].enabled = state
+  track[target][track[target].active_hill].enabled = state
 end
 
 function track_actions.toggle(state,target)
@@ -223,54 +264,62 @@ function track_actions.stop_playback(i)
   -- grid_dirty = true
 end
 
+function track_actions.sync_playheads()
+  for i = 1,10 do
+    track[i][track[i].active_hill].step = track[i][track[i].active_hill].start_point
+  end
+end
+
 function track_actions.iterate(target)
   while true do
-    clock.sync(track[target].time)
+    clock.sync(track[target][track[target].active_hill].time)
     track_actions.tick(target)
   end
 end
 
-function track_actions.tick(target,source)
-  if _song.transport_active then
-    local focused_set = track[target].focus == "main" and track[target] or track[target].fill
-    if tab.count(track[target].notes) > 0 then
-      if track[target].pause == false then
-        -- print(track[target].step, clock.get_beats(),track[1].notes[1])
-        if track[target].step == track[target].end_point and not track[target].loop then
-          track_actions.stop_playback(target)
-        else
-          if track[target].swing > 50 and track[target].step % 2 == 1 then
-            local base_time = (clock.get_beat_sec() * track[target].time)
-            local swung_time =  base_time*util.linlin(50,100,0,1,track[target].swing)
-            clock.run(function()
-              clock.sleep(swung_time)
-              track_actions.process(target)
-            end)
-          else
-            track_actions.process(target,source)
-          end
-          track[target].playing = true
-          grid_dirty = true
-        end
+function track_actions.tick(target,source) -- FIXME: shouldn't just trigger all voices all the time...
+  if song_atoms.transport_active then
+    local _active = track[target][track[target].active_hill]
+    local focused_set = _active.focus == "main" and _active or _active.fill
+    -- if tab.count(_active.notes) > 0 then
+    if _active.pause == false then
+      -- print(_active.step, clock.get_beats(),track[1].notes[1])
+      if _active.step == _active.end_point and not _active.loop then
+        track_actions.stop_playback(target)
       else
-        track[target].playing = false
+        if _active.swing > 50 and _active.step % 2 == 1 then
+          local base_time = (clock.get_beat_sec() * _active.time)
+          local swung_time =  base_time*util.linlin(50,100,0,1,_active.swing)
+          clock.run(function()
+            clock.sleep(swung_time)
+            track_actions.process(target)
+          end)
+        else
+          track_actions.process(target,source)
+        end
+        _active.playing = true
       end
     else
-      track[target].playing = false
+      _active.playing = false
     end
+    -- else
+    --   _active.playing = false
+    -- end
+    grid_dirty = true
   end
-  grid_dirty = true
 end
 
 function track_actions.prob_fill(target,s_p,e_p,value)
-  local focused_set = track[target].focus == "main" and track[target] or track[target].fill
+  local _active = track[target][track[target].active_hill]
+  local focused_set = _active.focus == "main" and _active or _active.fill
   for i = s_p,e_p do
     focused_set.prob[i] = value
   end
 end
 
-function track_actions.cond_fill(target,s_p,e_p,a_val,b_val) -- gets weird...
-  local focused_set = track[target].focus == "main" and track[target] or track[target].fill
+function track_actions.cond_fill(target,s_p,e_p,a_val,b_val) -- TODO: gets weird...
+  local _active = track[target][track[target].active_hill]
+  local focused_set = _active.focus == "main" and _active or _active.fill
   if b_val ~= "meta" then
     for i = s_p,e_p do
       focused_set.conditional.A[i] = a_val
@@ -285,20 +334,22 @@ function track_actions.cond_fill(target,s_p,e_p,a_val,b_val) -- gets weird...
 end
 
 function track_actions.retrig_fill(target,s_p,e_p,val,type)
-  local focused_set = track[target].focus == "main" and track[target] or track[target].fill
+  local _active = track[target][track[target].active_hill]
+  local focused_set = _active.focus == "main" and _active or _active.fill
   if type == "retrig_count" then
     for i = s_p,e_p do
       focused_set.conditional[type][i] = val
     end
   else
     for i = s_p,e_p do
-      track_paramset:set((track[target].focus == "main" and "track_retrig_time_" or "track_fill_retrig_time_")..target.."_"..i,val)
+      track_paramset:set((_active.focus == "main" and "track_retrig_time_" or "track_fill_retrig_time_")..target.."_"..track[target].active_hill..'_'..i,val)
     end
   end
 end
 
 function track_actions.fill(target,s_p,e_p,style)
-  local focused_set = track[target].focus == "main" and track[target] or track[target].fill
+  local _active = track[target][track[target].active_hill]
+  local focused_set = _active.focus == "main" and _active or _active.fill
   local snakes = 
   { 
       [1] = { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16 }
@@ -329,69 +380,71 @@ function track_actions.fill(target,s_p,e_p,style)
   elseif style == 11 then -- alt layer
 
   end
-  if not track[target].playing
-  and not track[target].pause
-  and not track[target].enabled
+  if not _active.playing
+  and not _active.pause
+  and not _active.enabled
   then
     track_actions.enable(target,true)
-    track[target].pause = true
-    track[target].hold = true
+    _active.pause = true
+    _active.hold = true
     grid_dirty = true
   end
   screen_dirty = true
 end
 
 function track_actions.copy(target)
+  local _active = track[target][track[target].active_hill]
   if track_clipboard == nil then
-    track_clipboard = mc.deep_copy(track[target])
+    track_clipboard = mc.deep_copy(_active)
     track_clipboard_bank_source = target
     track_clipboard_pad_source = page.tracks.seq_position[target]
-    track_clipboard_layer_source = track[target].focus
+    track_clipboard_layer_source = _active.focus
   end
 end
 
 function track_actions.paste(target,style)
+  local _active = track[target][track[target].active_hill]
   if track_clipboard ~= nil then
     if style == 1 then -- paste all
       for i = 1,128 do
-        track[target].notes[i] = track_clipboard.notes[i]
-        track[target].prob[i] = track_clipboard.prob[i]
-        track[target].conditional.A[i] = track_clipboard.conditional.A[i]
-        track[target].conditional.B[i] = track_clipboard.conditional.B[i]
-        track[target].conditional.mode[i] = track_clipboard.conditional.mode[i]
-        track[target].conditional.retrig_count[i] = track_clipboard.conditional.retrig_count[i]
+        _active.notes[i] = track_clipboard.notes[i]
+        _active.prob[i] = track_clipboard.prob[i]
+        _active.conditional.A[i] = track_clipboard.conditional.A[i]
+        _active.conditional.B[i] = track_clipboard.conditional.B[i]
+        _active.conditional.mode[i] = track_clipboard.conditional.mode[i]
+        _active.conditional.retrig_count[i] = track_clipboard.conditional.retrig_count[i]
         track_paramset:set("track_retrig_time_"..target.."_"..i,tab.key(track_retrig_lookup,track_clipboard.conditional.retrig_time[i]))
-        track[target].fill.notes[i] = track_clipboard.fill.notes[i]
-        track[target].fill.prob[i] = track_clipboard.fill.prob[i]
-        track[target].fill.conditional.A[i] = track_clipboard.fill.conditional.A[i]
-        track[target].fill.conditional.B[i] = track_clipboard.fill.conditional.B[i]
-        track[target].fill.conditional.mode[i] = track_clipboard.fill.conditional.mode[i]
-        track[target].fill.conditional.retrig_count[i] = track_clipboard.fill.conditional.retrig_count[i]
-        track_paramset:set("track_fill_retrig_time_"..target.."_"..i,tab.key(track_retrig_lookup,track_clipboard.fill.conditional.retrig_time[i]))
-        track[target].swing = track_clipboard.swing
-        track[target].mode = track_clipboard.mode
-        track[target].start_point = track_clipboard.start_point
-        track[target].end_point = track_clipboard.end_point
-        track[target].loop = track_clipboard.loop
+        _active.fill.notes[i] = track_clipboard.fill.notes[i]
+        _active.fill.prob[i] = track_clipboard.fill.prob[i]
+        _active.fill.conditional.A[i] = track_clipboard.fill.conditional.A[i]
+        _active.fill.conditional.B[i] = track_clipboard.fill.conditional.B[i]
+        _active.fill.conditional.mode[i] = track_clipboard.fill.conditional.mode[i]
+        _active.fill.conditional.retrig_count[i] = track_clipboard.fill.conditional.retrig_count[i]
+        track_paramset:set("track_fill_retrig_time_"..target.."_"..track[target].active_hill..'_'..i,tab.key(track_retrig_lookup,track_clipboard.fill.conditional.retrig_time[i]))
+        _active.swing = track_clipboard.swing
+        _active.mode = track_clipboard.mode
+        _active.start_point = track_clipboard.start_point
+        _active.end_point = track_clipboard.end_point
+        _active.loop = track_clipboard.loop
       end
     elseif style == 2 then -- paste individual
       local i = page.tracks.seq_position[target]
-      track[target].notes[i] = track_clipboard.notes[track_clipboard_pad_source]
-      track[target].prob[i] = track_clipboard.prob[track_clipboard_pad_source]
-      track[target].conditional.A[i] = track_clipboard.conditional.A[track_clipboard_pad_source]
-      track[target].conditional.B[i] = track_clipboard.conditional.B[track_clipboard_pad_source]
-      track[target].conditional.mode[i] = track_clipboard.conditional.mode[track_clipboard_pad_source]
-      track[target].conditional.retrig_count[i] = track_clipboard.conditional.retrig_count[track_clipboard_pad_source]
-      track_paramset:set("track_retrig_time_"..target.."_"..i,tab.key(track_retrig_lookup,track_clipboard.conditional.retrig_time[track_clipboard_pad_source]))
-      track[target].fill.notes[i] = track_clipboard.fill.notes[track_clipboard_pad_source]
-      track[target].fill.prob[i] = track_clipboard.fill.prob[track_clipboard_pad_source]
-      track[target].fill.conditional.A[i] = track_clipboard.fill.conditional.A[track_clipboard_pad_source]
-      track[target].fill.conditional.B[i] = track_clipboard.fill.conditional.B[track_clipboard_pad_source]
-      track[target].fill.conditional.mode[i] = track_clipboard.fill.conditional.mode[track_clipboard_pad_source]
-      track[target].fill.conditional.retrig_count[i] = track_clipboard.fill.conditional.retrig_count[track_clipboard_pad_source]
-      track_paramset:set("track_fill_retrig_time_"..target.."_"..i,tab.key(track_retrig_lookup,track_clipboard.fill.conditional.retrig_time[track_clipboard_pad_source]))
+      _active.notes[i] = track_clipboard.notes[track_clipboard_pad_source]
+      _active.prob[i] = track_clipboard.prob[track_clipboard_pad_source]
+      _active.conditional.A[i] = track_clipboard.conditional.A[track_clipboard_pad_source]
+      _active.conditional.B[i] = track_clipboard.conditional.B[track_clipboard_pad_source]
+      _active.conditional.mode[i] = track_clipboard.conditional.mode[track_clipboard_pad_source]
+      _active.conditional.retrig_count[i] = track_clipboard.conditional.retrig_count[track_clipboard_pad_source]
+      track_paramset:set("track_retrig_time_"..target.."_"..track[target].active_hill..'_'..i,tab.key(track_retrig_lookup,track_clipboard.conditional.retrig_time[track_clipboard_pad_source]))
+      _active.fill.notes[i] = track_clipboard.fill.notes[track_clipboard_pad_source]
+      _active.fill.prob[i] = track_clipboard.fill.prob[track_clipboard_pad_source]
+      _active.fill.conditional.A[i] = track_clipboard.fill.conditional.A[track_clipboard_pad_source]
+      _active.fill.conditional.B[i] = track_clipboard.fill.conditional.B[track_clipboard_pad_source]
+      _active.fill.conditional.mode[i] = track_clipboard.fill.conditional.mode[track_clipboard_pad_source]
+      _active.fill.conditional.retrig_count[i] = track_clipboard.fill.conditional.retrig_count[track_clipboard_pad_source]
+      track_paramset:set("track_fill_retrig_time_"..target.."_"..track[target].active_hill..'_'..i,tab.key(track_retrig_lookup,track_clipboard.fill.conditional.retrig_time[track_clipboard_pad_source]))
     elseif style == 3 then -- paste specific layer
-      local destination = track[target].focus == "main" and track[target] or track[target].fill
+      local destination = _active.focus == "main" and _active or _active.fill
       local source = track_clipboard_layer_source == "main" and track_clipboard or track_clipboard.fill
       for i = 1,128 do
         destination.notes[i] = source.notes[i]
@@ -401,13 +454,13 @@ function track_actions.paste(target,style)
         destination.conditional.mode[i] = source.conditional.mode[i]
         destination.conditional.retrig_count[i] = source.conditional.retrig_count[i]
         track_paramset:set(
-          (track[target].focus == "main" and "track_retrig_time_" or "track_fill_retrig_time_")
-          ..target.."_"..i,tab.key(track_retrig_lookup,track_clipboard.conditional.retrig_time[i]))
-        track[target].swing = track_clipboard.swing
-        track[target].mode = track_clipboard.mode
-        track[target].start_point = track_clipboard.start_point
-        track[target].end_point = track_clipboard.end_point
-        track[target].loop = track_clipboard.loop
+          (_active.focus == "main" and "track_retrig_time_" or "track_fill_retrig_time_")
+          ..target.."_"..track[target].active_hill..'_'..i,tab.key(track_retrig_lookup,track_clipboard.conditional.retrig_time[i]))
+        _active.swing = track_clipboard.swing
+        _active.mode = track_clipboard.mode
+        _active.start_point = track_clipboard.start_point
+        _active.end_point = track_clipboard.end_point
+        _active.loop = track_clipboard.loop
       end
     end
     track_clipboard = nil
@@ -417,41 +470,45 @@ function track_actions.paste(target,style)
 end
 
 function track_actions.process(target,source)
-  if track[target].step == nil then
+  local _active = track[target][track[target].active_hill]
+  if _active.step == nil then
     print("how is track step nil???")
-    track[target].step = track[target].start_point
+    _active.step = _active.start_point
   end
-  if track[target].mode == "fwd" then
+  if _active.mode == "fwd" then
     track_actions.forward(target)
-  elseif track[target].mode == "bkwd" then
+  elseif _active.mode == "bkwd" then
     track_actions.backward(target)
-  elseif track[target].mode == "pend" then
+  elseif _active.mode == "pend" then
     track_actions.pendulum(target)
-  elseif track[target].mode == "rnd" then
+  elseif _active.mode == "rnd" then
     track_actions.random(target)
   end
   if menu ~= 1 then screen_dirty = true end
-  track_actions.cheat(target,track[target].step,source)
+  track_actions.run(target,_active.step,source)
 end
 
 function track_actions.forward(target)
-  track[target].step = wrap(track[target].step + 1,track[target].start_point,track[target].end_point)
-  if track[target].step == track[target].start_point then
-    track[target].conditional.cycle = track[target].conditional.cycle + 1
+  local _active = track[target][track[target].active_hill]
+  _active.step = wrap(_active.step + 1,_active.start_point,_active.end_point)
+  if _active.step == _active.start_point then
+    _active.conditional.cycle = _active.conditional.cycle + 1
   end
 end
 
 function track_actions.backward(target)
-  track[target].step = wrap(track[target].step - 1,track[target].start_point,track[target].end_point)
-  if track[target].step == track[target].end_point then
-    track[target].conditional.cycle = track[target].conditional.cycle + 1
+  local _active = track[target][track[target].active_hill]
+  _active.step = wrap(_active.step - 1,_active.start_point,_active.end_point)
+  if _active.step == _active.end_point then
+    _active.conditional.cycle = _active.conditional.cycle + 1
   end
 end
 
-function track_actions.random(target)	
-  track[target].step = math.random(track[target].start_point,track[target].end_point)
-  if track[target].step == track[target].start_point or track[target].step == track[target].end_point then
-    track[target].conditional.cycle = track[target].conditional.cycle + 1
+function track_actions.random(target)
+  local _active = track[target][track[target].active_hill]
+  _active.step = math.random(_active.start_point,_active.end_point)
+  if _active.step == _active.start_point or _active.step == _active.end_point then
+    _active.conditional.cycle = _active.conditional.cycle + 1
   end
 end
 
@@ -462,37 +519,39 @@ for i = 1,3 do
 end
 
 function track_actions.pendulum(target)
-    if track_direction[target] == "positive" then
-        track[target].step = track[target].step + 1
-        if track[target].step > track[target].end_point then
-            track[target].step = track[target].end_point
-        end
-    elseif track_direction[target] == "negative" then
-        track[target].step = track[target].step - 1
-        if track[target].step == track[target].start_point - 1 then
-            track[target].step = track[target].start_point
-        end
+  local _active = track[target][track[target].active_hill]
+  if track_direction[target] == "positive" then
+    _active.step = _active.step + 1
+    if _active.step > _active.end_point then
+        _active.step = _active.end_point
     end
-    if track[target].step == track[target].end_point and track[target].step ~= track[target].start_point then
-      track_direction[target] = "negative"
-    elseif track[target].step == track[target].start_point then
-      track_direction[target] = "positive"
+  elseif track_direction[target] == "negative" then
+    _active.step = _active.step - 1
+    if _active.step == _active.start_point - 1 then
+        _active.step = _active.start_point
     end
+  end
+  if _active.step == _active.end_point and _active.step ~= _active.start_point then
+    track_direction[target] = "negative"
+  elseif _active.step == _active.start_point then
+    track_direction[target] = "positive"
+  end
 end
 
 function track_actions.check_prob(target,step)
-  if track[target].focus == "main" then
-    if track[target].prob[step] == 0 then
+  local _active = track[target][track[target].active_hill]
+  if _active.focus == "main" then
+    if _active.prob[step] == 0 then
       return false
-    elseif track[target].prob[step] >= math.random(1,100) then
+    elseif _active.prob[step] >= math.random(1,100) then
       return true
     else
       return false
     end
   else
-    if track[target].fill.prob[step] == 0 then
+    if _active.fill.prob[step] == 0 then
       return false
-    elseif track[target].fill.prob[step] >= math.random(1,100) then
+    elseif _active.fill.prob[step] >= math.random(1,100) then
       return true
     else
       return false
@@ -501,65 +560,66 @@ function track_actions.check_prob(target,step)
   
 end
 
-function track_actions.cheat(target,step,source)
-  if (track[target].focus == "main" and track[target].notes[step] ~= nil) or (track[target].focus == "fill" and track[target].fill.notes[step] ~= nil) then   
+function track_actions.run(target,step,source)
+  local _active = track[target][track[target].active_hill]
+  if (_active.focus == "main" and _active.trigs[step] == true) or (_active.focus == "fill" and _active.fill.trigs[step] == true) then   
     local should_happen = track_actions.check_prob(target,step)
     if should_happen then
       local A_step, B_step
-      if track[target].focus == "main" then
-        A_step = track[target].conditional.A[step]
-        B_step = track[target].conditional.B[step]
+      if _active.focus == "main" then
+        A_step = _active.conditional.A[step]
+        B_step = _active.conditional.B[step]
       else
-        A_step = track[target].fill.conditional.A[step]
-        B_step = track[target].fill.conditional.B[step]
+        A_step = _active.fill.conditional.A[step]
+        B_step = _active.fill.conditional.B[step]
       end
       -- print("should happen")
 
-      if track[target].conditional.mode[step] == "A:B" then
-        if track[target].conditional.cycle < A_step then
-          track[target].last_condition = false
-        elseif track[target].conditional.cycle == A_step then
+      if _active.conditional.mode[step] == "A:B" then
+        if _active.conditional.cycle < A_step then
+          _active.last_condition = false
+        elseif _active.conditional.cycle == A_step then
           track_actions.execute_step(target,step,source)
-        elseif track[target].conditional.cycle > A_step then
-          if track[target].conditional.cycle <= (A_step + B_step) then
-            if track[target].conditional.cycle % (A_step + B_step) == 0 then
+        elseif _active.conditional.cycle > A_step then
+          if _active.conditional.cycle <= (A_step + B_step) then
+            if _active.conditional.cycle % (A_step + B_step) == 0 then
               track_actions.execute_step(target,step,source)
             else
-              track[target].last_condition = false
-              -- grid_actions.kill_note(target,track[target].notes[wrap(step-1,track[target].start_point,track[target].end_point)])
+              _active.last_condition = false
+              -- grid_actions.kill_note(target,_active.notes[wrap(step-1,_active.start_point,_active.end_point)])
             end
           else
-            if (track[target].conditional.cycle - A_step) % B_step == 0 then
+            if (_active.conditional.cycle - A_step) % B_step == 0 then
               track_actions.execute_step(target,step,source)
             else
-              track[target].last_condition = false
-              -- grid_actions.kill_note(target,track[target].notes[wrap(step-1,track[target].start_point,track[target].end_point)])
+              _active.last_condition = false
+              -- grid_actions.kill_note(target,_active.notes[wrap(step-1,_active.start_point,_active.end_point)])
             end
           end
         end
-      elseif track[target].conditional.mode[step] == "PRE" then
-        if track[target].last_condition then
+      elseif _active.conditional.mode[step] == "PRE" then
+        if _active.last_condition then
           track_actions.execute_step(target,step,source)
         else
-          track[target].last_condition = false
+          _active.last_condition = false
         end
-      elseif track[target].conditional.mode[step] == "NOT PRE" then
-        if track[target].last_condition then
-          track[target].last_condition = false
+      elseif _active.conditional.mode[step] == "NOT PRE" then
+        if _active.last_condition then
+          _active.last_condition = false
         else
           track_actions.execute_step(target,step,source)
         end
-      elseif track[target].conditional.mode[step] == "NEI" then
-        local neighbors = {3,1,2}
-        if track[neighbors[target]].last_condition then
+      elseif _active.conditional.mode[step] == "NEI" then
+        local neighbors = {10,1,2,3,4,5,6,7,8,9}
+        if track[neighbors[target]][track[target].active_hill].last_condition then
           track_actions.execute_step(target,step,source)
         else
-          track[target].last_condition = false
+          _active.last_condition = false
         end
-      elseif track[target].conditional.mode[step] == "NOT NEI" then
-        local neighbors = {3,1,2}
-        if track[neighbors[target]].last_condition then
-          track[target].last_condition = false
+      elseif _active.conditional.mode[step] == "NOT NEI" then
+        local neighbors = {10,1,2,3,4,5,6,7,8,9}
+        if track[neighbors[target]][track[target].active_hill].last_condition then
+          _active.last_condition = false
         else
           track_actions.execute_step(target,step,source)
         end
@@ -567,15 +627,16 @@ function track_actions.cheat(target,step,source)
 
 
     else
-      track[target].last_condition = false
+      _active.last_condition = false
     end
   end
 end
 
 function track_actions.check_gate_prob(target)
-  if  track[target].gate.prob == 0 then
+  local _active = track[target][track[target].active_hill]
+  if  _active.gate.prob == 0 then
     return false
-  elseif track[target].gate.prob >= math.random(1,100) then
+  elseif _active.gate.prob >= math.random(1,100) then
     return true
   else
     return false
@@ -583,99 +644,113 @@ function track_actions.check_gate_prob(target)
 end
 
 function track_actions.execute_step(target,step,source)
+  local _active = track[target][track[target].active_hill]
   local focused_set = {}
-  if track[target].focus == "main" then
-    focused_set = track[target].notes
+  if _active.focus == "main" then
+    focused_set = _active.notes
   else
-    focused_set = track[target].fill.notes
+    focused_set = _active.fill.notes
   end
-  local last_pad = focused_set[wrap(step-1,track[target].start_point,track[target].end_point)]
-  bank[target].id = focused_set[step]
-  selected[target].x = (5*(target-1)+1)+(math.ceil(bank[target].id/4)-1)
-  if (bank[target].id % 4) ~= 0 then
-    selected[target].y = 9-(bank[target].id % 4)
-  else
-    selected[target].y = 5
-  end
-  -- print("should be this note.."..track[1].notes[1],clock.get_beats()) 
-  track_actions.resolve_step(target,step,last_pad)
+  local last_step = focused_set[wrap(step-1,_active.start_point,_active.end_point)]
+  -- print(target,last_step,wrap(step-1,_active.start_point,_active.end_point),step,focused_set[step])
+  track_actions.resolve_step(target, step, last_step)
 end
 
-function track_actions.resolve_step(target,step,last_pad)
+function track_actions.resolve_step(target, step, last_pad)
+  local _active = track[target][track[target].active_hill]
   local focused_set = {}
-  if track[target].focus == "main" then
-    focused_set = track[target].notes
+  if _active.focus == "main" then
+    focused_set = _active.notes
   else
-    focused_set = track[target].fill.notes
+    focused_set = _active.fill.notes
   end
   if last_pad ~= nil then
-    local next_pad = focused_set[wrap(step+1,track[target].start_point,track[target].end_point)]
-    cheat(target,bank[target].id)
+    local next_pad = focused_set[wrap(step+1,_active.start_point,_active.end_point)]
+    -- cheat(target,bank[target].id)
+    local i,j = target, track[target].active_hill
+    pass_note(
+      i,
+      j,
+      hills[i][j], -- seg
+      focused_set[step], -- note_val
+      step -- index
+    )
     track_actions.retrig_step(target,step)
     if next_pad == nil then
     end
   else
-    cheat(target,bank[target].id)
+    -- cheat(target,bank[target].id)
+    local i,j = target, track[target].active_hill
+    pass_note(
+      i,
+      j,
+      hills[i][j], -- seg
+      focused_set[step], -- note_val
+      step -- index
+    )
     track_actions.retrig_step(target,step)
-    local this_last_pad = focused_set[step]
   end
-  track[target].last_condition = true
+  _active.last_condition = true
 end
 
 function track_actions.retrig_step(target,step)
-  if track[target].conditional.retrig_clock ~= nil then
-    clock.cancel(track[target].conditional.retrig_clock)
+  local _active = track[target][track[target].active_hill]
+  if _active.conditional.retrig_clock ~= nil then
+    clock.cancel(_active.conditional.retrig_clock)
   end
-  local focused_set = {}
-  if track[target].focus == "main" then
-    focused_set = track[target].conditional
+  local focused_set, focused_notes = {}, {}
+  if _active.focus == "main" then
+    focused_set = _active.conditional
+    focused_notes = _active.notes
   else
-    focused_set = track[target].fill.conditional
+    focused_set = _active.fill.conditional
+    focused_notes = _active.fill.notes
   end
-  local base_time = (clock.get_beat_sec() * track[target].time)
-  local swung_time =  base_time*util.linlin(50,100,0,1,track[target].swing)
+  local base_time = (clock.get_beat_sec() * _active.time)
+  local swung_time =  base_time*util.linlin(50,100,0,1,_active.swing)
   if focused_set.retrig_count[step] > 0 then
-    track[target].conditional.retrig_clock = clock.run(
+    local i,j = target, track[target].active_hill
+    _active.conditional.retrig_clock = clock.run(
       function()
-        for i = 1,focused_set.retrig_count[step] do
-          clock.sleep(((clock.get_beat_sec() * track[target].time)*focused_set.retrig_time[step])+swung_time)
-          cheat(target,bank[target].id)
+        for retrigs = 1,focused_set.retrig_count[step] do
+          clock.sleep(((clock.get_beat_sec() * _active.time)*focused_set.retrig_time[step])+swung_time)
+          -- cheat(target,bank[target].id)
+          pass_note(
+            i,
+            j,
+            hills[i][j], -- seg
+            focused_notes[step], -- note_val
+            step -- index
+          )
         end
       end
     )
   end
 end
 
--- function track_actions.timed_note_off(target,pad)
---   clock.run(function()
---     clock.sleep(clock.get_beat_sec() * (track[target].time-(track[target].time/10)))
---     grid_actions.kill_note(target,pad)
---     -- print("killing", target, pad)
---   end)
--- end
-
 function track_actions.clear(target)
-  -- for k,v in pairs(track[target].notes) do
+  local _active = track[target][track[target].active_hill]
+  -- for k,v in pairs(_active.notes) do
   --   if tab.contains(held_keys[target],v) then
   --     -- print("////>"..v)
   --     grid_actions.kill_note(target,v)
   --   end
   -- end
   -- if params:string("track_"..target.."_hold_style") ~= "sequencer" then
-    track[target].playing = false
-    track[target].pause = false
-    track[target].hold = false
-    local focused_set = track[target].focus == "main" and track[target] or track[target].fill
+    _active.playing = false
+    _active.pause = false
+    _active.hold = false
+    local focused_set = _active.focus == "main" and track[target] or _active.fill
     focused_set.notes = {}
-    track[target].start_point = 1
-    track[target].end_point = 1
-    track[target].step = track[target].start_point
-    track[target].loop = true
+    _active.start_point = 1
+    _active.end_point = 1
+    _active.step = _active.start_point
+    _active.loop = true
     clock.cancel(track_clock[target])
     track_clock[target] = nil
     track_clock[target] = clock.run(track_actions.iterate,target)
   -- elseif params:string("track_"..target.."_hold_style") == "sequencer" then
-  --   local focused_set = track[target].focus == "main" and track[target] or track[target].fill
+  --   local focused_set = _active.focus == "main" and track[target] or _active.fill
   --   focused_set.notes = {}
   -- end
 end

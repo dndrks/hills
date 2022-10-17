@@ -15,6 +15,7 @@ function draw_popup(text)
 end
 
 screen_actions.popup_focus = {1,1,1,1,1}
+screen_actions.popup_focus.tracks = {1,1,1,1,1}
 
 function screen_actions.draw()
   local hf = ui.hill_focus

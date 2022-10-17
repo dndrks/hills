@@ -1,27 +1,26 @@
-local step_menu = {}
+local hway_ui = {}
 
-local _hway = step_menu
-local _hway_;
+local _hui;
 
 local snake_styles;
 
-function _hway.init()
+function hway_ui.init()
   
-  highway = {}
-  highway.focus = "seq" -- "params" or "seq"
-  highway.sel = 1
-  highway.alt = false
-  highway.param = 1
-  highway.seq_focus = "pattern"
-  highway.seq_position = {1,1,1,1,1,1,1,1,1,1}
-  highway.seq_page = {1,1,1,1,1,1,1,1,1,1}
-  highway.alt_view_sel = 1
-  highway.alt_fill_sel = 1
-  highway.fill = {}
-  highway.fill.start_point = {1,1,1,1,1,1,1,1,1,1}
-  highway.fill.end_point = {16,16,16,16,16,16,16,16,16,16}
-  highway.fill.snake = 1
-  _hway_ = highway
+  highway_ui = {}
+  highway_ui.focus = "seq" -- "params" or "seq"
+  highway_ui.sel = 1
+  highway_ui.hill_sel = 1
+  highway_ui.alt = false
+  highway_ui.param = 1
+  highway_ui.seq_position = {1,1,1,1,1,1,1,1,1,1}
+  highway_ui.seq_page = {1,1,1,1,1,1,1,1,1,1}
+  highway_ui.alt_view_sel = 1
+  highway_ui.alt_fill_sel = 1
+  highway_ui.fill = {}
+  highway_ui.fill.start_point = {1,1,1,1,1,1,1,1,1,1}
+  highway_ui.fill.end_point = {16,16,16,16,16,16,16,16,16,16}
+  highway_ui.fill.snake = 1
+  _hui = highway_ui
 
   snake_styles =
   {
@@ -38,10 +37,11 @@ function _hway.init()
   }
 end
 
-function _hway.draw_menu()
+function hway_ui.draw_menu()
 
   local hf = ui.hill_focus
   local h = hills[hf]
+  local _active = track[hf][h.screen_focus]
   screen.level(15)
   screen.move(0,10)
   screen.aa(1)
@@ -87,68 +87,79 @@ function _hway.draw_menu()
       end
 
       -- new drawing stuff //
-      local focus_arp = track[_hway_.sel]
-      local focused_set = track[_hway_.sel].focus == "main" and track[_hway_.sel] or track[_hway_.sel].fill
+      local focus_arp = _active
+      local focused_set = _active.focus == "main" and _active or _active.fill
       screen.move(0,10)
       screen.level(3)
-      -- screen.text("hway"..(focus_arp.focus == "fill" and ": FILL" or ""))
-      -- local header = {"bd","sd","tm","cp","rs","cb","hh",'s1','s2','s3'}
-      -- for i = 1,#header do
-      --   screen.level(_hway_.sel == i and 15 or 3)
-      --   screen.move(20+(i*15),10)
-      --   screen.text(header[i])
-      -- end
-      screen.level(_hway_.focus == "seq" and 8 or 0)
-      local e_pos = _hway_.seq_position[_hway_.sel]
-      -- screen.rect(2+(_hway.index_to_grid_pos(e_pos,8)[1]-1)*12,6+(10*_hway.index_to_grid_pos(e_pos,8)[2]),7,7)
-      screen.rect(41+(_hway.index_to_grid_pos(e_pos,8)[1]-1)*10,6+(10*_hway.index_to_grid_pos(e_pos,8)[2]),7,7)
+      screen.level(_hui.focus == "seq" and 8 or 0)
+      local e_pos = track[hf][h.screen_focus].ui_position
+      screen.rect(40+(hway_ui.index_to_grid_pos(e_pos,8)[1]-1)*10,7+(10*hway_ui.index_to_grid_pos(e_pos,8)[2]),9,7)
       screen.fill()
       local min_max = {{1,32},{33,64},{65,96},{97,128}}
       local lvl = 5
-      for i = min_max[_hway_.seq_page[_hway_.sel]][1], min_max[_hway_.seq_page[_hway_.sel]][2] do
-        if _hway_.seq_position[_hway_.sel] == i then
-          if track[_hway_.sel].step == i and track[_hway_.sel].playing then
-            lvl = _hway_.focus == "seq" and 5 or 4
+      for i = min_max[_hui.seq_page[hf]][1], min_max[_hui.seq_page[hf]][2] do
+        if e_pos == i then
+          if _active.step == i and _active.playing then
+            lvl = _hui.focus == "seq" and 5 or 4
           else
-            lvl = _hway_.focus == "seq" and 0 or 2
+            lvl = _hui.focus == "seq" and 0 or 2
           end
         else
-          if i <= track[_hway_.sel].end_point and i >= track[_hway_.sel].start_point then
-            if track[_hway_.sel].step == i then
-              lvl = _hway_.focus == "seq" and 15 or 4
+          if i <= _active.end_point and i >= _active.start_point then
+            if _active.step == i then
+              lvl = _hui.focus == "seq" and 15 or 4
             else
-              lvl = _hway_.focus == "seq" and 5 or 2
+              lvl = _hui.focus == "seq" and 5 or 2
             end
           else
             lvl = 0
           end
         end
         screen.level(lvl)
-        -- screen.move(5+(_hway.index_to_grid_pos(i,8)[1]-1)*12,12+(10*_hway.index_to_grid_pos(i,8)[2]))
-        screen.move(44+(_hway.index_to_grid_pos(i,8)[1]-1)*10,12+(10*_hway.index_to_grid_pos(i,8)[2]))
-        if highway.alt and _hway_.focus == "params" then
+        -- screen.move(5+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+        screen.move(44+(hway_ui.index_to_grid_pos(i,8)[1]-1)*10,13+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+
+        local display_step_data
+        if ui.menu_focus ~= 3 then
+          display_step_data = focused_set.trigs[i] == true and '|' or '-'
+        else
+          display_step_data = (focused_set.notes[i] ~= nil and focused_set.trigs[i] == true) and focused_set.notes[i] or '-'
+        end
+
+        if highway_ui.alt and _hui.focus == "params" then
           local first;
-          local second = focused_set.notes[i] ~= nil and focused_set.notes[i] or "-"
+          local second = display_step_data
           local third;
-          if _hway_.fill.start_point[_hway_.sel] == i then
+          if _hui.fill.start_point[_hui.sel] == i then
             first = "["
           else
             first = ""
           end
-          if _hway_.fill.end_point[_hway_.sel] == i then
+          if _hui.fill.end_point[_hui.sel] == i then
             third = "]"
           else
             third = ""
           end
           screen.text_center(first..second..third)
         else
-          screen.text_center(focused_set.notes[i] ~= nil and focused_set.notes[i] or "-")
+          screen.text_center(display_step_data)
         end
       end
-      screen.move(0,62)
+      screen.move(128,62)
       screen.level(3)
-      screen.text("p. ".._hway_.seq_page[_hway_.sel])
-      -- if not highway.alt then
+      screen.text_right(track[hf][h.screen_focus].ui_position..' / '..min_max[_hui.seq_page[hf]][1]..'-'..min_max[_hui.seq_page[hf]][2])
+
+      if ui.menu_focus == 2 then
+        local s_c = ui.screen_controls[_hui.sel][_hui.hill_sel]
+        screen.level(s_c["bounds"]["focus"] == 1 and 15 or 3)
+        screen.move(40,10)
+        screen.text("min: "..track[_hui.sel][hills[_hui.sel].screen_focus].start_point)
+        screen.level(s_c["bounds"]["focus"] == 1 and 3 or 15)
+        screen.move(120,10)
+        screen.text_right("max: "..track[_hui.sel][hills[_hui.sel].screen_focus].end_point)
+      end
+      
+      -- if not highway_ui.alt then
       --   if not key2_hold then
           
       --     local deci_to_frac =
@@ -165,31 +176,31 @@ function _hway.draw_menu()
       --     , ["4.0"] = "1"
       --     }
       --     screen.move(125,22)
-      --     screen.level(_hway_.focus == "params" and
-      --     (_hway_.param == 1 and 15 or 3)
+      --     screen.level(_hui.focus == "params" and
+      --     (_hui.param == 1 and 15 or 3)
       --     or 3)
       --     local banks = {"a","b","c"}
-      --     -- local pad = tostring(banks[_hway_.sel]..bank[_hway_.sel].id)
+      --     -- local pad = tostring(banks[_hui.sel]..bank[_hui.sel].id)
       --     local pad = 'nothing'
-      --     screen.text_right((_hway_.alt and (pad..": ") or "")..deci_to_frac[tostring(util.round(track[_hway_.sel].time, 0.0001))])
+      --     screen.text_right((_hui.alt and (pad..": ") or "")..deci_to_frac[tostring(util.round(_active.time, 0.0001))])
       --     screen.move(125,32)
-      --     screen.level(_hway_.focus == "params" and
-      --     (_hway_.param == 2 and 15 or 3)
+      --     screen.level(_hui.focus == "params" and
+      --     (_hui.param == 2 and 15 or 3)
       --     or 3)
       --     screen.text_right(focus_arp.mode)
       --     screen.move(125,42)
-      --     screen.level(_hway_.focus == "params" and
-      --     (_hway_.param == 3 and 15 or 3)
+      --     screen.level(_hui.focus == "params" and
+      --     (_hui.param == 3 and 15 or 3)
       --     or 3)
       --     screen.text_right("s: "..focus_arp.start_point)
       --     screen.move(125,52)
-      --     screen.level(_hway_.focus == "params" and
-      --     (_hway_.param == 4 and 15 or 3)
+      --     screen.level(_hui.focus == "params" and
+      --     (_hui.param == 4 and 15 or 3)
       --     or 3)
       --     screen.text_right("e: "..(focus_arp.end_point > 0 and focus_arp.end_point or "1"))
       --     screen.move(125,62)
-      --     screen.level(_hway_.focus == "params" and
-      --     (_hway_.param == 5 and 15 or 3)
+      --     screen.level(_hui.focus == "params" and
+      --     (_hui.param == 5 and 15 or 3)
       --     or 3)
       --     screen.text_right("swing: "..focus_arp.swing.."%")
     
@@ -202,7 +213,7 @@ function _hway.draw_menu()
       --     for i = 1,4 do
       --       screen.move(114,16+(i*10))
       --       screen.text(arp_clipboard ~= nil and letters[2][i] or letters[1][i])
-      --       -- screen.text(tab.count(focused_set.notes) > 0 and (track[_hway_.sel].playing and letters[2][i] or letters[1][i]) or letters[3][i])
+      --       -- screen.text(tab.count(focused_set.notes) > 0 and (_active.playing and letters[2][i] or letters[1][i]) or letters[3][i])
       --     end
       --     screen.font_size(8)
       --     if arp_clipboard ~= nil then
@@ -211,23 +222,23 @@ function _hway.draw_menu()
       --         screen.text(
       --           "E3: paste "
       --           ..("["..header[arp_clipboard_bank_source].."]")
-      --           .." to ["..header[_hway_.sel].."]"
+      --           .." to ["..header[_hui.sel].."]"
       --         )
       --       elseif arp_paste_style == 2 then
       --         screen.text(
       --           "E3: paste "
-      --           ..("["..header[arp_clipboard_bank_source]..arp_clipboard_pad_source.."] to ["..header[_hway_.sel].._hway_.seq_position[_hway_.sel].."]")
+      --           ..("["..header[arp_clipboard_bank_source]..arp_clipboard_pad_source.."] to ["..header[_hui.sel]..track[_hui.sel][_hui.hill_sel].ui_position.."]")
       --         )
       --       elseif arp_paste_style == 3 then
       --         local layer = arp_clipboard_layer_source == "main" and "" or ": F"
       --         screen.text(
       --           "E3: paste "
-      --           ..("["..header[arp_clipboard_bank_source]..layer.."] to ["..header[_hway_.sel]..(track[_hway_.sel].focus == "main" and "" or ": F").."]")
+      --           ..("["..header[arp_clipboard_bank_source]..layer.."] to ["..header[_hui.sel]..(_active.focus == "main" and "" or ": F").."]")
       --         )
       --       end
       --     end
       --   end
-      -- elseif highway.alt and _hway_.focus == "seq" then
+      -- elseif highway_ui.alt and _hui.focus == "seq" then
       --   if not key2_hold then
       --     screen.level(10)
       --     screen.rect(98,15,128,9)
@@ -235,25 +246,25 @@ function _hway.draw_menu()
       --     screen.level(0)
       --     screen.move(113,22)
       --     screen.text_center("TRIG")
-      --     screen.level(highway.alt_view_sel == 1 and 15 or 3)
+      --     screen.level(highway_ui.alt_view_sel == 1 and 15 or 3)
       --     screen.move(99,32)
-      --     screen.text("P: "..focused_set.prob[_hway_.seq_position[_hway_.sel]].."%")
-      --     screen.level(highway.alt_view_sel == 2 and 15 or 3)
+      --     screen.text("P: "..focused_set.prob[track[_hui.sel][_hui.hill_sel].ui_position].."%")
+      --     screen.level(highway_ui.alt_view_sel == 2 and 15 or 3)
       --     screen.move(99,42)
-      --     if focused_set.conditional.mode[_hway_.seq_position[_hway_.sel]] == "A:B" then
-      --       screen.text("C: "..focused_set.conditional.A[_hway_.seq_position[_hway_.sel]]..
+      --     if focused_set.conditional.mode[track[_hui.sel][_hui.hill_sel].ui_position] == "A:B" then
+      --       screen.text("C: "..focused_set.conditional.A[track[_hui.sel][_hui.hill_sel].ui_position]..
       --       ":"..
-      --       focused_set.conditional.B[_hway_.seq_position[_hway_.sel]])
+      --       focused_set.conditional.B[track[_hui.sel][_hui.hill_sel].ui_position])
       --     else
       --       local base, line_above;
-      --       if focused_set.conditional.mode[_hway_.seq_position[_hway_.sel]] == "NOT PRE" then
+      --       if focused_set.conditional.mode[track[_hui.sel][_hui.hill_sel].ui_position] == "NOT PRE" then
       --         base = "PRE"
       --         line_above = true
-      --       elseif focused_set.conditional.mode[_hway_.seq_position[_hway_.sel]] == "NOT NEI" then
+      --       elseif focused_set.conditional.mode[track[_hui.sel][_hui.hill_sel].ui_position] == "NOT NEI" then
       --         base = "NEI"
       --         line_above = true
       --       else
-      --         base = focused_set.conditional.mode[_hway_.seq_position[_hway_.sel]]
+      --         base = focused_set.conditional.mode[track[_hui.sel][_hui.hill_sel].ui_position]
       --         line_above = false
       --       end
       --       screen.text("C: "..base)
@@ -263,35 +274,35 @@ function _hway.draw_menu()
       --         screen.stroke()
       --       end
       --     end
-      --     screen.level(highway.alt_view_sel == 3 and 15 or 3)
+      --     screen.level(highway_ui.alt_view_sel == 3 and 15 or 3)
       --     screen.move(99,52)
-      --     screen.text("R: "..focused_set.conditional.retrig_count[_hway_.seq_position[_hway_.sel]].."x")
-      --     screen.level(highway.alt_view_sel == 4 and 15 or 3)
+      --     screen.text("R: "..focused_set.conditional.retrig_count[track[_hui.sel][_hui.hill_sel].ui_position].."x")
+      --     screen.level(highway_ui.alt_view_sel == 4 and 15 or 3)
       --     screen.move(99,62)
-      --     if track[_hway_.sel].focus == "main" then
-      --       screen.text("T: "..arp_paramset:string("arp_retrig_time_".._hway_.sel.."_".._hway_.seq_position[_hway_.sel]))
+      --     if _active.focus == "main" then
+      --       screen.text("T: "..arp_paramset:string("arp_retrig_time_".._hui.sel.."_"..track[_hui.sel][_hui.hill_sel].ui_position))
       --     else
-      --       screen.text("T: "..arp_paramset:string("arp_fill_retrig_time_".._hway_.sel.."_".._hway_.seq_position[_hway_.sel]))
+      --       screen.text("T: "..arp_paramset:string("arp_fill_retrig_time_".._hui.sel.."_"..track[_hui.sel][_hui.hill_sel].ui_position))
       --     end
       --     screen.level(15)
       --     screen.move(20,62)
-      --     if highway.alt_view_sel == 1 then
-      --       screen.text("K3: active -> "..focused_set.prob[_hway_.seq_position[_hway_.sel]].."%")
-      --     elseif highway.alt_view_sel == 2 then
-      --       if focused_set.conditional.mode[_hway_.seq_position[_hway_.sel]] == "A:B" then
-      --         screen.text("K3: active -> "..focused_set.conditional.A[_hway_.seq_position[_hway_.sel]]..
+      --     if highway_ui.alt_view_sel == 1 then
+      --       screen.text("K3: active -> "..focused_set.prob[track[_hui.sel][_hui.hill_sel].ui_position].."%")
+      --     elseif highway_ui.alt_view_sel == 2 then
+      --       if focused_set.conditional.mode[track[_hui.sel][_hui.hill_sel].ui_position] == "A:B" then
+      --         screen.text("K3: active -> "..focused_set.conditional.A[track[_hui.sel][_hui.hill_sel].ui_position]..
       --         ":"..
-      --         focused_set.conditional.B[_hway_.seq_position[_hway_.sel]])
+      --         focused_set.conditional.B[track[_hui.sel][_hui.hill_sel].ui_position])
       --       else
       --         local base, line_above;
-      --         if focused_set.conditional.mode[_hway_.seq_position[_hway_.sel]] == "NOT PRE" then
+      --         if focused_set.conditional.mode[track[_hui.sel][_hui.hill_sel].ui_position] == "NOT PRE" then
       --           base = "PRE"
       --           line_above = true
-      --         elseif focused_set.conditional.mode[_hway_.seq_position[_hway_.sel]] == "NOT NEI" then
+      --         elseif focused_set.conditional.mode[track[_hui.sel][_hui.hill_sel].ui_position] == "NOT NEI" then
       --           base = "NEI"
       --           line_above = true
       --         else
-      --           base = focused_set.conditional.mode[_hway_.seq_position[_hway_.sel]]
+      --           base = focused_set.conditional.mode[track[_hui.sel][_hui.hill_sel].ui_position]
       --           line_above = false
       --         end
       --         screen.text("K3: active -> "..base)
@@ -301,14 +312,14 @@ function _hway.draw_menu()
       --           screen.stroke()
       --         end
       --       end
-      --     elseif highway.alt_view_sel == 3 then
-      --       screen.text("K3: active -> "..focused_set.conditional.retrig_count[_hway_.seq_position[_hway_.sel]].."x")
-      --     elseif highway.alt_view_sel == 4 then
-      --       local focused_param = track[_hway_.sel].focus == "main" and "arp_retrig_time_" or "arp_fill_retrig_time_"
-      --       screen.text("K3: active -> "..arp_paramset:string(focused_param.._hway_.sel.."_".._hway_.seq_position[_hway_.sel]))
+      --     elseif highway_ui.alt_view_sel == 3 then
+      --       screen.text("K3: active -> "..focused_set.conditional.retrig_count[track[_hui.sel][_hui.hill_sel].ui_position].."x")
+      --     elseif highway_ui.alt_view_sel == 4 then
+      --       local focused_param = _active.focus == "main" and "arp_retrig_time_" or "arp_fill_retrig_time_"
+      --       screen.text("K3: active -> "..arp_paramset:string(focused_param.._hui.sel.."_"..track[_hui.sel][_hui.hill_sel].ui_position))
       --     end
       --   end
-      -- elseif highway.alt and _hway_.focus == "params" then
+      -- elseif highway_ui.alt and _hui.focus == "params" then
       --   if not key2_hold then
       --     screen.level(10)
       --     screen.rect(98,15,128,9)
@@ -316,31 +327,64 @@ function _hway.draw_menu()
       --     screen.level(0)
       --     screen.move(113,22)
       --     screen.text_center("FILL")
-      --     screen.level(highway.alt_fill_sel == 1 and 15 or 3)
+      --     screen.level(highway_ui.alt_fill_sel == 1 and 15 or 3)
       --     screen.move(99,32)
-      --     screen.text("s: ".._hway_.fill.start_point[_hway_.sel])
-      --     screen.level(highway.alt_fill_sel == 2 and 15 or 3)
+      --     screen.text("s: ".._hui.fill.start_point[_hui.sel])
+      --     screen.level(highway_ui.alt_fill_sel == 2 and 15 or 3)
       --     screen.move(99,42)
-      --     screen.text("e: ".._hway_.fill.end_point[_hway_.sel])
-      --     screen.level(highway.alt_fill_sel == 3 and 15 or 3)
+      --     screen.text("e: ".._hui.fill.end_point[_hui.sel])
+      --     screen.level(highway_ui.alt_fill_sel == 3 and 15 or 3)
       --     screen.move(99,52)
       --     screen.text("style:")
       --     screen.move(128,62)
-      --     screen.text_right(snake_styles[_hway_.fill.snake]..(snake_styles[_hway_.fill.snake] == "random @" and (" "..params:get("arp_"..highway.sel.."_rand_prob").."%") or ""))
+      --     screen.text_right(snake_styles[_hui.fill.snake]..(snake_styles[_hui.fill.snake] == "random @" and (" "..params:get("arp_"..highway_ui.sel.."_rand_prob").."%") or ""))
       --   end
       -- end
       -- // new drawing stuff
+
+      if key1_hold and ui.control_set == 'edit' then
+        if ui.menu_focus == 1 then
+          draw_popup("->")
+          screen.move(50,23)
+          screen.level(_s.popup_focus.tracks[hf] == 1 and 15 or 4)
+          local base, line_above;
+          if focused_set.conditional.mode[track[hf][h.screen_focus].ui_position] == "NOT PRE" then
+            base = "PRE"
+            line_above = true
+          elseif focused_set.conditional.mode[track[hf][h.screen_focus].ui_position] == "NOT NEI" then
+            base = "NEI"
+            line_above = true
+          else
+            base = focused_set.conditional.mode[track[hf][h.screen_focus].ui_position]
+            line_above = false
+          end
+          screen.text('CONDITION: '..base)
+          if line_above then
+            screen.move(97,17)
+            screen.line(base == "PRE" and 110 or 109,17)
+            screen.stroke()
+          end
+          screen.move(50,33)
+          screen.level(_s.popup_focus.tracks[hf] == 2 and 15 or 4)
+          screen.text('PROB: '..focused_set.prob[track[hf][h.screen_focus].ui_position]..'%')
+        end
+      end
+
     else
       _fkprm.redraw()
     end
   end
 end
 
-function _hway.process_key(n,z)
-  local focused_set = track[_hway_.sel].focus == "main" and track[_hway_.sel] or track[_hway_.sel].fill
+function hway_ui.process_key(n,z)
+  -- local _active = track[_hui.sel][track[track[_hui.sel]].active_hill]
+  local hf = ui.hill_focus
+  local h = hills[hf]
+  local _active = track[hf][h.screen_focus]
+  local focused_set = _active.focus == "main" and track[_hui.sel] or _active.fill
   if n == 1 then
     key1_hold = z == 1 and true or false
-    highway.alt = z == 1
+    highway_ui.alt = z == 1
     if z == 1 then
     end
   elseif n == 2 and z == 1 and not key1_hold then
@@ -358,39 +402,39 @@ function _hway.process_key(n,z)
       key2_hold_and_modify = false
     end
   elseif n == 3 and z == 1 and not key1_hold and not key2_hold then
-    _hway_.focus = _hway_.focus == "params" and "seq" or "params"
+    _hui.focus = _hui.focus == "params" and "seq" or "params"
   elseif n == 3 and z == 1 and key2_hold and not key1_hold then
-    -- if (params:string("arp_".._hway_.sel.."_hold_style") == "sequencer" and not track[_hway_.sel].playing)
-    -- or (params:string("arp_".._hway_.sel.."_hold_style") ~= "sequencer" and not track[_hway_.sel].playing and tab.count(focused_set.notes) > 0)
+    -- if (params:string("arp_".._hui.sel.."_hold_style") == "sequencer" and not _active.playing)
+    -- or (params:string("arp_".._hui.sel.."_hold_style") ~= "sequencer" and not _active.playing and tab.count(focused_set.notes) > 0)
     -- then
-    --   step.toggle("start",_hway_.sel)
-    -- elseif track[_hway_.sel].playing then
-    --   step.toggle("stop",_hway_.sel)
+    --   step.toggle("start",_hui.sel)
+    -- elseif _active.playing then
+    --   step.toggle("stop",_hui.sel)
     -- end
     if arp_clipboard == nil then
-      step.copy(_hway_.sel)
+      step.copy(_hui.sel)
     else
-      step.paste(_hway_.sel,arp_paste_style)
+      step.paste(_hui.sel,arp_paste_style)
     end
   elseif n == 3 and z == 1 and not key2_hold and key1_hold then
-    if _hway_.focus == "params" then
-      step.fill(_hway_.sel,_hway_.fill.start_point[_hway_.sel],_hway_.fill.end_point[_hway_.sel],highway.fill.snake)
-    elseif _hway_.focus == "seq" then
-      if _hway_.alt_view_sel == 1 then
-        step.prob_fill(_hway_.sel,track[_hway_.sel].start_point,track[_hway_.sel].end_point,focused_set.prob[_hway_.seq_position[_hway_.sel]])
-      elseif _hway_.alt_view_sel == 2 then
-        if focused_set.conditional.mode[_hway_.seq_position[_hway_.sel]] == "A:B" then
-          step.cond_fill(_hway_.sel,track[_hway_.sel].start_point,track[_hway_.sel].end_point,focused_set.conditional.A[_hway_.seq_position[_hway_.sel]],focused_set.conditional.B[_hway_.seq_position[_hway_.sel]])
+    if _hui.focus == "params" then
+      step.fill(_hui.sel,_hui.fill.start_point[_hui.sel],_hui.fill.end_point[_hui.sel],highway_ui.fill.snake)
+    elseif _hui.focus == "seq" then
+      if _hui.alt_view_sel == 1 then
+        step.prob_fill(_hui.sel,_active.start_point,_active.end_point,focused_set.prob[track[_hui.sel][_hui.hill_sel].ui_position])
+      elseif _hui.alt_view_sel == 2 then
+        if focused_set.conditional.mode[track[_hui.sel][_hui.hill_sel].ui_position] == "A:B" then
+          step.cond_fill(_hui.sel,_active.start_point,_active.end_point,focused_set.conditional.A[track[_hui.sel][_hui.hill_sel].ui_position],focused_set.conditional.B[track[_hui.sel][_hui.hill_sel].ui_position])
         else
-          step.cond_fill(_hway_.sel,track[_hway_.sel].start_point,track[_hway_.sel].end_point,focused_set.conditional.mode[_hway_.seq_position[_hway_.sel]],"meta")
+          step.cond_fill(_hui.sel,_active.start_point,_active.end_point,focused_set.conditional.mode[track[_hui.sel][_hui.hill_sel].ui_position],"meta")
         end
-      elseif _hway_.alt_view_sel == 3 then
-        step.retrig_fill(_hway_.sel,track[_hway_.sel].start_point,track[_hway_.sel].end_point,focused_set.conditional.retrig_count[_hway_.seq_position[_hway_.sel]],"retrig_count")
-      elseif _hway_.alt_view_sel == 4 then
-        if track[_hway_.sel].focus == "main" then
-          step.retrig_fill(_hway_.sel,track[_hway_.sel].start_point,track[_hway_.sel].end_point,arp_paramset:get("arp_retrig_time_".._hway_.sel.."_".._hway_.seq_position[_hway_.sel]),"retrig_time")
+      elseif _hui.alt_view_sel == 3 then
+        step.retrig_fill(_hui.sel,_active.start_point,_active.end_point,focused_set.conditional.retrig_count[track[_hui.sel][_hui.hill_sel].ui_position],"retrig_count")
+      elseif _hui.alt_view_sel == 4 then
+        if _active.focus == "main" then
+          step.retrig_fill(_hui.sel,_active.start_point,_active.end_point,arp_paramset:get("arp_retrig_time_".._hui.sel.."_"..track[_hui.sel][_hui.hill_sel].ui_position),"retrig_time")
         else
-          step.retrig_fill(_hway_.sel,track[_hway_.sel].start_point,track[_hway_.sel].end_point,arp_paramset:get("arp_fill_retrig_time_".._hway_.sel.."_".._hway_.seq_position[_hway_.sel]),"retrig_time")
+          step.retrig_fill(_hui.sel,_active.start_point,_active.end_point,arp_paramset:get("arp_fill_retrig_time_".._hui.sel.."_"..track[_hui.sel][_hui.hill_sel].ui_position),"retrig_time")
         end
       end
     end
@@ -399,18 +443,22 @@ function _hway.process_key(n,z)
   grid_dirty = true
 end
 
-function _hway.process_encoder(n,d)
-  local focused_set = track[_hway_.sel].focus == "main" and track[_hway_.sel] or track[_hway_.sel].fill
+function hway_ui.process_encoder(n,d)
+  -- local _active = track[_hui.sel][track[_hui.sel].active_hill]
+  local hf = ui.hill_focus
+  local h = hills[hf]
+  local _active = track[hf][h.screen_focus]
+  local focused_set = _active.focus == "main" and track[_hui.sel] or _active.fill
   if n == 1 then
-    _hway_.sel = util.clamp(_hway_.sel+d,1,3)
+    _hui.sel = util.clamp(_hui.sel+d,1,3)
   end
-  if _hway_.focus == "params" and not highway.alt then
+  if _hui.focus == "params" and not highway_ui.alt then
     if n == 2 then
-      _hway_.param = util.clamp(_hway_.param + d,1,5)
+      _hui.param = util.clamp(_hui.param + d,1,5)
     elseif n == 3 then
-      local id = _hway_.sel
-      local focus_arp = track[_hway_.sel]
-      if _hway_.param == 1 then
+      local id = _hui.sel
+      local focus_arp = track[_hui.sel]
+      if _hui.param == 1 then
         local deci_to_int =
         { ["0.125"] = 1 --1/32
         , ["0.1667"] = 2 --1/16T
@@ -432,7 +480,7 @@ function _hway.process_encoder(n,d)
           bank[id][i].arp_time = int_to_deci[working]
         end
         track[id].time = int_to_deci[working]
-      elseif _hway_.param == 2 then
+      elseif _hui.param == 2 then
         local dir_to_int =
         { ["fwd"] = 1
         , ["bkwd"] = 2
@@ -443,61 +491,61 @@ function _hway.process_encoder(n,d)
         dir = util.clamp(dir+d,1,4)
         local int_to_dir = {"fwd","bkwd","pend","rnd"}
         focus_arp.mode = int_to_dir[dir]
-      elseif _hway_.param == 3 then
+      elseif _hui.param == 3 then
         focus_arp.start_point = util.clamp(focus_arp.start_point+d,1,focus_arp.end_point)
-        _hway_.fill.start_point[_hway_.sel] = focus_arp.start_point
-      elseif _hway_.param == 4 then
+        _hui.fill.start_point[_hui.sel] = focus_arp.start_point
+      elseif _hui.param == 4 then
         focus_arp.end_point = util.clamp(focus_arp.end_point+d,focus_arp.start_point,128)
-        _hway_.fill.end_point[_hway_.sel] = focus_arp.end_point
-      elseif _hway_.param == 5 then
-        track[_hway_.sel].swing = util.clamp(track[_hway_.sel].swing+d,50,99)
+        _hui.fill.end_point[_hui.sel] = focus_arp.end_point
+      elseif _hui.param == 5 then
+        _active.swing = util.clamp(_active.swing+d,50,99)
       end
     end
-  elseif _hway_.focus == "params" and highway.alt then
+  elseif _hui.focus == "params" and highway_ui.alt then
     if n == 2 then
-      _hway_.alt_fill_sel = util.clamp(_hway_.alt_fill_sel+d,1,3)
+      _hui.alt_fill_sel = util.clamp(_hui.alt_fill_sel+d,1,3)
     elseif n == 3 then
-      if _hway_.alt_fill_sel == 1 then
-        _hway_.fill.start_point[_hway_.sel] = util.clamp(_hway_.fill.start_point[_hway_.sel]+d,1,_hway_.fill.end_point[_hway_.sel])
-      elseif _hway_.alt_fill_sel == 2 then
-        _hway_.fill.end_point[_hway_.sel] = util.clamp(_hway_.fill.end_point[_hway_.sel]+d,_hway_.fill.start_point[_hway_.sel],128)
-      elseif _hway_.alt_fill_sel == 3 then
-       _hway_.fill.snake = util.clamp(_hway_.fill.snake+d,1,#snake_styles)
+      if _hui.alt_fill_sel == 1 then
+        _hui.fill.start_point[_hui.sel] = util.clamp(_hui.fill.start_point[_hui.sel]+d,1,_hui.fill.end_point[_hui.sel])
+      elseif _hui.alt_fill_sel == 2 then
+        _hui.fill.end_point[_hui.sel] = util.clamp(_hui.fill.end_point[_hui.sel]+d,_hui.fill.start_point[_hui.sel],128)
+      elseif _hui.alt_fill_sel == 3 then
+       _hui.fill.snake = util.clamp(_hui.fill.snake+d,1,#snake_styles)
       end
     end
-  elseif _hway_.focus == "seq" then
+  elseif _hui.focus == "seq" then
     if n == 2 then
-      if not highway.alt then
-        _hway_.seq_position[_hway_.sel] = util.clamp(_hway_.seq_position[_hway_.sel]+d,1,128)
-        _hway_.seq_page[_hway_.sel] = math.ceil(_hway_.seq_position[_hway_.sel]/32)
+      if not highway_ui.alt then
+        track[_hui.sel][_hui.hill_sel].ui_position = util.clamp(track[_hui.sel][_hui.hill_sel].ui_position+d,1,128)
+        _hui.seq_page[_hui.sel] = math.ceil(track[_hui.sel][_hui.hill_sel].ui_position/32)
       else
-        _hway_.alt_view_sel = util.clamp(_hway_.alt_view_sel+d,1,4)
+        _hui.alt_view_sel = util.clamp(_hui.alt_view_sel+d,1,4)
       end
     elseif n == 3 then
-      if not highway.alt then
+      if not highway_ui.alt then
         if key2_hold then
           arp_paste_style = util.clamp(arp_paste_style+d,1,3)
         else
-          local current = focused_set.notes[_hway_.seq_position[_hway_.sel]]
+          local current = focused_set.notes[track[_hui.sel][_hui.hill_sel].ui_position]
           if current == nil then current = 0 end
           current = util.clamp(current+d,0,16)
           if current == 0 then current = nil end
-          focused_set.notes[_hway_.seq_position[_hway_.sel]] = current
-          _hway.check_for_first_touch()
+          focused_set.notes[track[_hui.sel][_hui.hill_sel].ui_position] = current
+          hway_ui.check_for_first_touch()
         end
       else
-        local current = _hway_.seq_position[_hway_.sel]
-        if _hway_.alt_view_sel == 1 then
+        local current = track[_hui.sel][_hui.hill_sel].ui_position
+        if _hui.alt_view_sel == 1 then
           focused_set.prob[current] = util.clamp(focused_set.prob[current]+d,0,100)
-        elseif _hway_.alt_view_sel == 2 then
-          _hway.cycle_conditional(_hway_.sel,current,d)
-        elseif _hway_.alt_view_sel == 3 then
-          _hway.cycle_retrig_count(_hway_.sel,current,d)
-        elseif _hway_.alt_view_sel == 4 then
-          if track[_hway_.sel].focus == "main" then
-            arp_paramset:delta("arp_retrig_time_".._hway_.sel.."_"..current,d)
+        elseif _hui.alt_view_sel == 2 then
+          hway_ui.cycle_conditional(_hui.sel,current,d)
+        elseif _hui.alt_view_sel == 3 then
+          hway_ui.cycle_retrig_count(_hui.sel,current,d)
+        elseif _hui.alt_view_sel == 4 then
+          if _active.focus == "main" then
+            arp_paramset:delta("arp_retrig_time_".._hui.sel.."_"..current,d)
           else
-            arp_paramset:delta("arp_fill_retrig_time_".._hway_.sel.."_"..current,d)
+            arp_paramset:delta("arp_fill_retrig_time_".._hui.sel.."_"..current,d)
           end
         end
       end
@@ -508,7 +556,7 @@ end
 
 local conditional_modes = {"NOT NEI","NEI","NOT PRE","PRE","A:B"}
 
-function _hway.cycle_conditional(target,step,d)
+function hway_ui.cycle_conditional(target,step,d)
   local focused_set = track[target].focus == "main" and track[target] or track[target].fill
   if d > 0 then
     if focused_set.conditional.mode[step] == "A:B" then
@@ -548,51 +596,56 @@ function _hway.cycle_conditional(target,step,d)
   end
 end
 
-function _hway.cycle_retrig_count(target,step,d)
+function hway_ui.cycle_retrig_count(target,step,d)
   local focused_set = track[target].focus == "main" and track[target] or track[target].fill
   focused_set.conditional.retrig_count[step] = util.clamp(focused_set.conditional.retrig_count[step]+d,0,128)
 end
 
-function _hway.check_for_first_touch()
-  local focused_set = track[_hway_.sel].focus == "main" and track[_hway_.sel] or track[_hway_.sel].fill
+function hway_ui.check_for_first_touch()
+  -- local _active = track[_hui.sel][track[_hui.sel].active_hill]
+  local hf = ui.hill_focus
+  local h = hills[hf]
+  local _active = track[hf][h.screen_focus]
+  local focused_set = _active.focus == "main" and track[_hui.sel] or _active.fill
   if tab.count(focused_set.notes) == 1
-  and not track[_hway_.sel].playing
-  and not track[_hway_.sel].pause
-  and not track[_hway_.sel].enabled
+  and not _active.playing
+  and not _active.pause
+  and not _active.enabled
   then
-    step.enable(_hway_.sel,true)
-    track[_hway_.sel].pause = true
-    track[_hway_.sel].hold = true
+    step.enable(_hui.sel,true)
+    _active.pause = true
+    _active.hold = true
     grid_dirty = true
   end
 end
 
-function _hway.index_to_grid_pos(val,columns)
+function hway_ui.index_to_grid_pos(val,columns)
   local x = math.fmod(val-1,columns)+1
   local y = math.modf((val-1)/columns)+1
-  return {x,y-(4*(_hway_.seq_page[_hway_.sel]-1))}
+  return {x,y-(4*(_hui.seq_page[_hui.sel]-1))}
 end
 
--- function _hway.fill(style)
+-- function hway_ui.fill(style)
+-- local _active = track[_hui.sel][track[_hui.sel].active_hill]
 --   if style ~= "random" then
---     for i = track[_hway_.sel].start_point,track[_hway_.sel].end_point do
---       track[_hway_.sel].notes[i] = snakes[style][wrap(i,1,16)]
+--     for i = _active.start_point,_active.end_point do
+--       _active.notes[i] = snakes[style][wrap(i,1,16)]
 --     end
 --   else
---     for i = track[_hway_.sel].start_point,track[_hway_.sel].end_point do
---       track[_hway_.sel].notes[i] = math.random(1,16)
+--     for i = _active.start_point,_active.end_point do
+--       _active.notes[i] = math.random(1,16)
 --     end
 --   end
---   if not track[_hway_.sel].playing
---   and not track[_hway_.sel].pause
---   and not track[_hway_.sel].enabled
+--   if not _active.playing
+--   and not _active.pause
+--   and not _active.enabled
 --   then
---     step.enable(_hway_.sel,true)
---     track[_hway_.sel].pause = true
---     track[_hway_.sel].hold = true
+--     step.enable(_hui.sel,true)
+--     _active.pause = true
+--     _active.hold = true
 --     grid_dirty = true
 --   end
 --   screen_dirty = true
 -- end
 
-return step_menu
+return hway_ui

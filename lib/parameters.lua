@@ -55,8 +55,18 @@ function parameters.init()
 
   params:add_separator('hills_main_header', 'hills')
   for i = 1,number_of_hills do
-    params:add_group('hill_'..i..'_group', hill_names[i], i > 7 and 62 or 65)
+    params:add_group('hill_'..i..'_group', hill_names[i], i > 7 and 64 or 67)
 
+    params:add_separator('hill_'..i..'_highway_header', 'mode')
+    params:add_option('hill_'..i..'_highway', 'mode', {'hill','highway'}, 1)
+    params:set_action('hill_'..i..'_highway', function(x)
+      if x == 1 then
+        hills[i].highway = false
+      else
+        hills[i].highway = true
+      end
+      screen_dirty = true
+    end)
     params:add_separator('hill_'..i..'_note_header', "note management "..hill_names[i])
     params:add_option("hill "..i.." scale","scale",scale_names,1)
     params:set_action("hill "..i.." scale",
