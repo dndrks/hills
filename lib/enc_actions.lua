@@ -73,8 +73,7 @@ function enc_actions.parse(n,d)
         elseif hills[i].highway then
           if ui.menu_focus == 1 then
             if key1_hold then
-              local upper_limit = track[i][j].conditional.retrig_count[track[i][j].ui_position] > 0 and 4 or 3
-              _s.popup_focus.tracks[i][1] = util.clamp(_s.popup_focus.tracks[i][1] + d, 1,upper_limit)
+              _s.popup_focus.tracks[i][1] = util.clamp(_s.popup_focus.tracks[i][1] + d, 1, 4)
             else
               enc_actions.delta_track_pos(i,j,d)
             end
@@ -88,7 +87,11 @@ function enc_actions.parse(n,d)
               end
             end
           elseif ui.menu_focus == 3 then
-            enc_actions.delta_track_pos(i,j,d)
+            if key1_hold then
+              _s.popup_focus.tracks[i][3] = util.clamp(_s.popup_focus.tracks[i][3] + d, 1, 2)
+            else
+              enc_actions.delta_track_pos(i,j,d)
+            end
           end
         end
       elseif ui.control_set == "seq" then
@@ -182,9 +185,9 @@ function enc_actions.parse(n,d)
             end
           end
         elseif hills[i].highway then
+          local _pos = track[i][j].ui_position
           if ui.menu_focus == 1 then
             if ui.control_set == 'edit' then
-              local _pos = track[i][j].ui_position
               if key1_hold then
                 if _s.popup_focus.tracks[i][1] == 1 then
                   _hsteps.cycle_conditional(i,j,_pos,d)
@@ -230,7 +233,14 @@ function enc_actions.parse(n,d)
               end
             end
           elseif ui.menu_focus == 3 and ui.control_set == 'edit' then
-            _t.track_transpose(i,j,track[i][j].ui_position,d)
+            if key1_hold then
+              if _s.popup_focus.tracks[i][3] == 1 then
+              elseif _s.popup_focus.tracks[i][3] == 2 then
+                _hsteps.cycle_chord_degrees(i,j,_pos,d)
+              end
+            else
+              _t.track_transpose(i,j,track[i][j].ui_position,d)
+            end
           end
         end
       elseif ui.control_set == "seq" then

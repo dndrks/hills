@@ -455,12 +455,12 @@ function hway_ui.draw_menu()
       -- // new drawing stuff
 
       if key1_hold and ui.control_set == 'edit' then
+        local current_step = track[hf][h.screen_focus].ui_position
         if ui.menu_focus == 1 then
           draw_popup("->")
           screen.move(40,20)
           screen.level(_s.popup_focus.tracks[hf][1] == 1 and 15 or 4)
           local base, line_above;
-          local current_step = track[hf][h.screen_focus].ui_position
           if focused_set.conditional.mode[current_step] == "NOT PRE" then
             base = "PRE"
             line_above = true
@@ -487,12 +487,9 @@ function hway_ui.draw_menu()
           screen.level(_s.popup_focus.tracks[hf][1] == 3 and 15 or 4)
           screen.text('RETRIG: '..focused_set.conditional.retrig_count[current_step]..'x')
           screen.level(_s.popup_focus.tracks[hf][1] == 4 and 15 or 4)
-          local show_time = _active.conditional.retrig_count[current_step] > 0 and true or false
-          if show_time then
-            local get_string = _active.focus == 'main' and ('track_retrig_time_'..hf..'_'..h.screen_focus..'_'..current_step) or ('track_fill_retrig_time_'..hf..'_'..h.screen_focus..'_'..current_step)
-            screen.move(93,40)
-            screen.text('('..track_paramset:string(get_string)..')')
-          end
+          local get_string = _active.focus == 'main' and ('track_retrig_time_'..hf..'_'..h.screen_focus..'_'..current_step) or ('track_fill_retrig_time_'..hf..'_'..h.screen_focus..'_'..current_step)
+          screen.move(93,40)
+          screen.text('('..track_paramset:string(get_string)..')')
         elseif ui.menu_focus == 2 then
           draw_popup(norns.state.path..'img/bolt.png',6,17)
           screen.move(15,20)
@@ -510,6 +507,20 @@ function hway_ui.draw_menu()
           screen.move(55,50)
           screen.level(_s.popup_focus.tracks[hf][2] == 4 and 15 or 4)
           screen.text('GENERATE (K3)')
+        elseif ui.menu_focus == 3 then
+          draw_popup(norns.state.path..'img/keys.png',6,17)
+          screen.move(55,20)
+          screen.level(_s.popup_focus.tracks[hf][3] == 1 and 15 or 4)
+          screen.text('VELOCITY: '..focused_set.velocities[current_step])
+          screen.move(55,30)
+          screen.level(_s.popup_focus.tracks[hf][3] == 2 and 15 or 4)
+          screen.text('CHORD DEG: '..focused_set.chord_degrees[current_step])
+          -- screen.move(55,40)
+          -- screen.level(_s.popup_focus.tracks[hf][2] == 3 and 15 or 4)
+          -- screen.text('SHIFT: '..focused_set.er.shift)
+          -- screen.move(55,50)
+          -- screen.level(_s.popup_focus.tracks[hf][2] == 4 and 15 or 4)
+          -- screen.text('GENERATE (K3)')
         end
       end
 
@@ -768,6 +779,12 @@ function hway_ui.cycle_er_param(prm,i,j,d)
   elseif prm == 'shift' then
     focused_set.er[prm] = util.clamp(focused_set.er[prm] + d, -128, 128)
   end
+end
+
+function hway_ui.cycle_chord_degrees(i,j,step,d)
+  local _active = track[i][j]
+  local focused_set = _active.focus == 'main' and _active or _active.fill
+  focused_set.chord_degrees[step] = util.clamp(focused_set.chord_degrees[step] + d, 1, 7)
 end
 
 function hway_ui.check_for_first_touch()
