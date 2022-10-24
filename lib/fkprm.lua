@@ -19,6 +19,20 @@ m.reset = function()
   m.group = false
 end
 
+m.flip_to_fkprm = function(prev_page)
+  if ui.menu_focus == 1 or ui.menu_focus == 3 then
+    m.voice_focus = ui.hill_focus
+    m.hill_focus = hills[ui.hill_focus].screen_focus
+    if hills[ui.hill_focus].highway then
+      m.step_focus = track[m.voice_focus][m.hill_focus].ui_position
+    else
+      m.step_focus = ui.screen_controls[m.voice_focus][m.hill_focus][ui.menu_focus == 1 and 'hills' or 'notes'].focus
+    end
+  end
+  pre_step_page = prev_page
+  ui.control_set = 'step parameters'
+end
+
 local function build_page()
   page = {}
   local ignore_range = {params.lookup['kildare_st_header'], params.lookup['kildare_st_preload']}
@@ -65,6 +79,7 @@ m.key = function(n,z)
       key2_hold = false
     end
   elseif n==3 and z==1 and key1_hold then
+    m:force(page[m.pos+1], m.voice_focus, m.hill_focus, m.step_focus)
   elseif n==3 and z==1 then
     if t == params.tGROUP then
       build_sub(i)
@@ -108,7 +123,11 @@ m.enc = function(n,d)
     elseif n == 1 then
       local i = m.voice_focus
       local j = m.hill_focus
-      m.step_focus = util.clamp(m.step_focus+d,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
+      if hills[i].highway then
+        m.step_focus = util.clamp(m.step_focus+d,1,128)
+      else
+        m.step_focus = util.clamp(m.step_focus+d,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
+      end
     end
   else
     if n == 2 then
@@ -118,35 +137,38 @@ m.enc = function(n,d)
         m.voice_focus = util.clamp(m.voice_focus+d,1,10)
         local i = m.voice_focus
         local j = m.hill_focus
-        if m.step_focus < hills[i][j].low_bound.note then
-          m.step_focus = hills[i][j].low_bound.note
-        elseif m.step_focus > hills[i][j].high_bound.note then
-          m.step_focus = hills[i][j].high_bound.note
+        local low_bound = hills[i].highway == true and 1 or hills[i][j].low_bound.note
+        local high_bound = hills[i].highway == true and 128 or hills[i][j].high_bound.note
+        if m.step_focus < low_bound then
+          m.step_focus = low_bound
+        elseif m.step_focus > high_bound then
+          m.step_focus = high_bound
         end
       elseif m.alt_menu_focus == 2 then
         m.hill_focus = util.clamp(m.hill_focus+d,1,8)
         local i = m.voice_focus
         local j = m.hill_focus
-        if m.step_focus < hills[i][j].low_bound.note then
-          m.step_focus = hills[i][j].low_bound.note
-        elseif m.step_focus > hills[i][j].high_bound.note then
-          m.step_focus = hills[i][j].high_bound.note
+        local low_bound = hills[i].highway == true and 1 or hills[i][j].low_bound.note
+        local high_bound = hills[i].highway == true and 128 or hills[i][j].high_bound.note
+        if m.step_focus < low_bound then
+          m.step_focus = low_bound
+        elseif m.step_focus > high_bounde then
+          m.step_focus = high_bound
         end
       elseif m.alt_menu_focus == 3 then
         local i = m.voice_focus
         local j = m.hill_focus
-        m.step_focus = util.clamp(m.step_focus+d,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
+        local low_bound = hills[i].highway == true and 1 or hills[i][j].low_bound.note
+        local high_bound = hills[i].highway == true and 128 or hills[i][j].high_bound.note
+        m.step_focus = util.clamp(m.step_focus+d, low_bound, high_bound)
       end
     end
   end
 end
 
-function m:delta(index, d, voice, hill, step)
-  -- ah, index is coming in as number...need to couple with 'params:set_raw(index,value)'
-
-  -- basically, want to snag the parameter info and build out a copy with the delta...
-  if m.adjusted_params[voice] == nil then
-    m.adjusted_params[voice] = {
+local function build_check(target_trig,voice,hill,step)
+  if target_trig[voice] == nil then
+    target_trig[voice] = {
       [hill] = {
         [step] = {
           ['params'] = {},
@@ -154,38 +176,119 @@ function m:delta(index, d, voice, hill, step)
         }
       }
     }
-  elseif m.adjusted_params[voice][hill] == nil then
-    m.adjusted_params[voice][hill] = {
+  elseif target_trig[voice][hill] == nil then
+    target_trig[voice][hill] = {
       
       [step] = {
         ['params'] = {},
         ['ids_idx'] = {},
       }
     }
-  elseif m.adjusted_params[voice][hill][step] == nil then
-    m.adjusted_params[voice][hill][step] = {
+  elseif target_trig[voice][hill][step] == nil then
+    target_trig[voice][hill][step] = {
       ['params'] = {},
       ['ids_idx'] = {},
     }
   end
-  if m.adjusted_params[voice][hill][step].params[index] == nil then
+end
+
+function m:force(index, voice, hill, step)
+  local target_trig;
+  if hills[voice].highway == true then
+    if track[voice][hill].trigs[step] then
+      target_trig = m.adjusted_params
+    else
+      target_trig = m.adjusted_params_lock_trigs
+    end
+  else
+    target_trig = m.adjusted_params
+  end
+  build_check(target_trig, voice, hill, step)
+  if target_trig[voice][hill][step].params[index] ~= params:lookup_param(index).raw then
+    target_trig[voice][hill][step].params[index] = params:lookup_param(index).raw
+    -- target_trig[voice][hill][step].lock_trigs[index] = true
+    track[voice][hill].lock_trigs[step] = true
+  else
+    target_trig[voice][hill][step].params[index] = nil
+    -- target_trig[voice][hill][step].lock_trigs[index] = false
+    if tab.count(target_trig[voice][hill][step].params) == 0 then
+      track[voice][hill].lock_trigs[step] = false
+    end
+  end
+end
+
+function m:delta(index, d, voice, hill, step)
+  -- ah, index is coming in as number...need to couple with 'params:set_raw(index,value)'
+  local target_trig;
+  if hills[voice].highway == true then
+    if track[voice][hill].trigs[step] then
+      target_trig = m.adjusted_params
+    else
+      target_trig = m.adjusted_params_lock_trigs
+    end
+  else
+    target_trig = m.adjusted_params
+  end
+  -- basically, want to snag the parameter info and build out a copy with the delta...
+  -- if target_trig[voice] == nil then
+  --   target_trig[voice] = {
+  --     [hill] = {
+  --       [step] = {
+  --         ['params'] = {},
+  --         ['ids_idx'] = {},
+  --       }
+  --     }
+  --   }
+  -- elseif target_trig[voice][hill] == nil then
+  --   target_trig[voice][hill] = {
+      
+  --     [step] = {
+  --       ['params'] = {},
+  --       ['ids_idx'] = {},
+  --     }
+  --   }
+  -- elseif target_trig[voice][hill][step] == nil then
+  --   target_trig[voice][hill][step] = {
+  --     ['params'] = {},
+  --     ['ids_idx'] = {},
+  --   }
+  -- end
+  build_check(target_trig, voice, hill, step)
+  if target_trig[voice][hill][step].params[index] == nil then
     -- write index and value
     local raw_val = params:lookup_param(index).raw
     local delta_val = params:lookup_param(index).controlspec.quantum
-    m.adjusted_params[voice][hill][step].params[index] = util.clamp(raw_val + d * delta_val,0,1)
+    target_trig[voice][hill][step].params[index] = util.clamp(raw_val + d * delta_val,0,1)
   else
     -- adjust value at index
-    local current_val = m.adjusted_params[voice][hill][step].params[index]
+    local current_val = target_trig[voice][hill][step].params[index]
     local delta_val = params:lookup_param(index).controlspec.quantum
-    m.adjusted_params[voice][hill][step].params[index] = util.clamp(current_val + d * delta_val,0,1)
+    target_trig[voice][hill][step].params[index] = util.clamp(current_val + d * delta_val,0,1)
   end
-  if util.round(m.adjusted_params[voice][hill][step].params[index],0.001) == util.round(params:get_raw(index),0.001) then
-    m.adjusted_params[voice][hill][step].params[index] = nil
+  if util.round(target_trig[voice][hill][step].params[index],0.001) == util.round(params:get_raw(index),0.001) then
+    target_trig[voice][hill][step].params[index] = nil
+    -- target_trig[voice][hill][step].lock_trigs[index] = false
+    if tab.count(target_trig[voice][hill][step].params) == 0 then
+      track[voice][hill].lock_trigs[step] = false
+    end
+  elseif target_trig == m.adjusted_params_lock_trigs then
+    -- target_trig[voice][hill][step].lock_trigs[index] = true
+    track[voice][hill].lock_trigs[step] = true
   end
 end
 
 function m:map(p)
-  local value = self.adjusted_params[self.voice_focus][self.hill_focus][self.step_focus].params[p]
+  local target_trig;
+  if hills[self.voice_focus].highway == true then
+    if track[self.voice_focus][self.hill_focus].trigs[self.step_focus] then
+      target_trig = self.adjusted_params
+    else
+      target_trig = self.adjusted_params_lock_trigs
+    end
+  else
+    target_trig = self.adjusted_params
+  end
+  local value = target_trig[self.voice_focus][self.hill_focus][self.step_focus].params[p]
   local clamped = util.clamp(value, 0, 1)
   local cs = params:lookup_param(p).controlspec
   local rounded = util.round(cs.warp.map(cs, clamped), cs.step)
@@ -196,18 +299,38 @@ function m:string(p)
   if params:lookup_param(p).formatter then
     return params:lookup_param(p).formatter(self:map(p))
   else
-    local value = self.adjusted_params[self.voice_focus][self.hill_focus][self.step_focus].params[p]
+    local target_trig;
+    if hills[self.voice_focus].highway == true then
+      if track[self.voice_focus][self.hill_focus].trigs[self.step_focus] then
+        target_trig = self.adjusted_params
+      else
+        target_trig = self.adjusted_params_lock_trigs
+      end
+    else
+      target_trig = self.adjusted_params
+    end
+    local value = target_trig[self.voice_focus][self.hill_focus][self.step_focus].params[p]
     local a = util.round(value, 0.01)
     return a.." "..params:lookup_param(p).controlspec.units
   end
 end
 
 local function check_subtables(p)
-  if m.adjusted_params[m.voice_focus] ~= nil
-  and m.adjusted_params[m.voice_focus][m.hill_focus] ~= nil
-  and m.adjusted_params[m.voice_focus][m.hill_focus][m.step_focus] ~= nil
-  and m.adjusted_params[m.voice_focus][m.hill_focus][m.step_focus].params ~= nil
-  and m.adjusted_params[m.voice_focus][m.hill_focus][m.step_focus].params[p] ~= nil then
+  local target_trig;
+  if hills[m.voice_focus].highway == true then
+    if track[m.voice_focus][m.hill_focus].trigs[m.step_focus] then
+      target_trig = m.adjusted_params
+    else
+      target_trig = m.adjusted_params_lock_trigs
+    end
+  else
+    target_trig = m.adjusted_params
+  end
+  if target_trig[m.voice_focus] ~= nil
+  and target_trig[m.voice_focus][m.hill_focus] ~= nil
+  and target_trig[m.voice_focus][m.hill_focus][m.step_focus] ~= nil
+  and target_trig[m.voice_focus][m.hill_focus][m.step_focus].params ~= nil
+  and target_trig[m.voice_focus][m.hill_focus][m.step_focus].params[p] ~= nil then
     return true
   else
     return false
@@ -218,7 +341,8 @@ m.redraw = function()
   -- print(m.pos, 2 - m.pos, #page - m.pos + 3)
   screen.clear()
   screen.font_size(8)
-  local n = m.voice_focus..' / hill: '..m.hill_focus
+  local trig_type = track[m.voice_focus][m.hill_focus].trigs[m.step_focus] and '' or ' (parameter lock)'
+  local n = m.voice_focus..' / hill: '..m.hill_focus..trig_type
   screen.level(4)
   screen.move(0,10)
   screen.text(n)
@@ -291,6 +415,7 @@ m.init = function()
   key1_hold = false
   m.fine = false
   m.adjusted_params = {}
+  m.adjusted_params_lock_trigs = {}
 end
 
 return m

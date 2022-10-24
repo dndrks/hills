@@ -32,57 +32,59 @@ function key_actions.parse(n,z)
       elseif n == 3 then
         if ui.control_set == "play" then
           if key2_hold and not key1_hold then
-            if ui.menu_focus == 1 or ui.menu_focus == 3 then
-              _fkprm.voice_focus = ui.hill_focus
-              _fkprm.hill_focus = hills[ui.hill_focus].screen_focus
-              _fkprm.step_focus = ui.screen_controls[_fkprm.voice_focus][_fkprm.hill_focus][ui.menu_focus == 1 and 'hills' or 'notes'].focus
-            end
-            pre_step_page = 'play'
-            ui.control_set = 'step parameters'
+            _fkprm.flip_to_fkprm('play')
           else
             ui.control_set = "edit"
           end
-          if ui.menu_focus == 3 then
-            if s_c["notes"]["focus"] < hills[i][j].low_bound.note then
-              s_c["notes"]["focus"] = hills[i][j].low_bound.note
-            elseif s_c["notes"]["focus"] > hills[i][j].high_bound.note then
-              s_c["notes"]["focus"] = hills[i][j].high_bound.note
-            end
+        elseif ui.control_set == 'edit' then
+          if key2_hold and not key1_hold then
+            _fkprm.flip_to_fkprm('edit')
           end
-        elseif ui.control_set == "edit" then
-          if not key1_hold and not key2_hold then
-            _a.start(i,j,true)
-          elseif key1_hold and not key2_hold then
-            if ui.menu_focus == 1 then
-              if _s.popup_focus[1] == 1 then
-                _t.reseed(i,j,0.1)
-              elseif _s.popup_focus[1] == 2 then
-                _t.quantize(i,j,params:string("hill "..i.." quant value"),hills[i][j].low_bound.note,hills[i][j].high_bound.note)
+        end
+        if hills[i].highway then
+          if ui.control_set == 'edit' then
+            if ui.menu_focus == 2 then
+              if key1_hold and _s.popup_focus.tracks[i][2] == 4 then
+                _htracks.generate_er(i,j)
               end
-            elseif ui.menu_focus == 3 then
-              -- if _s.popup_focus[3] == 3 then
-              --   _t[s_c["notes"]["transform"]](i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note,s_c.notes.focus)
-              -- end
-              _t[s_c["notes"]["transform"]](i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note,s_c.notes.focus)
-            elseif ui.menu_focus == 5 then
-              _t[s_c["samples"]["transform"]](i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note,s_c.samples.focus,true)
             end
-          elseif key2_hold and not key1_hold then
-            if ui.menu_focus == 1 or ui.menu_focus == 3 then
-              _fkprm.voice_focus = ui.hill_focus
-              _fkprm.hill_focus = hills[ui.hill_focus].screen_focus
-              _fkprm.step_focus = ui.screen_controls[_fkprm.voice_focus][_fkprm.hill_focus][ui.menu_focus == 1 and 'hills' or 'notes'].focus
-            end
-            pre_step_page = 'edit'
-            ui.control_set = 'step parameters'
           end
-        elseif ui.control_set == 'step parameters' then
-          ui.control_set = 'edit'
-        elseif ui.control_set == "seq" then
-          if ui.seq_menu_layer == "edit" then
-            ui.seq_menu_layer = "deep_edit"
-          elseif ui.seq_menu_layer == "nav" then
-            ui.seq_menu_layer = "edit"
+        else
+          if ui.control_set == "play" then
+            if ui.menu_focus == 3 then
+              if s_c["notes"]["focus"] < hills[i][j].low_bound.note then
+                s_c["notes"]["focus"] = hills[i][j].low_bound.note
+              elseif s_c["notes"]["focus"] > hills[i][j].high_bound.note then
+                s_c["notes"]["focus"] = hills[i][j].high_bound.note
+              end
+            end
+          elseif ui.control_set == "edit" then
+            if not key1_hold and not key2_hold then
+              _a.start(i,j,true)
+            elseif key1_hold and not key2_hold then
+              if ui.menu_focus == 1 then
+                if _s.popup_focus[1] == 1 then
+                  _t.reseed(i,j,0.1)
+                elseif _s.popup_focus[1] == 2 then
+                  _t.quantize(i,j,params:string("hill "..i.." quant value"),hills[i][j].low_bound.note,hills[i][j].high_bound.note)
+                end
+              elseif ui.menu_focus == 3 then
+                -- if _s.popup_focus[3] == 3 then
+                --   _t[s_c["notes"]["transform"]](i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note,s_c.notes.focus)
+                -- end
+                _t[s_c["notes"]["transform"]](i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note,s_c.notes.focus)
+              elseif ui.menu_focus == 5 then
+                _t[s_c["samples"]["transform"]](i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note,s_c.samples.focus,true)
+              end
+            end
+          elseif ui.control_set == 'step parameters' then
+            ui.control_set = 'edit'
+          elseif ui.control_set == "seq" then
+            if ui.seq_menu_layer == "edit" then
+              ui.seq_menu_layer = "deep_edit"
+            elseif ui.seq_menu_layer == "nav" then
+              ui.seq_menu_layer = "edit"
+            end
           end
         end
       end
@@ -92,7 +94,11 @@ function key_actions.parse(n,z)
       elseif n == 2 and not ignore_key2_up then
         if key2_hold == false then
           key2_hold_counter:stop()
-          ui.control_set = ui.control_set ~= 'play' and 'play' or 'song'
+          if key1_hold then
+            key1_hold = false
+          else
+            ui.control_set = ui.control_set ~= 'play' and 'play' or 'song'
+          end
           if key1_hold and ui.control_set ~= 'edit' then
             key1_hold = false
           end

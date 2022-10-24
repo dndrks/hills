@@ -27,7 +27,7 @@ hill_names = {
   "10: s3"
 }
 
-local pre_step_page = 'play'
+pre_step_page = 'play'
 
 pt = include 'lib/hills_new_pt'
 curves = include 'lib/easing'
@@ -644,10 +644,20 @@ local function get_random_offset(i,note)
 end
 
 local function check_subtables(i,j,index)
-  if _fkprm.adjusted_params[i] ~= nil
-  and _fkprm.adjusted_params[i][j] ~= nil
-  and _fkprm.adjusted_params[i][j][index] ~= nil
-  and _fkprm.adjusted_params[i][j][index].params ~= nil
+  local target_trig;
+  if hills[i].highway == true then
+    if track[i][j].trigs[index] then
+      target_trig = _fkprm.adjusted_params
+    else
+      target_trig = _fkprm.adjusted_params_lock_trigs
+    end
+  else
+    target_trig = _fkprm.adjusted_params
+  end
+  if target_trig[i] ~= nil
+  and target_trig[i][j] ~= nil
+  and target_trig[i][j][index] ~= nil
+  and target_trig[i][j][index].params ~= nil
   then
     -- print('yep')
     return true
@@ -658,14 +668,26 @@ local function check_subtables(i,j,index)
 end
 
 per_step_params_adjusted = {}
+trigless_params_adjusted = {}
 for i = 1,10 do
   per_step_params_adjusted[i] = {param = {}, value = {}}
+  trigless_params_adjusted[i] = {param = {}, value = {}}
 end
 
 local non_indexed_voices = {'delay', 'reverb', 'main'}
 
 function fkmap(i,j,index,p)
-  local value = _fkprm.adjusted_params[i][j][index].params[p]
+  local target_trig;
+  if hills[i].highway == true then
+    if track[i][j].trigs[index] then
+      target_trig = _fkprm.adjusted_params
+    else
+      target_trig = _fkprm.adjusted_params_lock_trigs
+    end
+  else
+    target_trig = _fkprm.adjusted_params
+  end
+  local value = target_trig[i][j][index].params[p]
   local clamped = util.clamp(value, 0, 1)
   local cs = params:lookup_param(p).controlspec
   local rounded = util.round(cs.warp.map(cs, clamped), cs.step)
@@ -680,46 +702,62 @@ local function extract_voice_from_string(s)
   end
 end
 
-pass_note = function(i,j,seg,note_val,index,destination)
+pass_note = function(i,j,seg,note_val,index,retrig_index)
   local midi_notes = hills[i][j].note_ocean
   local played_note = get_random_offset(i,midi_notes[note_val])
   if (played_note ~= nil and hills[i].highway == false and hills[i][j].note_num.active[index]) or
     (played_note ~= nil and hills[i].highway == true) then
     -- per-step params //
     if i <= 10 then
+      print(i,j,index,check_subtables(i,j,index),retrig_index)
       if check_subtables(i,j,index) then
         -- tab.print(per_step_params_adjusted[i].param)
-        -- step to step params:
-        for k = 1,#per_step_params_adjusted[i].param do
-          local check_prm = per_step_params_adjusted[i].param[k]
-          -- print(check_prm)
-          if _fkprm.adjusted_params[i][j][index].params[check_prm] == nil then
-            local is_drum_voice = check_prm <= params.lookup['sample3_reverbSend']
-            local id = check_prm
-            if is_drum_voice and i <= 7 then
-              local target_voice = string.match(params:get_id(id),"%d+")
-              local target_drum = params:get_id(id):match('(.*_)')
-              target_drum = string.gsub(target_drum, target_voice..'_', '')
-              target_drum = string.gsub(target_drum, '_', '')
-              local p_name = string.gsub(params:get_id(id),target_voice..'_'..target_drum..'_','')
-              prms.send_to_engine(target_voice,p_name,params:get(id))
-              print('reseeding non-adjusted value for voice', target_voice, j, index, id, p_name)
-            elseif is_drum_voice and i >= 8 then
-              local target_voice = 'sample'..(i-7)
-              local p_name = string.gsub(params:get_id(id),target_voice..'_','')
-              prms.send_to_engine(target_voice,p_name,params:get(id))
-              print('reseeding non-adjusted value for sample voice', target_voice, j, index, id, p_name, check_prm)
-            else
-              local p_name = extract_voice_from_string(params:get_id(id))
-              local sc_target = string.gsub(params:get_id(id),p_name..'_','')
-              -- print('reseeding non-adjusted value for fx', i, j, index, id)
-              engine['set_'..p_name..'_param'](sc_target,params:get(id))
+        -- step to step params resets:
+        local target_trig;
+        if hills[i].highway == true then
+          if track[i][j].trigs[index] then
+            target_trig = _fkprm.adjusted_params
+          else
+            target_trig = _fkprm.adjusted_params_lock_trigs
+          end
+        else
+          target_trig = _fkprm.adjusted_params
+        end
+        if target_trig == _fkprm.adjusted_params then
+          for k = 1,#per_step_params_adjusted[i].param do
+            local check_prm = per_step_params_adjusted[i].param[k]
+            -- print(check_prm)
+            if _fkprm.adjusted_params[i][j][index].params[check_prm] == nil then
+              local lock_trig = track[i][j].focus == 'main' and track[i][j].lock_trigs[index] or track[i][j].fill.lock_trigs[index]
+              local is_drum_voice = check_prm <= params.lookup['sample3_reverbSend']
+              local id = check_prm
+              if is_drum_voice and i <= 7 then
+                local target_voice = string.match(params:get_id(id),"%d+")
+                local target_drum = params:get_id(id):match('(.*_)')
+                target_drum = string.gsub(target_drum, target_voice..'_', '')
+                target_drum = string.gsub(target_drum, '_', '')
+                local p_name = string.gsub(params:get_id(id),target_voice..'_'..target_drum..'_','')
+                prms.send_to_engine(target_voice,p_name,params:get(id))
+                print('reseeding non-adjusted value for voice', target_voice, j, index, id, p_name)
+              elseif is_drum_voice and i >= 8 then
+                local target_voice = 'sample'..(i-7)
+                local p_name = string.gsub(params:get_id(id),target_voice..'_','')
+                prms.send_to_engine(target_voice,p_name,params:get(id))
+                print('reseeding non-adjusted value for sample voice', target_voice, j, index, id, p_name, check_prm)
+              else
+                local p_name = extract_voice_from_string(params:get_id(id))
+                local sc_target = string.gsub(params:get_id(id),p_name..'_','')
+                -- print('reseeding non-adjusted value for fx', i, j, index, id)
+                engine['set_'..p_name..'_param'](sc_target,params:get(id))
+              end
             end
           end
+          per_step_params_adjusted[i] = {param = {}, value = {}}
         end
-        -- entry handling:
-        per_step_params_adjusted[i] = {param = {}, value = {}}
-        for k,v in next,_fkprm.adjusted_params[i][j][index].params do
+        -- this step's entry handling:
+        -- per_step_params_adjusted[i] = {param = {}, value = {}}
+        -- for k,v in next,_fkprm.adjusted_params[i][j][index].params do
+        for k,v in next,target_trig[i][j][index].params do
 
           local is_drum_voice = k <= params.lookup['sample3_reverbSend']
           local id = k
@@ -737,7 +775,7 @@ pass_note = function(i,j,seg,note_val,index,destination)
             target_drum = string.gsub(target_drum, target_voice..'_', '')
             target_drum = string.gsub(target_drum, '_', '')
             local p_name = string.gsub(params:get_id(k),target_voice..'_'..target_drum..'_','')
-            -- print('sending voice param')
+            print('sending voice param',target_voice,p_name,fkmap(i,j,index,k))
             prms.send_to_engine(target_voice,p_name,fkmap(i,j,index,k))
           elseif is_drum_voice and type(drum_target) == 'string' then
             local target_voice = drum_target
@@ -755,6 +793,8 @@ pass_note = function(i,j,seg,note_val,index,destination)
           per_step_params_adjusted[i].value[#per_step_params_adjusted[i].value+1] = v
         
         end
+
+        -- print(i,j,index)
       else
         -- restore default param value:
         for k = 1,#per_step_params_adjusted[i].param do
@@ -810,8 +850,21 @@ pass_note = function(i,j,seg,note_val,index,destination)
         end
       end
       local vel_target = hills[i].highway == false and hills[i][j].note_velocity[index] or track[i][j].velocities[index]
-      -- engine.trig(i,hills[i][j].note_velocity[index])  -- TODO: this won't always be hill-active...track-active!!
-      engine.trig(i,vel_target)
+      if hills[i].highway then
+        local lock_trig = track[i][j].focus == 'main' and track[i][j].lock_trigs[index] or track[i][j].fill.lock_trigs[index]
+        if track[i][j].trigs[index] then
+          if retrig_index == nil then
+            engine.trig(i,vel_target)
+          else
+            local destination_vel = track[i][j].focus == 'main' and track[i][j].velocities[index] or track[i][j].fill.velocities[index]
+            local destination_count = track[i][j].focus == 'main' and track[i][j].conditional.retrig_count[index] or track[i][j].fill.conditional.retrig_count[index]
+            local retrig_vel = util.round(util.linlin(0, destination_count, destination_vel, 0, retrig_index))
+            engine.trig(i,retrig_vel)
+          end
+        end
+      else
+        engine.trig(i,vel_target)
+      end
       if params:string("hill "..i.." sample output") == "yes" then
         if params:get("hill "..i.." sample probability") >= math.random(100) then
           local target = "sample"..params:get("hill "..i.." sample slot")
@@ -836,14 +889,23 @@ pass_note = function(i,j,seg,note_val,index,destination)
       local vel_target = hills[i].highway == false and hills[i][j].note_velocity[index] or track[i][j].velocities[index]
       if params:string("hill "..i.." sample output") == "yes" then
         if params:get("hill "..i.." sample probability") >= math.random(100) then
+          local should_play;
+          if hills[i].highway then
+            -- local lock_trig = track[i][j].focus == 'main' and track[i][j].lock_trigs[index] or track[i][j].fill.lock_trigs[index]
+            if track[i][j].trigs[index] then
+              should_play = true
+            end
+          else
+            should_play = true
+          end
           local target = "sample"..i-7
-          if params:string(target..'_sampleMode') == 'chop' then
+          if params:string(target..'_sampleMode') == 'chop' and should_play then
             local slice_count = params:get('hill '..i..' sample slice count') - 1
             local slice = util.wrap(played_note - params:get("hill "..i.." base note"),0,slice_count) + 1
             _ca.play_slice(target,slice,vel_target,i,j,played_note)
-          elseif params:string(target..'_sampleMode') == 'playthrough' then
+          elseif params:string(target..'_sampleMode') == 'playthrough' and should_play then
             _ca.play_through(target,vel_target,i,j,played_note)
-          elseif params:string(target..'_sampleMode') == 'distribute' then
+          elseif params:string(target..'_sampleMode') == 'distribute' and should_play then
             local scaled_idx = util.round(sample_info[target].sample_count * (params:get('hill '..i..' sample distribution')/100))
             if scaled_idx ~= 0 then
               local idx = util.wrap(played_note - params:get("hill "..i.." base note"),0,scaled_idx-1) + 1

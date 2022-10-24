@@ -123,7 +123,11 @@ function hway_ui.draw_menu()
         if ui.menu_focus ~= 3 then
           display_step_data = focused_set.trigs[i] == true and '|' or '-'
         else
-          display_step_data = (focused_set.notes[i] ~= nil and focused_set.trigs[i] == true) and focused_set.notes[i] or '-'
+          local note_index = focused_set.notes[i]
+          display_step_data = 
+            (focused_set.notes[i] ~= nil and focused_set.trigs[i] == true)
+              and hills[hf][h.screen_focus].note_ocean[note_index]
+              or '-'
         end
 
         if highway_ui.alt and _hui.focus == "params" then
@@ -143,20 +147,128 @@ function hway_ui.draw_menu()
           screen.text_center(first..second..third)
         else
           screen.text_center(display_step_data)
+          if display_step_data == '|' then
+            -- display_step_data = '|*'
+            if focused_set.prob[i] ~= 100 then
+              if focused_set.prob[i] <= 25 then
+                for pix = 41,42 do
+                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*10,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                end
+              elseif focused_set.prob[i] <= 50 then
+                for pix = 41,42 do
+                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*10,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*10,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                end
+              elseif focused_set.prob[i] <= 75 then
+                for pix = 41,42 do
+                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*10,10+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*10,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*10,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                end
+              elseif focused_set.prob[i] < 100 then
+                for pix = 41,42 do
+                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*10,9+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*10,10+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*10,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*10,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                end
+              end
+              screen.fill()
+            end
+            if focused_set.conditional.retrig_count[i] > 0 then
+              screen.pixel(47+(hway_ui.index_to_grid_pos(i,8)[1]-1)*10,9+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+              screen.pixel(47+(hway_ui.index_to_grid_pos(i,8)[1]-1)*10,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+              screen.fill()
+            end
+          end
         end
       end
-      screen.move(128,62)
-      screen.level(3)
-      screen.text_right(track[hf][h.screen_focus].ui_position..' / '..min_max[_hui.seq_page[hf]][1]..'-'..min_max[_hui.seq_page[hf]][2])
+
+      if key2_hold then
+        screen.font_size(8)
+        screen.level(15)
+        screen.move(128,64)
+        screen.text_right("K3: PER-STEP PARAMS")
+      else
+        screen.move(128,64)
+        screen.level(3)
+        screen.text_right(track[hf][h.screen_focus].ui_position..' / '..min_max[_hui.seq_page[hf]][1]..'-'..min_max[_hui.seq_page[hf]][2])
+      end
 
       if ui.menu_focus == 2 then
-        local s_c = ui.screen_controls[_hui.sel][_hui.hill_sel]
-        screen.level(s_c["bounds"]["focus"] == 1 and 15 or 3)
+        local s_c = ui.screen_controls[hf][h.screen_focus]
+        if ui.control_set == 'play' then
+          screen.level(3)
+        else
+          screen.level(s_c["bounds"]["focus"] == 1 and 15 or 3)
+        end
         screen.move(40,10)
-        screen.text("min: "..track[_hui.sel][hills[_hui.sel].screen_focus].start_point)
-        screen.level(s_c["bounds"]["focus"] == 1 and 3 or 15)
+        screen.text("min: "..track[hf][h.screen_focus].start_point)
+        if ui.control_set == 'play' then
+          screen.level(3)
+        else
+          screen.level(s_c["bounds"]["focus"] == 1 and 3 or 15)
+        end
         screen.move(120,10)
-        screen.text_right("max: "..track[_hui.sel][hills[_hui.sel].screen_focus].end_point)
+        screen.text_right("max: "..track[hf][h.screen_focus].end_point)
+      elseif ui.menu_focus == 3 then
+        if ui.control_set == 'edit' then
+          local _active = track[hf][h.screen_focus]
+          local pos = _active.ui_position
+          local focused_set = {}
+          local display_text = ''
+          if _active.focus == "main" then
+            focused_set = _active.notes
+            if _active.trigs[pos] == false then
+              screen.level(3)
+              display_text = 'set note adds trig'
+            else
+              local note_index = focused_set[pos]
+              screen.level(15)
+              -- display_text = hills[hf][h.screen_focus].note_ocean[note_index]
+            end
+          else
+            focused_set = _active.fill.notes
+            if _active.fill.trigs[pos] == false then
+              screen.level(3)
+              display_text = 'set note adds trig'
+            else
+              local note_index = focused_set[pos]
+              screen.level(15)
+              -- display_text = hills[hf][h.screen_focus].note_ocean[note_index]
+            end
+          end
+          screen.move(40,10)
+          screen.text(display_text)
+          -- if ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus].notes.velocity then
+          --   screen.text(
+          --     note_number.."/"..mu.note_num_to_name(note_number)..
+          --     (hills[hf][focus].note_num.active[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["notes"]["focus"]] and "" or " (m)")
+          --     .." | velocity: "..(hills[hf][focus].note_velocity[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["notes"]["focus"]])
+          --   )
+          -- else
+          --   local target_sample_voice;
+          --   local target_sample_string = "";
+          --   if params:string('hill '..hf..' sample output') == "yes" then
+          --     target_sample_voice = params:get('hill '..hf..' sample slot')
+          --     if params:string('sample'..target_sample_voice..'_sampleMode') == 'distribute' then
+          --       if sample_info['sample'..target_sample_voice].sample_count == nil then
+          --         target_sample_string = ""
+          --       else
+          --         local scaled_idx = util.round(sample_info['sample'..target_sample_voice].sample_count * (params:get('hill '..hf..' sample distribution')/100))
+          --         target_sample_string = ' | sample: '..(util.wrap(note_number - params:get("hill "..hf.." base note"),0,scaled_idx-1) + 1)
+          --       end
+          --     elseif params:string('sample'..target_sample_voice..'_sampleMode') == 'chop' then
+          --       target_sample_string = ' | slice: '..(util.wrap(note_number - params:get("hill "..hf.." base note"),0,params:get('hill '..hf..' sample slice count') - 1) + 1)
+          --     end
+          --   end
+          --   screen.text(
+          --     note_number.."/"..mu.note_num_to_name(note_number)..
+          --     (hills[hf][focus].note_num.active[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["notes"]["focus"]] and "" or " (m)")
+          --     ..target_sample_string
+          --   )
+          -- end
+        end
       end
       
       -- if not highway_ui.alt then
@@ -345,28 +457,59 @@ function hway_ui.draw_menu()
       if key1_hold and ui.control_set == 'edit' then
         if ui.menu_focus == 1 then
           draw_popup("->")
-          screen.move(50,23)
-          screen.level(_s.popup_focus.tracks[hf] == 1 and 15 or 4)
+          screen.move(40,20)
+          screen.level(_s.popup_focus.tracks[hf][1] == 1 and 15 or 4)
           local base, line_above;
-          if focused_set.conditional.mode[track[hf][h.screen_focus].ui_position] == "NOT PRE" then
+          local current_step = track[hf][h.screen_focus].ui_position
+          if focused_set.conditional.mode[current_step] == "NOT PRE" then
             base = "PRE"
             line_above = true
-          elseif focused_set.conditional.mode[track[hf][h.screen_focus].ui_position] == "NOT NEI" then
+          elseif focused_set.conditional.mode[current_step] == "NOT NEI" then
             base = "NEI"
             line_above = true
+          elseif focused_set.conditional.mode[current_step] == "A:B" then
+            base = focused_set.conditional.A[current_step]..':'..focused_set.conditional.B[current_step]
+            line_above = false
           else
-            base = focused_set.conditional.mode[track[hf][h.screen_focus].ui_position]
+            base = focused_set.conditional.mode[current_step]
             line_above = false
           end
           screen.text('CONDITION: '..base)
           if line_above then
-            screen.move(97,17)
-            screen.line(base == "PRE" and 110 or 109,17)
+            screen.move(87,14)
+            screen.line(base == "PRE" and 105 or 104,14)
             screen.stroke()
           end
-          screen.move(50,33)
-          screen.level(_s.popup_focus.tracks[hf] == 2 and 15 or 4)
-          screen.text('PROB: '..focused_set.prob[track[hf][h.screen_focus].ui_position]..'%')
+          screen.move(40,30)
+          screen.level(_s.popup_focus.tracks[hf][1] == 2 and 15 or 4)
+          screen.text('PROB: '..focused_set.prob[current_step]..'%')
+          screen.move(40,40)
+          screen.level(_s.popup_focus.tracks[hf][1] == 3 and 15 or 4)
+          screen.text('RETRIG: '..focused_set.conditional.retrig_count[current_step]..'x')
+          screen.level(_s.popup_focus.tracks[hf][1] == 4 and 15 or 4)
+          local show_time = _active.conditional.retrig_count[current_step] > 0 and true or false
+          if show_time then
+            local get_string = _active.focus == 'main' and ('track_retrig_time_'..hf..'_'..h.screen_focus..'_'..current_step) or ('track_fill_retrig_time_'..hf..'_'..h.screen_focus..'_'..current_step)
+            screen.move(93,40)
+            screen.text('('..track_paramset:string(get_string)..')')
+          end
+        elseif ui.menu_focus == 2 then
+          draw_popup(norns.state.path..'img/bolt.png',6,17)
+          screen.move(15,20)
+          screen.level(15)
+          screen.text('[EUCLID]')
+          screen.move(55,20)
+          screen.level(_s.popup_focus.tracks[hf][2] == 1 and 15 or 4)
+          screen.text('PULSES: '..focused_set.er.pulses)
+          screen.move(55,30)
+          screen.level(_s.popup_focus.tracks[hf][2] == 2 and 15 or 4)
+          screen.text('STEPS: '..focused_set.er.steps)
+          screen.move(55,40)
+          screen.level(_s.popup_focus.tracks[hf][2] == 3 and 15 or 4)
+          screen.text('SHIFT: '..focused_set.er.shift)
+          screen.move(55,50)
+          screen.level(_s.popup_focus.tracks[hf][2] == 4 and 15 or 4)
+          screen.text('GENERATE (K3)')
         end
       end
 
@@ -556,8 +699,9 @@ end
 
 local conditional_modes = {"NOT NEI","NEI","NOT PRE","PRE","A:B"}
 
-function hway_ui.cycle_conditional(target,step,d)
-  local focused_set = track[target].focus == "main" and track[target] or track[target].fill
+function hway_ui.cycle_conditional(i,j,step,d)
+  local _active = track[i][j]
+  local focused_set = _active.focus == 'main' and _active or _active.fill
   if d > 0 then
     if focused_set.conditional.mode[step] == "A:B" then
       local current_B = focused_set.conditional.B[step]
@@ -596,9 +740,34 @@ function hway_ui.cycle_conditional(target,step,d)
   end
 end
 
-function hway_ui.cycle_retrig_count(target,step,d)
-  local focused_set = track[target].focus == "main" and track[target] or track[target].fill
-  focused_set.conditional.retrig_count[step] = util.clamp(focused_set.conditional.retrig_count[step]+d,0,128)
+function hway_ui.cycle_prob(i,j,step,d)
+  local _active = track[i][j]
+  local focused_set = _active.focus == 'main' and _active or _active.fill
+  focused_set.prob[step] = util.clamp(focused_set.prob[step] + d, 0, 100)
+end
+
+function hway_ui.cycle_retrig_count(i,j,step,d)
+  local _active = track[i][j]
+  local focused_set = _active.focus == 'main' and _active or _active.fill
+  focused_set.conditional.retrig_count[step] = util.clamp(focused_set.conditional.retrig_count[step]+d, 0, 128)
+end
+
+function hway_ui.cycle_retrig_time(i,j,step,d)
+  local _active = track[i][j]
+  local focused_set = _active.focus == 'main' and ('track_retrig_time_'..i..'_'..j..'_'..step) or ('track_fill_retrig_time_'..i..'_'..j..'_'..step)
+  track_paramset:delta(focused_set,d)
+end
+
+function hway_ui.cycle_er_param(prm,i,j,d)
+  local _active = track[i][j]
+  local focused_set = _active.focus == 'main' and _active or _active.fill
+  if prm == 'pulses' then
+    focused_set.er[prm] = util.clamp(focused_set.er[prm] + d, 0, focused_set.er.steps)
+  elseif prm == 'steps' then
+    focused_set.er[prm] = util.clamp(focused_set.er[prm] + d, 0, 128)
+  elseif prm == 'shift' then
+    focused_set.er[prm] = util.clamp(focused_set.er[prm] + d, -128, 128)
+  end
 end
 
 function hway_ui.check_for_first_touch()

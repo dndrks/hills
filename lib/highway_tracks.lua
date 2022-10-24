@@ -25,19 +25,24 @@ end
 track_paramset = paramset.new()
 local track_retrig_lookup = 
 {
+  1/64,
+  1/48,
+  1/40,
   1/32,
   1/24,
   1/16,
   1/12,
+  1/10,
   1/8,
   1/6,
+  1/5,
   3/16,
   1/4,
   5/16,
   1/3,
   3/8,
-  2/3,
   1/2,
+  2/3,
   3/4,
   1,
   4/3,
@@ -46,10 +51,17 @@ local track_retrig_lookup =
   8/3,
   3,
   4,
+  5,
   6,
   8,
+  10,
+  12,
   16,
-  32
+  24,
+  32,
+  40,
+  48,
+  64
 }
 
 function track_actions.init(target)
@@ -71,7 +83,9 @@ function track_actions.init(target)
     track[target][hill_count].chord_degrees = {}
     track[target][hill_count].velocities = {}
     track[target][hill_count].trigs = {}
+    track[target][hill_count].lock_trigs = {}
     track[target][hill_count].prob = {}
+    track[target][hill_count].er = {pulses = 0, steps = 16, shift = 0}
     track[target][hill_count].last_condition = false
     track[target][hill_count].conditional = {}
     track[target][hill_count].conditional.cycle = 0
@@ -81,6 +95,7 @@ function track_actions.init(target)
     track[target][hill_count].conditional.retrig_clock = nil
     track[target][hill_count].conditional.retrig_count = {}
     track[target][hill_count].conditional.retrig_time = {}
+    track[target][hill_count].conditional.retrig_vel = {}
     track[target][hill_count].focus = "main"
     track[target][hill_count].fill =
     {
@@ -88,14 +103,24 @@ function track_actions.init(target)
       ["chord_degrees"] = {},
       ["velocities"] = {},
       ["trigs"] = {},
+      ["lock_trigs"] = {},
       ["prob"] = {},
-      ["conditional"] = {["A"] = {}, ["B"] = {}, ["mode"] = {}, ["retrig_count"] = {}, ["retrig_time"] = {}}
+      ['er'] = {pulses = 0, steps = 16, shift = 0},
+      ["conditional"] = {
+        ["A"] = {},
+        ["B"] = {},
+        ["mode"] = {},
+        ["retrig_count"] = {},
+        ["retrig_time"] = {},
+        ["retrig_vel"] = {}
+      }
     }
     for i = 1,128 do
       track[target][hill_count].notes[i] = 1
       track[target][hill_count].chord_degrees[i] = 1
       track[target][hill_count].velocities[i] = 127
       track[target][hill_count].trigs[i] = false
+      track[target][hill_count].lock_trigs[i] = false
       track[target][hill_count].prob[i] = 100
       track[target][hill_count].conditional.A[i] = 1
       track[target][hill_count].conditional.B[i] = 1
@@ -103,81 +128,108 @@ function track_actions.init(target)
       track[target][hill_count].conditional.retrig_count[i] = 0
       track_paramset:add_option("track_retrig_time_"..target.."_"..hill_count..'_'..i,"",
       {
-        "1/32",
-        "1/24",
-        "1/16",
-        "1/12",
-        "1/8",
-        "1/6",
-        "3/16",
-        "1/4",
-        "5/16",
-        "1/3",
-        "3/8",
-        "2/3",
-        "1/2",
-        "3/4",
-        "1",
-        "1.33",
-        "1.5",
-        "2",
-        "2.33",
-        "3",
-        "4",
-        "6",
-        "8",
-        "16",
-        "32"
+        '1/64',
+        '1/48',
+        '1/40',
+        '1/32',
+        '1/24',
+        '1/16',
+        '1/12',
+        '1/10',
+        '1/8',
+        '1/6',
+        '1/5',
+        '3/16',
+        '1/4',
+        '5/16',
+        '1/3',
+        '3/8',
+        '1/2',
+        '2/3',
+        '3/4',
+        '1',
+        '4/3',
+        '1.5',
+        '2',
+        '8/3',
+        '3',
+        '4',
+        '5',
+        '6',
+        '8',
+        '10',
+        '12',
+        '16',
+        '24',
+        '32',
+        '40',
+        '48',
+        '64'
       },
-      8)
+      13)
       track_paramset:set_action("track_retrig_time_"..target.."_"..hill_count..'_'..i, function(x)
         track[target][hill_count].conditional.retrig_time[i] = track_retrig_lookup[x]
       end)
 
       track_paramset:add_option("track_fill_retrig_time_"..target.."_"..hill_count..'_'..i,"",
       {
-        "1/32",
-        "1/24",
-        "1/16",
-        "1/12",
-        "1/8",
-        "1/6",
-        "3/16",
-        "1/4",
-        "5/16",
-        "1/3",
-        "3/8",
-        "2/3",
-        "1/2",
-        "3/4",
-        "1",
-        "1.33",
-        "1.5",
-        "2",
-        "2.33",
-        "3",
-        "4",
-        "6",
-        "8",
-        "16",
-        "32"
+        '1/64',
+        '1/48',
+        '1/40',
+        '1/32',
+        '1/24',
+        '1/16',
+        '1/12',
+        '1/10',
+        '1/8',
+        '1/6',
+        '1/5',
+        '3/16',
+        '1/4',
+        '5/16',
+        '1/3',
+        '3/8',
+        '1/2',
+        '2/3',
+        '3/4',
+        '1',
+        '4/3',
+        '1.5',
+        '2',
+        '8/3',
+        '3',
+        '4',
+        '5',
+        '6',
+        '8',
+        '10',
+        '12',
+        '16',
+        '24',
+        '32',
+        '40',
+        '48',
+        '64'
       },
-      8)
+      13)
       track_paramset:set_action("track_fill_retrig_time_"..target.."_"..hill_count..'_'..i, function(x)
         track[target][hill_count].fill.conditional.retrig_time[i] = track_retrig_lookup[x]
       end)
       track[target][hill_count].conditional.retrig_time[i] = track_retrig_lookup[track_paramset:get("track_retrig_time_"..target.."_"..hill_count..'_'..i)]
+      track[target][hill_count].conditional.retrig_vel[i] = 0
       
       track[target][hill_count].fill.notes[i] = 1
       track[target][hill_count].fill.chord_degrees[i] = 1
       track[target][hill_count].fill.velocities[i] = 127
       track[target][hill_count].fill.trigs[i] = false
+      track[target][hill_count].fill.lock_trigs[i] = false
       track[target][hill_count].fill.prob[i] = 100
       track[target][hill_count].fill.conditional.A[i] = 1
       track[target][hill_count].fill.conditional.B[i] = 1
       track[target][hill_count].fill.conditional.mode[i] = "A:B"
       track[target][hill_count].fill.conditional.retrig_count[i] = 0
       track[target][hill_count].fill.conditional.retrig_time[i] = track_retrig_lookup[track_paramset:get("track_fill_retrig_time_"..target.."_"..hill_count..'_'..i)]
+      track[target][hill_count].fill.conditional.retrig_vel[i] = 0
     end
 
     track[target][hill_count].gate = {}
@@ -512,6 +564,15 @@ function track_actions.random(target)
   end
 end
 
+function track_actions.generate_er(i,j)
+  local _active = track[i][j]
+  local focused_set = _active.focus == "main" and _active or _active.fill
+  local generated = euclid.gen(focused_set.er.pulses, focused_set.er.steps, focused_set.er.shift)
+  for length = focused_set.start_point, focused_set.end_point do
+    focused_set.trigs[length] = generated[length-(focused_set.start_point-1)]
+  end
+end
+
 track_direction = {}
 
 for i = 1,3 do
@@ -562,7 +623,11 @@ end
 
 function track_actions.run(target,step,source)
   local _active = track[target][track[target].active_hill]
-  if (_active.focus == "main" and _active.trigs[step] == true) or (_active.focus == "fill" and _active.fill.trigs[step] == true) then   
+  if (_active.focus == "main" and 
+        (_active.trigs[step] == true or _active.lock_trigs[step] == true))
+      or (_active.focus == "fill" and
+        (_active.fill.trigs[step] == true or _active.fill.lock_trigs[step] == true))
+  then   
     local should_happen = track_actions.check_prob(target,step)
     if should_happen then
       local A_step, B_step
@@ -673,9 +738,12 @@ function track_actions.resolve_step(target, step, last_pad)
       j,
       hills[i][j], -- seg
       focused_set[step], -- note_val
-      step -- index
+      step, -- index
+      0 -- retrig index
     )
-    track_actions.retrig_step(target,step)
+    if _active.trigs[step] then
+      track_actions.retrig_step(target,step)
+    end
     if next_pad == nil then
     end
   else
@@ -686,9 +754,12 @@ function track_actions.resolve_step(target, step, last_pad)
       j,
       hills[i][j], -- seg
       focused_set[step], -- note_val
-      step -- index
+      step, -- index
+      0 -- retrig_index
     )
-    track_actions.retrig_step(target,step)
+    if _active.trigs[step] then
+      track_actions.retrig_step(target,step)
+    end
   end
   _active.last_condition = true
 end
@@ -713,6 +784,7 @@ function track_actions.retrig_step(target,step)
     _active.conditional.retrig_clock = clock.run(
       function()
         for retrigs = 1,focused_set.retrig_count[step] do
+          print('passing')
           clock.sleep(((clock.get_beat_sec() * _active.time)*focused_set.retrig_time[step])+swung_time)
           -- cheat(target,bank[target].id)
           pass_note(
@@ -720,7 +792,8 @@ function track_actions.retrig_step(target,step)
             j,
             hills[i][j], -- seg
             focused_notes[step], -- note_val
-            step -- index
+            step, -- index
+            retrigs
           )
         end
       end

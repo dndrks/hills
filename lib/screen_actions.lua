@@ -1,21 +1,32 @@
 local screen_actions = {}
 
-function draw_popup(text)
-  screen.rect(7,11,112,42)
+function draw_popup(text,x,y)
+  screen.rect(7,11,113,44)
   screen.level(15)
   screen.fill()
-  screen.rect(8,12,110,40)
+  screen.rect(8,12,111,42)
   screen.level(0)
   screen.fill()
-  screen.font_size(15)
-  screen.level(15)
-  screen.move(14,34)
-  screen.text(text)
-  screen.font_size(8)
+  if util.string_starts(text, '/home') then
+    screen.display_png(text,x,y)
+    screen.fill()
+  else
+    screen.font_size(15)
+    screen.level(15)
+    screen.move(14,34)
+    screen.text(text)
+    screen.font_size(8)
+  end
 end
 
-screen_actions.popup_focus = {1,1,1,1,1}
-screen_actions.popup_focus.tracks = {1,1,1,1,1}
+screen_actions.popup_focus = {1,1,1,1,1,1,1,1,1,1}
+screen_actions.popup_focus.tracks = {}
+for i = 1,10 do
+  screen_actions.popup_focus.tracks[i] = {}
+  for j = 1,5 do
+    screen_actions.popup_focus.tracks[i][j] = 1
+  end
+end
 
 function screen_actions.draw()
   local hf = ui.hill_focus

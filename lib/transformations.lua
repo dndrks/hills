@@ -24,6 +24,34 @@ m.transpose = function(i,j,pos,delta)
   hills[i][j].note_num.chord_degree[pos] = util.wrap(hills[i][j].note_num.pool[pos], 1, 7)
 end
 
+m.track_transpose = function(i,j,pos,delta)
+  local _active = track[i][j]
+  local focused_set = {}
+  if _active.focus == "main" then
+    focused_set = _active.notes
+    if _active.trigs[pos] == false then
+      _active.trigs[pos] = true
+      goto finished
+    end
+  else
+    focused_set = _active.fill.notes
+    if _active.fill.trigs[pos] == false then
+      _active.fill.trigs[pos] = true
+      goto finished
+    end
+  end
+  if focused_set[pos] == 1 and delta < 1 then
+    if focused_set == _active.notes then
+      _active.trigs[pos] = false
+    else
+      _active.fill.trigs[pos] = false
+    end
+  else
+    focused_set[pos] = util.clamp(focused_set[pos] + delta, 1, hills[i][j].note_num.max)
+  end
+  ::finished::
+end
+
 m.sample_transpose = function(i,j,pos,delta)
   hills[i][j].sample_controls.rate[pos] = util.clamp(hills[i][j].sample_controls.rate[pos]+delta,1,#sample_speedlist)
 end
