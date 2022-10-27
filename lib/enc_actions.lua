@@ -26,11 +26,17 @@ function enc_actions.parse(n,d)
         if hills[i].highway and key1_hold then
           enc_actions.delta_track_pos(i,j,d)
         else
-          hills[i].screen_focus = util.clamp(j+d,1,8)
-          if mods["hill"] then
-            grid_dirty = true
+          -- hills[i].screen_focus = util.clamp(j+d,1,8)
+          -- if mods["hill"] then
+          --   grid_dirty = true
+          -- end
+          -- highway_ui.seq_page[i] = math.ceil(track[i][hills[i].screen_focus].ui_position/32)
+          ui.hill_focus = util.clamp(ui.hill_focus+d,1,number_of_hills)
+          if ui.hill_focus < 8 then
+            if ui.menu_focus == 5 then
+              ui.menu_focus = 4
+            end
           end
-          highway_ui.seq_page[i] = math.ceil(track[i][hills[i].screen_focus].ui_position/32)
         end
       end
     elseif n == 2 then

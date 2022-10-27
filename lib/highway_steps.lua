@@ -147,7 +147,7 @@ function hway_ui.draw_menu()
           screen.text_center(first..second..third)
         else
           screen.text_center(display_step_data)
-          if display_step_data == '|' then
+          -- if display_step_data == '|' then
             -- display_step_data = '|*'
             if focused_set.prob[i] ~= 100 then
               if focused_set.prob[i] <= 25 then
@@ -180,7 +180,7 @@ function hway_ui.draw_menu()
               screen.pixel(47+(hway_ui.index_to_grid_pos(i,8)[1]-1)*10,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
               screen.fill()
             end
-          end
+          -- end
         end
       end
 
@@ -508,7 +508,7 @@ function hway_ui.draw_menu()
           screen.level(_s.popup_focus.tracks[hf][2] == 4 and 15 or 4)
           screen.text('GENERATE (K3)')
         elseif ui.menu_focus == 3 then
-          draw_popup(norns.state.path..'img/keys.png',6,17)
+          draw_popup(norns.state.path..'img/keys.png',9,17)
           screen.move(55,20)
           screen.level(_s.popup_focus.tracks[hf][3] == 1 and 15 or 4)
           screen.text('VELOCITY: '..focused_set.velocities[current_step])
