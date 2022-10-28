@@ -331,13 +331,23 @@ function g.key(x,y,z)
   elseif x == 1 and mods['hill'] then
     if y == 1 and z == 1 then
       mods['hill'] = not mods['hill']
+      if not mods['hill'] then
+        mod_held = false
+      end
     elseif y > 2 and y <= 6 then
       grid_lib.highway_press(x,y,z)
     end
   end
   if x > 1 and x <= number_of_hills+1 and not mod_held then
     if z == 1 then
-      _a.start(x-1,y,true)
+      if hills[x-1].highway == false then
+        _a.start(x-1,y,true)
+      else
+        _htracks.stop_playback(x-1)
+        track[x-1].active_hill = y
+        _htracks.start_playback(x-1)
+        print('start and stop')
+      end
       hills[x-1].screen_focus = y
       screen_dirty = true
       hills[x-1][y].perf_led = true
@@ -369,7 +379,11 @@ function g.key(x,y,z)
     end
     if z == 0 then
       if hills[x-1][y].playmode == "momentary" and hills[x-1].segment == y then
-        stop(x-1,true)
+        if hills[x-1].highway == false then
+          stop(x-1,true)
+        else
+          _htracks.stop_playback(x-1)
+        end
         screen_dirty = true
         -- hills[x-1][y].perf_led = true
         hills[x-1][y].perf_led = false
@@ -666,11 +680,11 @@ function long_press(dir)
 end
 
 function grid_lib.highway_press(x,y,z)
-  if y == 1 and z == 1 then
+  if y == 1 and z == 1 and x <= 11 then
     ui.hill_focus = x-1
-  elseif y == 2 and z == 1 then
+  elseif y == 2 and z == 1 and (x > 1 and x <= 9) then
     hills[ui.hill_focus].screen_focus = x-1
-  elseif y <= 6 and z == 1 then
+  elseif y <= 6 and z == 1 and (x >= 1 and x <= 8) then
     local i = ui.hill_focus
     local j = hills[ui.hill_focus].screen_focus
     local min_max = {{1,32},{33,64},{65,96},{97,128}}
@@ -1021,7 +1035,7 @@ function grid_lib.draw_highway(i)
         lvl = 2
       end
       if _active.trigs[display_range] then
-        if _active.step == display_range then
+        if _active.step == display_range and _active.playing then
           lvl = 0
         else
           lvl = 15

@@ -277,17 +277,18 @@ function track_actions.toggle(state,target)
 end
 
 function track_actions.start_playback(i)
+  local j = track[i].active_hill
   local track_start =
   {
-    ["fwd"] = track[i].start_point - 1
-  , ["bkwd"] = track[i].end_point + 1
-  , ["pend"] = track[i].start_point
-  , ["rnd"] = track[i].start_point - 1
+    ["fwd"] = track[i][j].start_point - 1
+  , ["bkwd"] = track[i][j].end_point + 1
+  , ["pend"] = track[i][j].start_point
+  , ["rnd"] = track[i][j].start_point - 1
   }
-  track[i].step = track_start[track[i].mode]
-  track[i].pause = false
-  track[i].playing = true
-  if track[i].mode == "pend" then
+  track[i][j].step = track_start[track[i][j].mode]
+  track[i][j].pause = false
+  track[i][j].playing = true
+  if track[i][j].mode == "pend" then
     track_direction[i] = "negative"
   end
   -- TODO: fix up later! this needs to be wrapped in transport logic
@@ -309,10 +310,11 @@ function track_actions.start_playback(i)
 end
 
 function track_actions.stop_playback(i)
-  track[i].pause = true
-  track[i].playing = false
-  track[i].step = track[i].start_point
-  track[i].conditional.cycle = 0
+  local j = track[i].active_hill
+  track[i][j].pause = true
+  track[i][j].playing = false
+  track[i][j].step = track[i][j].start_point
+  track[i][j].conditional.cycle = 0
   -- grid_dirty = true
 end
 
@@ -575,7 +577,7 @@ end
 
 track_direction = {}
 
-for i = 1,3 do
+for i = 1,8 do
   track_direction[i] = "positive"
 end
 

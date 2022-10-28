@@ -54,7 +54,7 @@ end
 
 development_state = function()
   song_atoms.transport_active = true
-  for i = 1,10 do
+  for i = 1,9 do
     hills[i].highway = true
   end
   _htracks.sync_playheads()
@@ -355,8 +355,6 @@ function init()
         voice = tonumber(string.sub(voice,-1)) + 7 -- TODO: CONFIRM CPU OKAY
       end
       for i = 1,8 do
-        -- FIXME
-        print(snapshot_overwrite,voice,d_voice,i)
         local should_overwrite = snapshot_overwrite[voice][d_voice][i]
         if should_overwrite and params:string('lfo_snapshot_'..voice) == 'off' then
           -- print('overwriting', snapshots[voice][d_voice][i][param])
