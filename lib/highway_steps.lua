@@ -597,7 +597,7 @@ function hway_ui.process_key(n,z)
   grid_dirty = true
 end
 
-function hway_ui.process_encoder(n,d)
+function hway_ui.process_encoder(n,d) -- NONE OF THIS GETS CALLED!!!
   -- local _active = track[_hui.sel][track[_hui.sel].active_hill]
   local hf = ui.hill_focus
   local h = hills[hf]
@@ -670,6 +670,7 @@ function hway_ui.process_encoder(n,d)
   elseif _hui.focus == "seq" then
     if n == 2 then
       if not highway_ui.alt then
+        print(_hui.sel)
         track[_hui.sel][_hui.hill_sel].ui_position = util.clamp(track[_hui.sel][_hui.hill_sel].ui_position+d,1,128)
         _hui.seq_page[_hui.sel] = math.ceil(track[_hui.sel][_hui.hill_sel].ui_position/32)
       else

@@ -234,7 +234,7 @@ local function enable_toggle(target)
 end
 
 function g.key(x,y,z)
-  if x == 1 then
+  if x == 1 and not mods['hill'] then
     if y >= 1 and y <= 4 and z == 1 then
       for i = 1,#modkeys do
         if i ~= y then
@@ -328,6 +328,12 @@ function g.key(x,y,z)
     end
     grid_dirty = true
     screen_dirty = true
+  elseif x == 1 and mods['hill'] then
+    if y == 1 and z == 1 then
+      mods['hill'] = not mods['hill']
+    elseif y > 2 and y <= 6 then
+      grid_lib.highway_press(x,y,z)
+    end
   end
   if x > 1 and x <= number_of_hills+1 and not mod_held then
     if z == 1 then
@@ -435,9 +441,11 @@ function g.key(x,y,z)
           }
         )
       end
-    elseif mods["hill"] or mods["bound"] or mods["notes"] or mods["loop"] then
+    elseif mods["bound"] or mods["notes"] or mods["loop"] then
       ui.hill_focus = x-1
       hills[ui.hill_focus].screen_focus = y
+    elseif mods['hill'] then
+      grid_lib.highway_press(x,y,z)
     elseif mods["playmode"] and z == 1 then
       if mods['playmode_extended'] then
         if #iter_link_source == 0 then
@@ -657,12 +665,32 @@ function long_press(dir)
   end
 end
 
+function grid_lib.highway_press(x,y,z)
+  if y == 1 and z == 1 then
+    ui.hill_focus = x-1
+  elseif y == 2 and z == 1 then
+    hills[ui.hill_focus].screen_focus = x-1
+  elseif y <= 6 and z == 1 then
+    local i = ui.hill_focus
+    local j = hills[ui.hill_focus].screen_focus
+    local min_max = {{1,32},{33,64},{65,96},{97,128}}
+    local pos = ((y - 3) * 8) + x
+    local pressed_step = pos + ((highway_ui.seq_page[i] - 1) * 32)
+    track[i][j].ui_position = pressed_step
+    track[i][j].trigs[pressed_step] = not track[i][j].trigs[pressed_step]
+  end
+end
+
 function grid_redraw()
   g:all(0)
+  for i = 1,8 do
+    g:led(1,i,mods[modkeys[i]] and 15 or 0)
+  end
   for i = 1+1,number_of_hills+1 do
     for j = 1,8 do
       if mod_held then
-        if not mods["playmode"] and not mods["copy"] and not mods["snapshots"] then
+        if not mods["playmode"] and not mods["copy"] and not mods["snapshots"]
+        and not mods['hill'] then
           if i-1 == ui.hill_focus and hills[ui.hill_focus].screen_focus == j then
             g:led(i,j,15)
           else
@@ -718,6 +746,27 @@ function grid_redraw()
               display_level = hills[i-1][j].mute and 2 or 10
             end
             g:led(i,j,display_level)
+          end
+        elseif mods['hill'] then
+          if not hills[i-1].highway then
+            if i-1 == ui.hill_focus and hills[ui.hill_focus].screen_focus == j then
+              g:led(i,j,15)
+            else
+              if hills[i-1].segment == j then
+                g:led(i,j,hills[i-1][j].perf_led and 10 or (hills[i-1][j].iterated and 6 or 8))
+              else
+                g:led(i,j,0)
+              end
+            end
+            if mods["alt"] then
+              if hills[i-1].segment == j then
+                g:led(i,j,hills[i-1][j].perf_led and 15 or (hills[i-1][j].iterated and 6 or 15))
+              else
+                g:led(i,j,0)
+              end
+            end
+          else
+            grid_lib.draw_highway(i-1)
           end
         elseif snapshot_overwrite_mod then
 
@@ -796,9 +845,6 @@ function grid_redraw()
         end
       end
     end
-  end
-  for i = 1,8 do
-    g:led(1,i,mods[modkeys[i]] and 15 or 0)
   end
   if mod_held and not mods["playmode"] and not mods["alt"] and not mods["copy"] and not mods["snapshots"] then
     g:led(14,8,dirs["L"] and 15 or 8)
@@ -946,8 +992,51 @@ function grid_redraw()
     g:led(12,1,mods['snapshots_extended'] and 15 or 6)
     g:led(12,2,snapshot_overwrite_mod and 15 or 6)
   end
-
+  
   g:refresh()
+end
+
+function grid_lib.draw_highway(i)
+  local focused = hills[i].screen_focus
+  local _active = track[i][focused]
+  local focused_set = _active.focus == 'main' and _active or _active.fill
+  local _hui = highway_ui
+  local epos = _active.ui_position
+  
+  -- draw top row hill selector
+  g:led(i+1,1,i == ui.hill_focus and 15 or 4)
+
+  -- draw steps + sequence selector
+  if ui.hill_focus == i then
+    local min_max = {{1,32},{33,64},{65,96},{97,128}}
+    local lvl = 5
+    for display_range = min_max[_hui.seq_page[focused]][1], min_max[_hui.seq_page[focused]][2] do
+      if display_range <= _active.end_point and display_range >= _active.start_point then
+        if _active.step == display_range and track[i].active_hill == focused then
+          lvl = 10
+        else
+          lvl = 5
+        end
+      else
+        lvl = 2
+      end
+      if _active.trigs[display_range] then
+        if _active.step == display_range then
+          lvl = 0
+        else
+          lvl = 15
+        end
+      end
+      g:led(_hsteps.index_to_grid_pos(display_range,8)[1], _hsteps.index_to_grid_pos(display_range,8)[2]+2,lvl)
+    end
+    for j = 1,8 do
+      g:led(j+1, 2, focused == j and 15 or 4)
+      if track[i].active_hill == j and track[i].active_hill ~= focused then
+        g:led(j+1, 2, 10)
+      end
+    end
+  end
+
 end
 
 function start_dir_clock(dir,n,d)

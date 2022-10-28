@@ -349,9 +349,14 @@ function init()
   end
 
   function kildare.voice_param_callback(voice, param, val)
-    local d_voice = type(voice) ~= 'string' and params:string('voice_model_'..voice) or voice
     if snapshot_overwrite_mod then
+      local d_voice = type(voice) ~= 'string' and params:string('voice_model_'..voice) or voice
+      if util.string_starts(voice, 'sample') then
+        voice = tonumber(string.sub(voice,-1)) + 7 -- TODO: CONFIRM CPU OKAY
+      end
       for i = 1,8 do
+        -- FIXME
+        print(snapshot_overwrite,voice,d_voice,i)
         local should_overwrite = snapshot_overwrite[voice][d_voice][i]
         if should_overwrite and params:string('lfo_snapshot_'..voice) == 'off' then
           -- print('overwriting', snapshots[voice][d_voice][i][param])
