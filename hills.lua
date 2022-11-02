@@ -76,6 +76,9 @@ end
 local pre_note = {}
 local midi_device = {}
 
+local util_round = util.round
+local lin_lin = util.linlin
+
 function init()
   kildare.init(true)
   _ca.init() -- initialize clips
@@ -175,7 +178,7 @@ function init()
 
     for j = 1,8 do
       hills[i][j] = {}
-      hills[i][j].duration = util.round(clock.get_beat_sec() * 16,0.01)
+      hills[i][j].duration = util_round(clock.get_beat_sec() * 16,0.01)
       hills[i][j].eject = hills[i][j].duration
       hills[i][j].base_step = 0
       hills[i][j].population = math.random(10,100)/100
@@ -432,14 +435,14 @@ end
 construct = function(i,j,shuffle)
   local h = hills[i]
   local seg = h[j]
-  local total_notes = util.round(#seg.note_ocean*seg.population)
+  local total_notes = util_round(#seg.note_ocean*seg.population)
   local index = 0
   local reasonable_max = seg.note_num.min ~= seg.note_num.max and seg.note_num.max or seg.note_num.min+1
   for k = 0,seg.duration*100 do
     local last_val = seg.current_val
     seg.current_val = math.floor(util.wrap(curves[seg.shape](k/100,1,total_notes-1,seg.duration),seg.note_num.min,reasonable_max))
     local note_num = seg.note_num.min ~= seg.note_num.max and seg.current_val or seg.note_num.min
-    if util.round(last_val) ~= util.round(seg.current_val) then
+    if util_round(last_val) ~= util_round(seg.current_val) then
       index = index + 1
       pass_data_into_storage(i,j,index,{note_num,k/100})
     end
@@ -488,14 +491,14 @@ iterate = function(i)
       if seg.loop then
         if seg.high_bound.note ~= seg.low_bound.note then
           if seg.note_timestamp[seg.index] ~= nil then
-            if util.round(seg.note_timestamp[seg.index],0.01) == util.round(seg.step,0.01) then
+            if util_round(seg.note_timestamp[seg.index],0.01) == util_round(seg.step,0.01) then
               pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index)
               seg.index = seg.index + 1
               seg.perf_led = true
             end
-            seg.step = util.round(seg.step + 0.01,0.01)
+            seg.step = util_round(seg.step + 0.01,0.01)
             local reasonable_max = seg.note_timestamp[seg.high_bound.note+1] ~= nil and seg.note_timestamp[seg.high_bound.note+1] or seg.note_timestamp[seg.high_bound.note] + seg.note_timedelta[seg.high_bound.note]
-            if util.round(seg.step,0.01) >= util.round(reasonable_max,0.01) then
+            if util_round(seg.step,0.01) >= util_round(reasonable_max,0.01) then
               if seg.looper.mode == "phase" then
                 _a.start(i,h.segment)
               else
@@ -505,27 +508,27 @@ iterate = function(i)
           grid_dirty = true
           end
         else
-          if util.round(seg.note_timestamp[seg.index+1],0.01) == util.round(seg.step,0.01) then
+          if util_round(seg.note_timestamp[seg.index+1],0.01) == util_round(seg.step,0.01) then
             pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index)
             seg.step = seg.note_timestamp[seg.index]
             seg.perf_led = true
           else
-            seg.step = util.round(seg.step + 0.01,0.01)
+            seg.step = util_round(seg.step + 0.01,0.01)
           end
           grid_dirty = true
         end
       else
         seg.iterated = false
         if seg.index <= seg.high_bound.note then
-          if util.round(seg.note_timestamp[seg.index],0.01) == util.round(seg.step,0.01) then
+          if util_round(seg.note_timestamp[seg.index],0.01) == util_round(seg.step,0.01) then
             pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index)
             seg.index = seg.index + 1
             seg.perf_led = true
           end
-          seg.step = util.round(seg.step + 0.01,0.01)
+          seg.step = util_round(seg.step + 0.01,0.01)
           local comparator;
           if seg.bound_mode == "time" then
-            comparator = util.round(seg.step,0.01) > util.round(seg.high_bound.time,0.01)
+            comparator = util_round(seg.step,0.01) > util_round(seg.high_bound.time,0.01)
           elseif seg.bound_mode == "note" then
             comparator = seg.index > seg.high_bound.note
           end
@@ -601,7 +604,7 @@ end
 local function inject(shape,i,injection_point,duration)
   local h = hills[i]
   local seg = h[h.segment]
-  local total_notes = util.round(#seg.note_ocean*seg.population)
+  local total_notes = util_round(#seg.note_ocean*seg.population)
   local index = injection_point-1
   local current_val = 0
   local reasonable_max = seg.note_num.min ~= seg.note_num.max and seg.note_num.max or seg.note_num.min+1
@@ -609,7 +612,7 @@ local function inject(shape,i,injection_point,duration)
     local last_val = current_val
     current_val = math.floor(util.wrap(curves[shape](j/100,1,total_notes-1,duration),seg.note_num.min,reasonable_max))
     local note_num = seg.note_num.min ~= seg.note_num.max and current_val or seg.note_num.min
-    if util.round(last_val) ~= util.round(current_val) then
+    if util_round(last_val) ~= util_round(current_val) then
       index = index + 1
       inject_data_into_storage(i,h.segment,index,{note_num,j/100})
     end
@@ -693,7 +696,7 @@ function fkmap(i,j,index,p)
   local value = target_trig[i][j][index].params[p]
   local clamped = util.clamp(value, 0, 1)
   local cs = params:lookup_param(p).controlspec
-  local rounded = util.round(cs.warp.map(cs, clamped), cs.step)
+  local rounded = util_round(cs.warp.map(cs, clamped), cs.step)
   return rounded
 end
 
@@ -861,7 +864,17 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
           else
             local destination_vel = track[i][j].focus == 'main' and track[i][j].velocities[index] or track[i][j].fill.velocities[index]
             local destination_count = track[i][j].focus == 'main' and track[i][j].conditional.retrig_count[index] or track[i][j].fill.conditional.retrig_count[index]
-            local retrig_vel = util.round(util.linlin(0, destination_count, destination_vel, 0, retrig_index))
+            local destination_curve = track[i][j].focus == 'main' and track[i][j].conditional.retrig_slope[index] or track[i][j].fill.conditional.retrig_slope[index]
+            local retrig_vel;
+            if destination_curve < 0 and destination_count > 0 then
+              local destination_min = lin_lin(-128, -1, 0, destination_vel, destination_curve)
+              retrig_vel = util_round(lin_lin(0, destination_count, destination_vel, destination_min, retrig_index))
+            elseif destination_curve > 0 and destination_count > 0 then
+              local destination_max = lin_lin(1, 128, 0, destination_vel, destination_curve)
+              retrig_vel = util_round(lin_lin(0, destination_count, 0, destination_max, retrig_index))
+            else
+              retrig_vel = destination_vel
+            end
             engine.trig(i,retrig_vel)
           end
         end
@@ -878,7 +891,7 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
           elseif params:string(target..'_sampleMode') == 'playthrough' then
             _ca.play_through(target,vel_target,i,j,played_note)  -- TODO: this won't always be hill-active...track-active!!
           elseif params:string(target..'_sampleMode') == 'distribute' then
-            local scaled_idx = util.round(sample_info[target].sample_count * (params:get('hill '..i..' sample distribution')/100))
+            local scaled_idx = util_round(sample_info[target].sample_count * (params:get('hill '..i..' sample distribution')/100))
             if scaled_idx ~= 0 then
               local idx = util.wrap(played_note - params:get("hill "..i.." base note"),0,scaled_idx-1) + 1
                -- TODO: this won't always be hill-active...track-active!!:
@@ -909,7 +922,7 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
           elseif params:string(target..'_sampleMode') == 'playthrough' and should_play then
             _ca.play_through(target,vel_target,i,j,played_note)
           elseif params:string(target..'_sampleMode') == 'distribute' and should_play then
-            local scaled_idx = util.round(sample_info[target].sample_count * (params:get('hill '..i..' sample distribution')/100))
+            local scaled_idx = util_round(sample_info[target].sample_count * (params:get('hill '..i..' sample distribution')/100))
             if scaled_idx ~= 0 then
               local idx = util.wrap(played_note - params:get("hill "..i.." base note"),0,scaled_idx-1) + 1
               _ca.play_index(target,idx,vel_target,i,j,played_note) -- TODO: adjust for actual sample pool size

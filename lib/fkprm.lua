@@ -204,6 +204,7 @@ function m:force(index, voice, hill, step)
     target_trig = m.adjusted_params
   end
   build_check(target_trig, voice, hill, step)
+  print(voice,hill,step,index)
   if target_trig[voice][hill][step].params[index] ~= params:lookup_param(index).raw then
     target_trig[voice][hill][step].params[index] = params:lookup_param(index).raw
     -- target_trig[voice][hill][step].lock_trigs[index] = true
@@ -229,30 +230,6 @@ function m:delta(index, d, voice, hill, step)
   else
     target_trig = m.adjusted_params
   end
-  -- basically, want to snag the parameter info and build out a copy with the delta...
-  -- if target_trig[voice] == nil then
-  --   target_trig[voice] = {
-  --     [hill] = {
-  --       [step] = {
-  --         ['params'] = {},
-  --         ['ids_idx'] = {},
-  --       }
-  --     }
-  --   }
-  -- elseif target_trig[voice][hill] == nil then
-  --   target_trig[voice][hill] = {
-      
-  --     [step] = {
-  --       ['params'] = {},
-  --       ['ids_idx'] = {},
-  --     }
-  --   }
-  -- elseif target_trig[voice][hill][step] == nil then
-  --   target_trig[voice][hill][step] = {
-  --     ['params'] = {},
-  --     ['ids_idx'] = {},
-  --   }
-  -- end
   build_check(target_trig, voice, hill, step)
   if target_trig[voice][hill][step].params[index] == nil then
     -- write index and value

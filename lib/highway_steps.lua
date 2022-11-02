@@ -488,8 +488,12 @@ function hway_ui.draw_menu()
           screen.text('RETRIG: '..focused_set.conditional.retrig_count[current_step]..'x')
           screen.level(_s.popup_focus.tracks[hf][1] == 4 and 15 or 4)
           local get_string = _active.focus == 'main' and ('track_retrig_time_'..hf..'_'..h.screen_focus..'_'..current_step) or ('track_fill_retrig_time_'..hf..'_'..h.screen_focus..'_'..current_step)
-          screen.move(93,40)
-          screen.text('('..track_paramset:string(get_string)..')')
+          screen.move(20,50)
+          screen.text('RATE: '..track_paramset:string(get_string))
+          screen.level(_s.popup_focus.tracks[hf][1] == 5 and 15 or 4)
+          screen.move(70,50)
+          local show_sign = focused_set.conditional.retrig_slope[current_step] > 0 and '+' or ''
+          screen.text('SLOPE: '..show_sign..focused_set.conditional.retrig_slope[current_step])
         elseif ui.menu_focus == 2 then
           draw_popup(norns.state.path..'img/bolt.png',6,17)
           screen.move(15,20)
@@ -770,6 +774,12 @@ function hway_ui.cycle_retrig_time(i,j,step,d)
   track_paramset:delta(focused_set,d)
 end
 
+function hway_ui.cycle_retrig_vel(i,j,step,d)
+  local _active = track[i][j]
+  local focused_set = _active.focus == 'main' and _active or _active.fill
+  focused_set.conditional.retrig_slope[step] = util.clamp(focused_set.conditional.retrig_slope[step]+d, -128, 128)
+end
+
 function hway_ui.cycle_er_param(prm,i,j,d)
   local _active = track[i][j]
   local focused_set = _active.focus == 'main' and _active or _active.fill
@@ -809,7 +819,7 @@ end
 function hway_ui.index_to_grid_pos(val,columns)
   local x = math.fmod(val-1,columns)+1
   local y = math.modf((val-1)/columns)+1
-  return {x,y-(4*(_hui.seq_page[_hui.sel]-1))}
+  return {x,y-(4*(_hui.seq_page[ui.hill_focus]-1))}
 end
 
 -- function hway_ui.fill(style)

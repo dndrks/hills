@@ -68,6 +68,12 @@ function grid_lib.pattern_execute(data)
   end
 end
 
+grid_data_entry = false
+data_entry_steps = {}
+for i = 1,10 do
+  data_entry_steps[i] = {}
+end
+
 grid_pattern = {}
 grid_overdub_state = {}
 overdubbing_pattern = false
@@ -680,10 +686,13 @@ function long_press(dir)
 end
 
 function grid_lib.highway_press(x,y,z)
+  -- change voice focus:
   if y == 1 and z == 1 and x <= 11 then
     ui.hill_focus = x-1
+  -- change pattern focus:
   elseif y == 2 and z == 1 and (x > 1 and x <= 9) then
     hills[ui.hill_focus].screen_focus = x-1
+  -- enter steps
   elseif y <= 6 and z == 1 and (x >= 1 and x <= 8) then
     local i = ui.hill_focus
     local j = hills[ui.hill_focus].screen_focus
@@ -691,7 +700,21 @@ function grid_lib.highway_press(x,y,z)
     local pos = ((y - 3) * 8) + x
     local pressed_step = pos + ((highway_ui.seq_page[i] - 1) * 32)
     track[i][j].ui_position = pressed_step
-    track[i][j].trigs[pressed_step] = not track[i][j].trigs[pressed_step]
+    if not grid_data_entry then
+      track[i][j].trigs[pressed_step] = not track[i][j].trigs[pressed_step]
+    else
+      if not tab.contains(data_entry_steps[i], pressed_step) then
+        data_entry_steps[i][#data_entry_steps[i]+1] = pressed_step
+      else
+        table.remove(data_entry_steps[i],tab.key(data_entry_steps[i],pressed_step))
+      end
+    end
+  -- grid lock mode:
+  elseif y == 8 and x == 8 and z == 1 then
+    grid_data_entry = not grid_data_entry
+    if not grid_data_entry then
+      data_entry_steps[ui.hill_focus] = {}
+    end
   end
 end
 
@@ -1024,6 +1047,7 @@ function grid_lib.draw_highway(i)
   if ui.hill_focus == i then
     local min_max = {{1,32},{33,64},{65,96},{97,128}}
     local lvl = 5
+    local flipped_data_entry_steps = tab.invert(data_entry_steps[i])
     for display_range = min_max[_hui.seq_page[focused]][1], min_max[_hui.seq_page[focused]][2] do
       if display_range <= _active.end_point and display_range >= _active.start_point then
         if _active.step == display_range and track[i].active_hill == focused then
@@ -1034,11 +1058,23 @@ function grid_lib.draw_highway(i)
       else
         lvl = 2
       end
-      if _active.trigs[display_range] then
-        if _active.step == display_range and _active.playing then
-          lvl = 0
-        else
+      if grid_data_entry then
+        if flipped_data_entry_steps[display_range] ~= nil then
           lvl = 15
+        else
+          if _active.trigs[display_range] then
+            lvl = 5
+          else
+            lvl = 2
+          end
+        end
+      else
+        if _active.trigs[display_range] then
+          if _active.step == display_range and _active.playing then
+            lvl = 0
+          else
+            lvl = 15
+          end
         end
       end
       g:led(_hsteps.index_to_grid_pos(display_range,8)[1], _hsteps.index_to_grid_pos(display_range,8)[2]+2,lvl)
@@ -1050,6 +1086,9 @@ function grid_lib.draw_highway(i)
       end
     end
   end
+
+  -- draw grid_lock:
+  g:led(8,8,grid_data_entry and 15 or 5)
 
 end
 

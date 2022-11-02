@@ -95,7 +95,7 @@ function track_actions.init(target)
     track[target][hill_count].conditional.retrig_clock = nil
     track[target][hill_count].conditional.retrig_count = {}
     track[target][hill_count].conditional.retrig_time = {}
-    track[target][hill_count].conditional.retrig_vel = {}
+    track[target][hill_count].conditional.retrig_slope = {}
     track[target][hill_count].focus = "main"
     track[target][hill_count].fill =
     {
@@ -112,7 +112,7 @@ function track_actions.init(target)
         ["mode"] = {},
         ["retrig_count"] = {},
         ["retrig_time"] = {},
-        ["retrig_vel"] = {}
+        ["retrig_slope"] = {}
       }
     }
     for i = 1,128 do
@@ -216,7 +216,7 @@ function track_actions.init(target)
         track[target][hill_count].fill.conditional.retrig_time[i] = track_retrig_lookup[x]
       end)
       track[target][hill_count].conditional.retrig_time[i] = track_retrig_lookup[track_paramset:get("track_retrig_time_"..target.."_"..hill_count..'_'..i)]
-      track[target][hill_count].conditional.retrig_vel[i] = 0
+      track[target][hill_count].conditional.retrig_slope[i] = 0
       
       track[target][hill_count].fill.notes[i] = 1
       track[target][hill_count].fill.chord_degrees[i] = 1
@@ -229,7 +229,7 @@ function track_actions.init(target)
       track[target][hill_count].fill.conditional.mode[i] = "A:B"
       track[target][hill_count].fill.conditional.retrig_count[i] = 0
       track[target][hill_count].fill.conditional.retrig_time[i] = track_retrig_lookup[track_paramset:get("track_fill_retrig_time_"..target.."_"..hill_count..'_'..i)]
-      track[target][hill_count].fill.conditional.retrig_vel[i] = 0
+      track[target][hill_count].fill.conditional.retrig_slope[i] = 0
     end
 
     track[target][hill_count].gate = {}

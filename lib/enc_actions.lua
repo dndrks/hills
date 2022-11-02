@@ -21,7 +21,7 @@ function enc_actions.parse(n,d)
             ui.menu_focus = 4
           end
         end
-        highway_ui.seq_page[i] = math.ceil(track[i][j].ui_position/32)
+        highway_ui.seq_page[ui.hill_focus] = math.ceil(track[ui.hill_focus][j].ui_position/32)
       elseif ui.control_set == 'edit' then
         if hills[i].highway and key1_hold then
           enc_actions.delta_track_pos(i,j,d)
@@ -79,7 +79,7 @@ function enc_actions.parse(n,d)
         elseif hills[i].highway then
           if ui.menu_focus == 1 then
             if key1_hold then
-              _s.popup_focus.tracks[i][1] = util.clamp(_s.popup_focus.tracks[i][1] + d, 1, 4)
+              _s.popup_focus.tracks[i][1] = util.clamp(_s.popup_focus.tracks[i][1] + d, 1, 5)
             else
               enc_actions.delta_track_pos(i,j,d)
             end
@@ -203,6 +203,8 @@ function enc_actions.parse(n,d)
                   _hsteps.cycle_retrig_count(i,j,_pos,d)
                 elseif _s.popup_focus.tracks[i][1] == 4 then
                   _hsteps.cycle_retrig_time(i,j,_pos,d)
+                elseif _s.popup_focus.tracks[i][1] == 5 then
+                  _hsteps.cycle_retrig_vel(i,j,_pos,d)
                 end
               else
                 if d > 0 then
