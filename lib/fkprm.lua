@@ -19,18 +19,24 @@ m.reset = function()
   m.group = false
 end
 
-m.flip_to_fkprm = function(prev_page)
+m.flip_to_fkprm = function(prev_page, locked_entry)
   if ui.menu_focus == 1 or ui.menu_focus == 3 then
     m.voice_focus = ui.hill_focus
     m.hill_focus = hills[ui.hill_focus].screen_focus
     if hills[ui.hill_focus].highway then
-      m.step_focus = track[m.voice_focus][m.hill_focus].ui_position
+      if not locked_entry then
+        m.step_focus = track[m.voice_focus][m.hill_focus].ui_position
+      end
     else
       m.step_focus = ui.screen_controls[m.voice_focus][m.hill_focus][ui.menu_focus == 1 and 'hills' or 'notes'].focus
     end
   end
   pre_step_page = prev_page
   ui.control_set = 'step parameters'
+end
+
+m.flip_from_fkprm = function()
+  ui.control_set = pre_step_page
 end
 
 local function build_page()
@@ -74,7 +80,7 @@ m.key = function(n,z)
       build_page()
       m.pos = m.oldpos
     else
-      ui.control_set = pre_step_page
+      m.flip_from_fkprm()
       ignore_key2_up = true
       key2_hold = false
     end
@@ -117,7 +123,11 @@ m.enc = function(n,d)
     elseif n==3 and params.count > 0 then
       if params:lookup_param(page[m.pos+1]).t == 3 then
         local dx = m.fine and (d/20) or d
-        m:delta(page[m.pos+1], dx, m.voice_focus, m.hill_focus, m.step_focus)
+        if grid_data_entry then
+          m:delta_many(page[m.pos+1], dx, m.voice_focus, m.hill_focus)
+        else
+          m:delta(page[m.pos+1], dx, m.voice_focus, m.hill_focus, m.step_focus)
+        end
         m.redraw()
       end
     elseif n == 1 then
@@ -251,6 +261,12 @@ function m:delta(index, d, voice, hill, step)
   elseif target_trig == m.adjusted_params_lock_trigs then
     -- target_trig[voice][hill][step].lock_trigs[index] = true
     track[voice][hill].lock_trigs[step] = true
+  end
+end
+
+function m:delta_many(index, d, voice, hill)
+  for i = 1,#data_entry_steps[voice] do
+    m:delta(index, d, voice, hill, data_entry_steps[voice][i])
   end
 end
 

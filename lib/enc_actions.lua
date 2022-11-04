@@ -5,6 +5,14 @@ function enc_actions.delta_track_pos(i,j,d)
   highway_ui.seq_page[i] = math.ceil(track[i][j].ui_position/32)
 end
 
+local function check_for_menu_condition(i)
+  if (key1_hold or (#conditional_entry_steps[i] > 0)) and ui.control_set == 'edit' then
+    return true
+  else
+    return false
+  end
+end
+
 function enc_actions.parse(n,d)
   if ui.control_set == 'step parameters' then
     _fkprm.enc(n,d)
@@ -78,7 +86,8 @@ function enc_actions.parse(n,d)
           end
         elseif hills[i].highway then
           if ui.menu_focus == 1 then
-            if key1_hold then
+            -- if key1_hold then
+            if check_for_menu_condition(i) then
               _s.popup_focus.tracks[i][1] = util.clamp(_s.popup_focus.tracks[i][1] + d, 1, 5)
             else
               enc_actions.delta_track_pos(i,j,d)
@@ -194,7 +203,8 @@ function enc_actions.parse(n,d)
           local _pos = track[i][j].ui_position
           if ui.menu_focus == 1 then
             if ui.control_set == 'edit' then
-              if key1_hold then
+              -- if key1_hold then
+              if check_for_menu_condition(i) then
                 if _s.popup_focus.tracks[i][1] == 1 then
                   _hsteps.cycle_conditional(i,j,_pos,d)
                 elseif _s.popup_focus.tracks[i][1] == 2 then

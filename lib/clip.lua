@@ -176,7 +176,7 @@ function ca.get_pitched_rate(target,i,j,played_note)
   end
 end
 
-function ca.play_slice(target,slice,velocity,i,j, played_note)
+function ca.play_slice(target,slice,velocity,i,j, played_note, retrig_index)
   if params:get(target..'_sampleFile') ~= _path.audio then
     local length = sample_info[target].sample_lengths[1]
     local slice_count = params:get('hill '..i..' sample slice count')
@@ -196,11 +196,15 @@ function ca.play_slice(target,slice,velocity,i,j, played_note)
       rate = ca.get_resampled_rate(target, i, j)
     end
     engine.set_voice_param(target, 'rate', rate)
-    engine.trig(target,velocity)
+    if retrig_index == 0 then
+      engine.trig(target,velocity,'false')
+    else
+      engine.trig(target,velocity,'true')
+    end
   end
 end
 
-function ca.play_through(target,velocity,i,j, played_note)
+function ca.play_through(target,velocity,i,j, played_note, retrig_index)
   engine.set_voice_param(target,'sampleStart',0)
   engine.set_voice_param(target,'sampleEnd',1)
   if params:string(target..'_loop') == 'off' then
@@ -215,10 +219,14 @@ function ca.play_through(target,velocity,i,j, played_note)
     rate = ca.get_resampled_rate(target, i, j)
   end
   engine.set_voice_param(target, 'rate', rate)
-  engine.trig(target,velocity)
+  if retrig_index == 0 then
+    engine.trig(target,velocity,'false')
+  else
+    engine.trig(target,velocity,'true')
+  end
 end
 
-function ca.play_index(target,index,velocity,i,j, played_note)
+function ca.play_index(target,index,velocity,i,j, played_note, retrig_index)
   engine.change_sample(target,index)
   engine.set_voice_param(target,'sampleStart',0)
   engine.set_voice_param(target,'sampleEnd',1)
@@ -234,7 +242,11 @@ function ca.play_index(target,index,velocity,i,j, played_note)
     rate = ca.get_resampled_rate(target, i, j)
   end
   engine.set_voice_param(target, 'rate', rate)
-  engine.trig(target,velocity)
+  if retrig_index == 0 then
+    engine.trig(target,velocity,'false')
+  else
+    engine.trig(target,velocity,'true')
+  end
 end
 
 return ca

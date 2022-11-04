@@ -85,6 +85,7 @@ function track_actions.init(target)
     track[target][hill_count].trigs = {}
     track[target][hill_count].lock_trigs = {}
     track[target][hill_count].prob = {}
+    track[target][hill_count].micro = {}
     track[target][hill_count].er = {pulses = 0, steps = 16, shift = 0}
     track[target][hill_count].last_condition = false
     track[target][hill_count].conditional = {}
@@ -126,6 +127,7 @@ function track_actions.init(target)
       track[target][hill_count].conditional.B[i] = 1
       track[target][hill_count].conditional.mode[i] = "A:B"
       track[target][hill_count].conditional.retrig_count[i] = 0
+      track[target][hill_count].micro[i] = 0
       track_paramset:add_option("track_retrig_time_"..target.."_"..hill_count..'_'..i,"",
       {
         '1/64',

@@ -860,7 +860,7 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
         local lock_trig = track[i][j].focus == 'main' and track[i][j].lock_trigs[index] or track[i][j].fill.lock_trigs[index]
         if track[i][j].trigs[index] then
           if retrig_index == nil then
-            engine.trig(i,vel_target)
+            engine.trig(i,vel_target,'false')
           else
             local destination_vel = track[i][j].focus == 'main' and track[i][j].velocities[index] or track[i][j].fill.velocities[index]
             local destination_count = track[i][j].focus == 'main' and track[i][j].conditional.retrig_count[index] or track[i][j].fill.conditional.retrig_count[index]
@@ -875,11 +875,11 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
             else
               retrig_vel = destination_vel
             end
-            engine.trig(i,retrig_vel)
+            engine.trig(i,retrig_vel,'true')
           end
         end
       else
-        engine.trig(i,vel_target)
+        engine.trig(i,vel_target,'false')
       end
       if params:string("hill "..i.." sample output") == "yes" then
         if params:get("hill "..i.." sample probability") >= math.random(100) then
@@ -887,15 +887,15 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
           if params:string(target..'_sampleMode') == 'chop' then
             local slice_count = params:get('hill '..i..' sample slice count') - 1
             local slice = util.wrap(played_note - params:get("hill "..i.." base note"),0,slice_count) + 1
-            _ca.play_slice(target,slice,vel_target,i,j,played_note)  -- TODO: this won't always be hill-active...track-active!!
+            _ca.play_slice(target,slice,vel_target,i,j,played_note, retrig_index)  -- TODO: this won't always be hill-active...track-active!!
           elseif params:string(target..'_sampleMode') == 'playthrough' then
-            _ca.play_through(target,vel_target,i,j,played_note)  -- TODO: this won't always be hill-active...track-active!!
+            _ca.play_through(target,vel_target,i,j,played_note, retrig_index)  -- TODO: this won't always be hill-active...track-active!!
           elseif params:string(target..'_sampleMode') == 'distribute' then
             local scaled_idx = util_round(sample_info[target].sample_count * (params:get('hill '..i..' sample distribution')/100))
             if scaled_idx ~= 0 then
               local idx = util.wrap(played_note - params:get("hill "..i.." base note"),0,scaled_idx-1) + 1
                -- TODO: this won't always be hill-active...track-active!!:
-              _ca.play_index(target,idx,vel_target,i,j,played_note) -- TODO: adjust for actual sample pool size
+              _ca.play_index(target,idx,vel_target,i,j,played_note, retrig_index) -- TODO: adjust for actual sample pool size
             end
           end
         end
@@ -918,14 +918,14 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
           if params:string(target..'_sampleMode') == 'chop' and should_play then
             local slice_count = params:get('hill '..i..' sample slice count') - 1
             local slice = util.wrap(played_note - params:get("hill "..i.." base note"),0,slice_count) + 1
-            _ca.play_slice(target,slice,vel_target,i,j,played_note)
+            _ca.play_slice(target,slice,vel_target,i,j,played_note, retrig_index)
           elseif params:string(target..'_sampleMode') == 'playthrough' and should_play then
-            _ca.play_through(target,vel_target,i,j,played_note)
+            _ca.play_through(target,vel_target,i,j,played_note, retrig_index)
           elseif params:string(target..'_sampleMode') == 'distribute' and should_play then
             local scaled_idx = util_round(sample_info[target].sample_count * (params:get('hill '..i..' sample distribution')/100))
             if scaled_idx ~= 0 then
               local idx = util.wrap(played_note - params:get("hill "..i.." base note"),0,scaled_idx-1) + 1
-              _ca.play_index(target,idx,vel_target,i,j,played_note) -- TODO: adjust for actual sample pool size
+              _ca.play_index(target,idx,vel_target,i,j,played_note, retrig_index) -- TODO: adjust for actual sample pool size
             end
           end
         end
