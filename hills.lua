@@ -711,17 +711,19 @@ end
 pass_note = function(i,j,seg,note_val,index,retrig_index)
   local midi_notes = hills[i][j].note_ocean
   local played_note = get_random_offset(i,midi_notes[note_val])
+  local _active = track[i][j]
+  local focused_set = _active.focus == 'main' and _active or _active.fill
   if (played_note ~= nil and hills[i].highway == false and hills[i][j].note_num.active[index]) or
     (played_note ~= nil and hills[i].highway == true) then
     -- per-step params //
     if i <= 10 then
-      print(i,j,index,check_subtables(i,j,index),retrig_index)
+      -- print(i,j,index,check_subtables(i,j,index),retrig_index)
       if check_subtables(i,j,index) then
         -- tab.print(per_step_params_adjusted[i].param)
         -- step to step params resets:
         local target_trig;
         if hills[i].highway == true then
-          if track[i][j].trigs[index] then
+          if focused_set.trigs[index] then
             target_trig = _fkprm.adjusted_params
           else
             target_trig = _fkprm.adjusted_params_lock_trigs
@@ -858,7 +860,7 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
       local vel_target = hills[i].highway == false and hills[i][j].note_velocity[index] or track[i][j].velocities[index]
       if hills[i].highway then
         local lock_trig = track[i][j].focus == 'main' and track[i][j].lock_trigs[index] or track[i][j].fill.lock_trigs[index]
-        if track[i][j].trigs[index] then
+        if focused_set.trigs[index] then
           if retrig_index == nil then
             engine.trig(i,vel_target,'false')
           else
@@ -1029,25 +1031,33 @@ function enc(n,d)
 end
 
 function key(n,z)
-  if ui.control_set ~= "song" then
-    _k.parse(n,z)
-  else
+  if key2_hold and (ui.control_set == 'play' or ui.control_set == 'song') then
     _flow.process_key(n,z)
+  else
+    if ui.control_set ~= "song" then
+      _k.parse(n,z)
+    else
+      _flow.process_key(n,z)
+    end
   end
   screen_dirty = true
 end
 
 redraw = function()
   screen.clear()
-  if ui.control_set ~= "song" and hills[ui.hill_focus].highway == false then
-    _s.draw()
-  elseif ui.control_set ~= "song" and hills[ui.hill_focus].highway then
-    _hsteps.draw_menu()
+  if key2_hold and (ui.control_set == 'play' or ui.control_set == 'song') then
+    _flow.draw_transport_menu()
   else
-    if not key2_hold then
-      _flow.draw_song_menu()
+    if ui.control_set ~= "song" and hills[ui.hill_focus].highway == false then
+      _s.draw()
+    elseif ui.control_set ~= "song" and hills[ui.hill_focus].highway then
+      _hsteps.draw_menu()
     else
-      _flow.draw_transport_menu()
+      if not key2_hold then
+        _flow.draw_song_menu()
+      else
+        _flow.draw_transport_menu()
+      end
     end
   end
   screen.update()

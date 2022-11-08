@@ -217,13 +217,15 @@ function enc_actions.parse(n,d)
                   _hsteps.cycle_retrig_vel(i,j,_pos,d)
                 end
               else
+                local _active = track[i][j]
+                local focused_set = _active.focus == 'main' and _active or _active.fill
                 if d > 0 then
-                  if track[i][j].trigs[_pos] == false then
-                    track[i][j].trigs[_pos] = true
+                  if focused_set.trigs[_pos] == false then
+                    focused_set.trigs[_pos] = true
                   end
                 else
-                  if track[i][j].trigs[_pos] == true then
-                    track[i][j].trigs[_pos] = false
+                  if focused_set.trigs[_pos] == true then
+                    focused_set.trigs[_pos] = false
                   end
                 end
               end

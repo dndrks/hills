@@ -84,15 +84,15 @@ function f_m.draw_song_menu()
     end
     screen.level(3)
     local sel_x = 52+(f_m.index_to_grid_pos(_fm_.song_col[_fm_.group],5)[1]-1)*14
-    local sel_y = 4+(10*util.wrap(_fm_.song_line[_fm_.group],1,5))
-    screen.rect(sel_x,sel_y,13,7)
+    local sel_y = 3+(10*util.wrap(_fm_.song_line[_fm_.group],1,5))
+    screen.rect(sel_x,sel_y,13,8)
     screen.fill()
     screen.move(37,10)
     screen.line(128,10)
     screen.stroke()
     local _v = _fm_.group
     local page = f_m.index_to_grid_pos(_fm_.song_line[_fm_.group],5)[2] - 1 -- only minus 1 cuz of reasons...
-
+    screen.font_face(2)
     for i = 1+(25*page), 25+(25*page) do
       screen.move(58+(f_m.index_to_grid_pos(util.wrap(i,1,25),5)[1]-1)*14,10+(10*f_m.index_to_grid_pos(util.wrap(i,1,25),5)[2]))
       screen.level((_fm_.song_col[_fm_.group] == f_m.index_to_grid_pos(i,5)[1] and _fm_.song_line[_fm_.group] == f_m.index_to_grid_pos(i,5)[2]) and 0 or 15)
@@ -100,7 +100,7 @@ function f_m.draw_song_menu()
         screen.text_center(song_atoms[_v].lane[f_m.index_to_grid_pos(i,5)[2]].beats)
         screen.level(15)
         screen.move(col_starts[1]+(f_m.index_to_grid_pos(util.wrap(i,1,25),5)[1]-1)*18,10+(10*f_m.index_to_grid_pos(util.wrap(i,1,25),5)[2]))
-        screen.text(f_m.index_to_grid_pos(i,5)[2])
+        screen.text(string.format("%02d",f_m.index_to_grid_pos(i,5)[2]))
       elseif (f_m.index_to_grid_pos(util.wrap(i,1,25),5)[1] == 2
         or f_m.index_to_grid_pos(util.wrap(i,1,25),5)[1] == 3
         or f_m.index_to_grid_pos(util.wrap(i,1,25),5)[1] == 4
@@ -108,12 +108,18 @@ function f_m.draw_song_menu()
         and f_m.index_to_grid_pos(i,5)[2] <= song_atoms[_v].end_point then
         local target = song_atoms[_v].lane[f_m.index_to_grid_pos(i,5)[2]][pattern_names[f_m.index_to_grid_pos(i,5)[1]-1]].target
         if target > 0 then
+          if target <= 16 then
+            target = 'P'..target
+          elseif target <= 24 then
+            target = 'H'..(target-16)
+          end
         else
-          target = target == 0 and "-" or "xx"
+          target = target == 0 and "-" or "XX"
         end
         screen.text_center(target)
       end
     end
+    screen.font_face(1)
     screen.level(15)
     if song_atoms[_fm_.group].current > 5*page and song_atoms[_fm_.group].current <= 5*(page+1) then
       screen.move(128,10+(10*(song_atoms[_fm_.group].current - 5*page)))
@@ -153,7 +159,7 @@ function f_m.draw_transport_menu()
   screen.move(0,58)
   screen.level(15)
   screen.font_size(14)
-  screen.text("K3: "..(song_atoms.transport_active and "STOP SONG" or "START SONG"))
+  screen.text("K3: "..(song_atoms.transport_active and "STOP" or "START"))
 end
 
 function f_m.process_encoder(n,d)
@@ -189,15 +195,18 @@ function f_m.process_encoder(n,d)
         end
       end
     elseif n == 3 then
-      if _fm_.song_col[_fm_.group] == 1 then
-        song_atoms[_fm_.group].lane[_fm_.song_line[_fm_.group]].beats = util.clamp(song_atoms[_fm_.group].lane[_fm_.song_line[_fm_.group]].beats + d,1,128)
-      elseif _fm_.song_col[_fm_.group] == 2 or _fm_.song_col[_fm_.group] == 3 or _fm_.song_col[_fm_.group] == 4 or _fm_.song_col[_fm_.group] == 5 then
-        song_atoms[_fm_.group].lane[_fm_.song_line[_fm_.group]][pattern_names[_fm_.song_col[_fm_.group]-1]].target = util.clamp(song_atoms[_fm_.group].lane[_fm_.song_line[_fm_.group]][pattern_names[_fm_.song_col[_fm_.group]-1]].target + d,-1,16)
-      -- elseif _fm_.song_col[_fm_.group] == 3 then
+      local group = _fm_.group
+      local line = _fm_.song_line[group]
+      local col = _fm_.song_col[group]
+      if col == 1 then
+        song_atoms[group].lane[line].beats = util.clamp(song_atoms[group].lane[line].beats + d,1,128)
+      elseif col >= 2 and col <= 5 then
+        song_atoms[group].lane[line][pattern_names[col-1]].target = util.clamp(song_atoms[group].lane[line][pattern_names[col-1]].target + d,-1,25)
+      -- elseif col == 3 then
       --   if _fm_.alt then
-      --     song_atoms[_fm_.group].lane[_fm_.song_line[_fm_.group]].snapshot_restore_mod_index = util.clamp(song_atoms[_fm_.group].lane[_fm_.song_line[_fm_.group]].snapshot_restore_mod_index + d, 0,8)
+      --     song_atoms[_fm_.group].lane[line].snapshot_restore_mod_index = util.clamp(song_atoms[_fm_.group].lane[line].snapshot_restore_mod_index + d, 0,8)
       --   else
-      --     song_atoms[_fm_.group].lane[_fm_.song_line[_fm_.group]].snapshot.target = util.clamp(song_atoms[_fm_.group].lane[_fm_.song_line[_fm_.group]].snapshot.target + d,-1,16)
+      --     song_atoms[_fm_.group].lane[line].snapshot.target = util.clamp(song_atoms[_fm_.group].lane[line].snapshot.target + d,-1,16)
       --   end
       end
     end
@@ -234,6 +243,9 @@ function f_m.process_key(n,z)
       if song_atoms.transport_active then
         clock.transport.stop()
       else
+        if params:string("clock_source") == "internal" then
+          clock.internal.start(-0.1)
+        end
         clock.transport.start()
       end
     end

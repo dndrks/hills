@@ -36,7 +36,12 @@ m.flip_to_fkprm = function(prev_page, locked_entry)
 end
 
 m.flip_from_fkprm = function()
-  ui.control_set = pre_step_page
+  if pre_step_page ~= 'step parameters' then
+    ui.control_set = pre_step_page
+  else
+    ui.control_set = 'edit'
+  end
+  grid_data_entry = false
 end
 
 local function build_page()

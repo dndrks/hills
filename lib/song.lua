@@ -26,7 +26,8 @@ end
 
 song.iterate = function()
   while true do
-    clock.sync(1,-1/64)
+    -- clock.sync(1,-1/64)
+    clock.sync(1/4)
     for i = 1,4 do
       if song_atoms[i].active then
         local _current = song_atoms[i].current
@@ -49,14 +50,25 @@ song.check_step = function(i)
     -- if k == 1 and song_atoms[i].runner == 1 then
     if song_atoms[i].runner == 1 then
       local shot = song_atoms[i].lane[_current][j].target
-      if shot > 0 and tab.count(grid_pattern[shot].event) > 1 and grid_pattern[shot].rec == 0 then
-        -- print("would launch pattern "..shot)
-        -- restart style
-        if grid_pattern[shot].play == 0 then
-          grid_pattern[shot]:start()
-        else
-          _g.stop_pattern_playback(shot)
-          grid_pattern[shot]:start()
+      if shot > 0 and shot <= 16 then
+        if tab.count(grid_pattern[shot].event) > 1 and grid_pattern[shot].rec == 0 then
+          if grid_pattern[shot].play == 0 then
+            grid_pattern[shot]:start()
+          else
+            _g.stop_pattern_playback(shot)
+            grid_pattern[shot]:start()
+          end
+        end
+      elseif shot >= 17 and shot <= 24 then
+        for k = 1,10 do
+          if hills[k].highway then
+            _htracks.stop_playback(k)
+            track[k].active_hill = shot - 16
+            _htracks.start_playback(k)
+            if k == 1 then
+              print(clock.get_beats())
+            end
+          end
         end
       elseif shot == 0 then
       elseif shot == -1 then
@@ -87,6 +99,16 @@ song.start = function()
   for i = 1,4 do
     song.check_step(i)
   end
+
+  if params:string('global_transport_mode') == 'highways' then
+    for i = 1,10 do
+      if hills[i].highway then
+        _htracks.start_playback(i)
+      end
+    end
+  end
+  screen_dirty = true
+  grid_dirty = true
 end
 
 song.stop = function()
@@ -103,6 +125,11 @@ song.stop = function()
       _g.stop_pattern_playback(i)
     end
   end
+  for i = 1,10 do
+    _htracks.stop_playback(i)
+  end
+  screen_dirty = true
+  grid_dirty = true
   -- should probably kill running patterns...
 end
 

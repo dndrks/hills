@@ -328,7 +328,7 @@ end
 
 function track_actions.iterate(target)
   while true do
-    clock.sync(track[target][track[target].active_hill].time)
+    clock.sync(track[target][track[target].active_hill].time, track[target][track[target].active_hill].micro[track[target][track[target].active_hill].step]/384)
     track_actions.tick(target)
   end
 end

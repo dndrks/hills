@@ -32,8 +32,11 @@ function parameters.change_UI_name(id, new_name)
 end
 
 function parameters.send_to_engine(voice,param,value)
+  print(param)
   if param == 'carHz' then
     engine.set_voice_param(voice, param, mu.note_num_to_freq(value))
+    engine.set_voice_param(voice,"thirdHz", mu.note_num_to_freq(value))
+    engine.set_voice_param(voice,"seventhHz", mu.note_num_to_freq(value))
   elseif param == 'poly' then
     engine.set_voice_param(voice, param, value == 1 and 0 or 1)
   else
@@ -367,7 +370,9 @@ function parameters.init()
 
   params:add_separator('hills_pattern_header', 'pattern + snapshot settings')
   
-  params:add_group('global_pattern_group', 'global', 23)
+  params:add_group('global_pattern_group', 'global', 25)
+  params:add_separator('global_transport_settings','transport')
+  params:add_option('global_transport_mode', 'start mode', {'highways','song'}, 1)
   params:add_separator('global_pattern_settings','patterns')
   params:add_option('global_pattern_start_rec_at', 'start rec at', {'first event','when engaged'}, 1)
   params:set_action('global_pattern_start_rec_at', function(x)
