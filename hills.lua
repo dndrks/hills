@@ -80,19 +80,25 @@ local util_round = util.round
 local lin_lin = util.linlin
 
 function init()
+  print('starting: '..util.time())
   kildare.init(true)
   _ca.init() -- initialize clips
   _snapshots.init()
   _flow.init()
+  print('initializing song: '..util.time())
   _song.init()
   math.randomseed(os.time())
   _g.init()
+  
   key1_hold = false
   key2_hold = false
+  
   _hsteps.init()
   for i = 1,10 do
     _htracks.init(i)
   end
+
+  print('initialized tracks: '..util.time())
 
   key2_hold_counter = metro.init()
   key2_hold_counter.time = 0.25
@@ -128,11 +134,11 @@ function init()
     scale_names[scale_count] = mu.SCALES[i].name
     scale_count = scale_count + 1
   end
-
+  
   prms.init()
   _fkprm.init()
   -- prms.reload_engine(params:string("global engine"),true)
-
+  
   for i = 1,number_of_hills do
     ui.edit_note[i] = {}
 
@@ -252,6 +258,8 @@ function init()
       end
     end)
   end
+
+  print('built hills: '..util.time())
 
   params.action_read = function(filename,name,number)
     print("loading hills data for PSET: "..number)
@@ -411,12 +419,16 @@ function init()
     -- snapshot_overwrite_mod = false
   end
 
+  print('wrapped with startup: '..util.time())
   clock.run(
     function()
-      clock.sleep(0.25)
+      clock.sleep(0.5)
       development_state()
+      print('dev state: '..util.time())
     end
   )
+
+  print('done: '..util.time())
 
 end
 

@@ -4,6 +4,8 @@ track = {}
 
 track_clock = {}
 
+local fast_option = include 'lib/fast_option'
+
 track_paste_style = 1
 
 local function wrap(n, min, max)
@@ -68,6 +70,7 @@ function track_actions.init(target)
   track[target] = {}
   track[target].active_hill = 1
   track[target].seed_prob = 100
+  track[target].song_mute = {}
   for hill_count = 1,8 do
     track[target][hill_count] = {}
     track[target][hill_count].playing = false
@@ -86,6 +89,7 @@ function track_actions.init(target)
     track[target][hill_count].lock_trigs = {}
     track[target][hill_count].prob = {}
     track[target][hill_count].micro = {}
+    track[target][hill_count].song_mute = false
     track[target][hill_count].er = {pulses = 0, steps = 16, shift = 0}
     track[target][hill_count].last_condition = false
     track[target][hill_count].conditional = {}
@@ -128,6 +132,7 @@ function track_actions.init(target)
       track[target][hill_count].conditional.mode[i] = "A:B"
       track[target][hill_count].conditional.retrig_count[i] = 0
       track[target][hill_count].micro[i] = 0
+      -- track_paramset:add { param=fast_option.new("track_retrig_time_"..target.."_"..hill_count..'_'..i,"",
       track_paramset:add_option("track_retrig_time_"..target.."_"..hill_count..'_'..i,"",
       {
         '1/64',
@@ -169,10 +174,12 @@ function track_actions.init(target)
         '64'
       },
       13)
+    -- }
       track_paramset:set_action("track_retrig_time_"..target.."_"..hill_count..'_'..i, function(x)
         track[target][hill_count].conditional.retrig_time[i] = track_retrig_lookup[x]
       end)
 
+      -- track_paramset:add { param=fast_option.new("track_fill_retrig_time_"..target.."_"..hill_count..'_'..i,"",
       track_paramset:add_option("track_fill_retrig_time_"..target.."_"..hill_count..'_'..i,"",
       {
         '1/64',
@@ -214,6 +221,7 @@ function track_actions.init(target)
         '64'
       },
       13)
+    -- }
       track_paramset:set_action("track_fill_retrig_time_"..target.."_"..hill_count..'_'..i, function(x)
         track[target][hill_count].fill.conditional.retrig_time[i] = track_retrig_lookup[x]
       end)
@@ -247,6 +255,7 @@ function track_actions.init(target)
       track_clock[target] = clock.run(track_actions.iterate,target)
     end
   end
+  print('initializing track: '..target..', '..util.time())
 end
 
 -- function track_actions.find_index(tab,el)
