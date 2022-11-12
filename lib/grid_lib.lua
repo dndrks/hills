@@ -742,7 +742,7 @@ function grid_lib.highway_press(x,y,z)
     local min_max = {{1,32},{33,64},{65,96},{97,128}}
     local pos = ((y - 3) * 8) + x
     local pressed_step = pos + ((highway_ui.seq_page[i] - 1) * 32)
-    if not grid_data_entry and not grid_conditional_entry and not grid_loop_modifier then
+    if not grid_data_entry and not grid_conditional_entry and not grid_loop_modifier and not grid_mute then
       track[i][j].ui_position = pressed_step
       focused_set.trigs[pressed_step] = not focused_set.trigs[pressed_step]
     elseif grid_data_entry then
@@ -773,6 +773,11 @@ function grid_lib.highway_press(x,y,z)
         track[i][j].end_point = util.clamp(pressed_step, track[i][j].start_point, 128)
         reset_state.loop_modifier()
       end
+    elseif grid_mute then
+      track[i][j].ui_position = pressed_step
+      if focused_set.trigs[pressed_step] then
+        focused_set.muted_trigs[pressed_step] = not focused_set.muted_trigs[pressed_step]
+      end
     end
   -- grid lock mode:
   elseif y == 7 and x == 1 then
@@ -801,6 +806,8 @@ function grid_lib.highway_press(x,y,z)
     else
       -- _fkprm.flip_to_fkprm(ui.control_set,true)
     end
+  elseif y == 8 and x == 7 then
+    grid_mute = z == 1 and true or false
   elseif y == 8 and x == 8 then
     track[ui.hill_focus][hills[ui.hill_focus].screen_focus].focus = z == 1 and "fill" or "main"
   end
@@ -1141,7 +1148,7 @@ function grid_lib.draw_highway(i)
         if display_step == _active.end_point or display_step == _active.start_point then
           lvl = 10
         elseif display_step < _active.end_point and display_step > _active.start_point then
-          lvl = 5
+          lvl = 3
         else
           lvl = 2
         end
@@ -1151,7 +1158,7 @@ function grid_lib.draw_highway(i)
           if _active.step == display_step and track[i].active_hill == focused then
             lvl = 10
           else
-            lvl = 5
+            lvl = 3
           end
         else
           lvl = 2
@@ -1161,7 +1168,7 @@ function grid_lib.draw_highway(i)
             lvl = 15
           else
             if focused_set.trigs[display_step] then
-              lvl = 5
+              lvl = 3
             else
               if _active.step == display_step and _active.playing then
                 lvl = 0
@@ -1175,7 +1182,11 @@ function grid_lib.draw_highway(i)
             if _active.step == display_step and _active.playing then
               lvl = 0
             else
-              lvl = 15
+              if focused_set.muted_trigs[display_step] then
+                lvl = 8
+              else
+                lvl = 15
+              end
             end
           end
         end
@@ -1202,6 +1213,7 @@ function grid_lib.draw_highway(i)
   g:led(1,7,grid_loop_modifier and 5 or 2)
   g:led(2,8,grid_conditional_entry and 15 or 5)
   g:led(4,8,grid_data_entry and 15 or 5)
+  g:led(7,8,grid_mute and 15 or 5)
   g:led(8,8,track[ui.hill_focus][hills[ui.hill_focus].screen_focus].focus == 'fill' and 15 or 5)
 end
 

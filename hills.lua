@@ -720,13 +720,41 @@ local function extract_voice_from_string(s)
   end
 end
 
+local function process_params_per_step(parent,i,j,k,index)
+  local is_drum_voice = parent[k] <= params.lookup['sample3_reverbSend']
+  local id = parent[k]
+  local drum_target;
+  if id < params.lookup['sample1_sampleMode'] then
+    drum_target = params:get_id(id):match('(.+)_(.+)_(.+)')
+    drum_target = tonumber(drum_target)
+  else
+    drum_target = params:get_id(id):match('(.+)_(.+)')
+  end
+
+  if is_drum_voice and type(drum_target) == 'number' and drum_target <= 7 and drum_target == i then
+    local p_name = string.gsub(params:get_id(id),drum_target..'_'..params:string('voice_model_'..drum_target)..'_','')
+    print('reseeding default value for voice', drum_target, j, index, id)
+    prms.send_to_engine(drum_target,p_name,params:get(id))
+  elseif is_drum_voice and type(drum_target) == 'string' then
+    local target_voice = drum_target
+    local p_name = string.gsub(params:get_id(id),target_voice..'_','')
+    prms.send_to_engine(target_voice,p_name,params:get(id))
+    -- print('reseeding default value for sample voice', i, j, index, id)
+  elseif drum_target == i then
+    local p_name = extract_voice_from_string(params:get_id(id))
+    local sc_target = string.gsub(params:get_id(id),p_name..'_','')
+    -- print('reseeding default value to fx', i, j, index, id)
+    engine['set_'..p_name..'_param'](sc_target,params:get(id))
+  end
+end
+
 pass_note = function(i,j,seg,note_val,index,retrig_index)
   local midi_notes = hills[i][j].note_ocean
   local played_note = get_random_offset(i,midi_notes[note_val])
   local _active = track[i][j]
   local focused_set = _active.focus == 'main' and _active or _active.fill
   if (played_note ~= nil and hills[i].highway == false and hills[i][j].note_num.active[index]) or
-    (played_note ~= nil and hills[i].highway == true) then
+    (played_note ~= nil and hills[i].highway == true and not focused_set.muted_trigs[index]) then
     -- per-step params //
     if i <= 10 then
       -- print(i,j,index,check_subtables(i,j,index),retrig_index)
@@ -790,18 +818,33 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
           end
 
           if is_drum_voice and type(drum_target) == 'number' and drum_target <= 7 then
-            local target_voice = drum_target
-            local target_drum = params:get_id(k):match('(.*_)')
-            target_drum = string.gsub(target_drum, target_voice..'_', '')
-            target_drum = string.gsub(target_drum, '_', '')
-            local p_name = string.gsub(params:get_id(k),target_voice..'_'..target_drum..'_','')
-            print('sending voice param',target_voice,p_name,fkmap(i,j,index,k))
-            prms.send_to_engine(target_voice,p_name,fkmap(i,j,index,k))
+            if retrig_index == 0 then
+              local target_voice = drum_target
+              local target_drum = params:get_id(k):match('(.*_)')
+              target_drum = string.gsub(target_drum, target_voice..'_', '')
+              target_drum = string.gsub(target_drum, '_', '')
+              local p_name = string.gsub(params:get_id(k),target_voice..'_'..target_drum..'_','')
+              print('sending voice param',target_voice,p_name,fkmap(i,j,index,k))
+              if target_voice ~= i then
+                if not tab.contains(track[target_voice].external_prm_change,k) then
+                  track[target_voice].external_prm_change[#track[target_voice].external_prm_change+1] = k
+                end
+              end
+              prms.send_to_engine(target_voice,p_name,fkmap(i,j,index,k))
+            end
           elseif is_drum_voice and type(drum_target) == 'string' then
-            local target_voice = drum_target
-            local p_name = string.gsub(params:get_id(k),target_voice..'_','')
-            prms.send_to_engine(target_voice,p_name,fkmap(i,j,index,k))
-            -- print('sending sample param')
+            if retrig_index == 0 then
+              local target_voice = drum_target
+              local p_name = string.gsub(params:get_id(k),target_voice..'_','')
+              -- TODO: how does this work??
+              if target_voice ~= 'sample'..(i-7) then
+                if not tab.contains(track[target_voice].external_prm_change,k) then
+                  track[target_voice].external_prm_change[#track[target_voice].external_prm_change+1] = k
+                end
+              end
+              prms.send_to_engine(target_voice,p_name,fkmap(i,j,index,k))
+              -- print('sending sample param')
+            end
           else
             local p_name = extract_voice_from_string(params:get_id(k))
             local sc_target = string.gsub(params:get_id(k),p_name..'_','')
@@ -818,33 +861,13 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
       else
         -- restore default param value:
         for k = 1,#per_step_params_adjusted[i].param do
-          local is_drum_voice = per_step_params_adjusted[i].param[k] <= params.lookup['sample3_reverbSend']
-          local id = per_step_params_adjusted[i].param[k]
-          local drum_target;
-          if id < params.lookup['sample1_sampleMode'] then
-            drum_target = params:get_id(id):match('(.+)_(.+)_(.+)')
-            drum_target = tonumber(drum_target)
-          else
-            drum_target = params:get_id(id):match('(.+)_(.+)')
-          end
-
-          if is_drum_voice and type(drum_target) == 'number' and drum_target <= 7 then
-            local p_name = string.gsub(params:get_id(id),drum_target..'_'..params:string('voice_model_'..drum_target)..'_','')
-            print('reseeding default value for voice', drum_target, j, index, id)
-            prms.send_to_engine(drum_target,p_name,params:get(id))
-          elseif is_drum_voice and type(drum_target) == 'string' then
-            local target_voice = drum_target
-            local p_name = string.gsub(params:get_id(id),target_voice..'_','')
-            prms.send_to_engine(target_voice,p_name,params:get(id))
-            -- print('reseeding default value for sample voice', i, j, index, id)
-          else
-            local p_name = extract_voice_from_string(params:get_id(id))
-            local sc_target = string.gsub(params:get_id(id),p_name..'_','')
-            -- print('reseeding default value to fx', i, j, index, id)
-            engine['set_'..p_name..'_param'](sc_target,params:get(id))
-          end
+          process_params_per_step(per_step_params_adjusted[i].param,i,j,k,index)
         end
         per_step_params_adjusted[i] = {param = {}, value = {}}
+        for k = 1,#track[i].external_prm_change do
+          process_params_per_step(track[i].external_prm_change,i,j,k,index)
+        end
+        track[i].external_prm_change = {}
       end
     end
     -- // per-step params
@@ -872,7 +895,7 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
       local vel_target = hills[i].highway == false and hills[i][j].note_velocity[index] or track[i][j].velocities[index]
       if hills[i].highway then
         local lock_trig = track[i][j].focus == 'main' and track[i][j].lock_trigs[index] or track[i][j].fill.lock_trigs[index]
-        if focused_set.trigs[index] then
+        if focused_set.trigs[index] and not focused_set.muted_trigs[index] then
           if retrig_index == nil then
             engine.trig(i,vel_target,'false')
           else

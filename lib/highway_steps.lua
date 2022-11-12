@@ -129,7 +129,7 @@ function hway_ui.draw_menu()
 
         local display_step_data
         if ui.menu_focus ~= 3 then
-          display_step_data = focused_set.trigs[i] == true and '|' or '-'
+          display_step_data = focused_set.trigs[i] == true and (focused_set.muted_trigs[i] and 'M' or '|') or '-'
         else
           local note_index = focused_set.notes[i]
           display_step_data = 

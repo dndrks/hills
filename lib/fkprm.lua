@@ -207,17 +207,20 @@ local function build_check(target_trig,voice,hill,step)
   end
 end
 
-function m:force(index, voice, hill, step)
-  local target_trig;
+local function get_focus(voice,hill,step)
   if hills[voice].highway == true then
     if track[voice][hill].trigs[step] then
-      target_trig = m.adjusted_params
+      return m.adjusted_params
     else
-      target_trig = m.adjusted_params_lock_trigs
+      return m.adjusted_params_lock_trigs
     end
   else
-    target_trig = m.adjusted_params
+    return m.adjusted_params
   end
+end
+
+function m:force(index, voice, hill, step)
+  local target_trig = get_focus(voice,hill,step)
   build_check(target_trig, voice, hill, step)
   print(voice,hill,step,index)
   if target_trig[voice][hill][step].params[index] ~= params:lookup_param(index).raw then
@@ -234,37 +237,24 @@ function m:force(index, voice, hill, step)
 end
 
 function m:delta(index, d, voice, hill, step)
-  -- ah, index is coming in as number...need to couple with 'params:set_raw(index,value)'
-  local target_trig;
-  if hills[voice].highway == true then
-    if track[voice][hill].trigs[step] then
-      target_trig = m.adjusted_params
-    else
-      target_trig = m.adjusted_params_lock_trigs
-    end
-  else
-    target_trig = m.adjusted_params
-  end
+  local target_trig = get_focus(voice,hill,step)
   build_check(target_trig, voice, hill, step)
+  local val;
   if target_trig[voice][hill][step].params[index] == nil then
     -- write index and value
-    local raw_val = params:lookup_param(index).raw
-    local delta_val = params:lookup_param(index).controlspec.quantum
-    target_trig[voice][hill][step].params[index] = util.clamp(raw_val + d * delta_val,0,1)
+    val = params:lookup_param(index).raw
   else
     -- adjust value at index
-    local current_val = target_trig[voice][hill][step].params[index]
-    local delta_val = params:lookup_param(index).controlspec.quantum
-    target_trig[voice][hill][step].params[index] = util.clamp(current_val + d * delta_val,0,1)
+    val = target_trig[voice][hill][step].params[index]
   end
+  local delta_val = params:lookup_param(index).controlspec.quantum
+  target_trig[voice][hill][step].params[index] = util.clamp(val + d * delta_val,0,1)
   if util.round(target_trig[voice][hill][step].params[index],0.001) == util.round(params:get_raw(index),0.001) then
     target_trig[voice][hill][step].params[index] = nil
-    -- target_trig[voice][hill][step].lock_trigs[index] = false
     if tab.count(target_trig[voice][hill][step].params) == 0 then
       track[voice][hill].lock_trigs[step] = false
     end
   elseif target_trig == m.adjusted_params_lock_trigs then
-    -- target_trig[voice][hill][step].lock_trigs[index] = true
     track[voice][hill].lock_trigs[step] = true
   end
 end
@@ -313,26 +303,19 @@ function m:string(p)
   end
 end
 
-local function check_subtables(p)
-  local target_trig;
-  if hills[m.voice_focus].highway == true then
-    if track[m.voice_focus][m.hill_focus].trigs[m.step_focus] then
-      target_trig = m.adjusted_params
-    else
-      target_trig = m.adjusted_params_lock_trigs
+local function prm_lookup(t, ...)
+  for _, k in ipairs{...} do
+    t = t[k]
+    if not t then
+      return false
     end
-  else
-    target_trig = m.adjusted_params
   end
-  if target_trig[m.voice_focus] ~= nil
-  and target_trig[m.voice_focus][m.hill_focus] ~= nil
-  and target_trig[m.voice_focus][m.hill_focus][m.step_focus] ~= nil
-  and target_trig[m.voice_focus][m.hill_focus][m.step_focus].params ~= nil
-  and target_trig[m.voice_focus][m.hill_focus][m.step_focus].params[p] ~= nil then
-    return true
-  else
-    return false
-  end
+  return true
+end
+
+local function check_subtables(p)
+  local target_trig = get_focus(m.voice_focus,m.hill_focus,m.step_focus)
+  return prm_lookup(target_trig, m.voice_focus,m.hill_focus,m.step_focus,'params',p)
 end
 
 m.redraw = function()

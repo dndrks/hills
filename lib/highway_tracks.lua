@@ -71,6 +71,7 @@ function track_actions.init(target)
   track[target].active_hill = 1
   track[target].seed_prob = 100
   track[target].song_mute = {}
+  track[target].external_prm_change = {}
   for hill_count = 1,8 do
     track[target][hill_count] = {}
     track[target][hill_count].playing = false
@@ -86,6 +87,7 @@ function track_actions.init(target)
     track[target][hill_count].chord_degrees = {}
     track[target][hill_count].velocities = {}
     track[target][hill_count].trigs = {}
+    track[target][hill_count].muted_trigs = {}
     track[target][hill_count].lock_trigs = {}
     track[target][hill_count].prob = {}
     track[target][hill_count].micro = {}
@@ -108,6 +110,7 @@ function track_actions.init(target)
       ["chord_degrees"] = {},
       ["velocities"] = {},
       ["trigs"] = {},
+      ["muted_trigs"] = {},
       ["lock_trigs"] = {},
       ["prob"] = {},
       ['er'] = {pulses = 0, steps = 16, shift = 0},
@@ -125,6 +128,7 @@ function track_actions.init(target)
       track[target][hill_count].chord_degrees[i] = 1
       track[target][hill_count].velocities[i] = 127
       track[target][hill_count].trigs[i] = false
+      track[target][hill_count].muted_trigs[i] = false
       track[target][hill_count].lock_trigs[i] = false
       track[target][hill_count].prob[i] = 100
       track[target][hill_count].conditional.A[i] = 1
@@ -232,6 +236,7 @@ function track_actions.init(target)
       track[target][hill_count].fill.chord_degrees[i] = 1
       track[target][hill_count].fill.velocities[i] = 127
       track[target][hill_count].fill.trigs[i] = false
+      track[target][hill_count].fill.muted_trigs[i] = false
       track[target][hill_count].fill.lock_trigs[i] = false
       track[target][hill_count].fill.prob[i] = 100
       track[target][hill_count].fill.conditional.A[i] = 1
