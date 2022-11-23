@@ -6,7 +6,7 @@ function enc_actions.delta_track_pos(i,j,d)
 end
 
 local function check_for_menu_condition(i)
-  if (key1_hold or (#conditional_entry_steps[i] > 0)) and ui.control_set == 'edit' then
+  if (key1_hold or (#conditional_entry_steps.focus[i] > 0)) and ui.control_set == 'edit' then
     return true
   else
     return false
@@ -230,7 +230,7 @@ function enc_actions.parse(n,d)
                 end
               end
             elseif ui.control_set == 'play' then
-              hills[i].screen_focus = util.clamp(j+d,1,8)
+              hills[i].screen_focus = util.clamp(j+d,1,#track[i])
               highway_ui.seq_page[i] = math.ceil(track[i][hills[i].screen_focus].ui_position/32)
               if mods["hill"] then
                 grid_dirty = true

@@ -19,6 +19,20 @@ function draw_popup(text,x,y)
   end
 end
 
+function draw_prepop(text)
+  screen.rect(7,11,113,44)
+  screen.level(15)
+  screen.fill()
+  screen.rect(8,12,111,42)
+  screen.level(0)
+  screen.fill()
+  screen.level(15)
+  screen.move(64,30)
+  screen.text_center(text)
+  screen.move(64,40)
+  screen.text_center('(select a step)')
+end
+
 screen_actions.popup_focus = {1,1,1,1,1,1,1,1,1,1}
 screen_actions.popup_focus.tracks = {}
 for i = 1,10 do

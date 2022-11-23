@@ -22,7 +22,7 @@ function snapshot.init()
   end
 
   snapshots.delay = {}
-  snapshots.reverb = {}
+  snapshots.feedback = {}
   snapshots.main = {}
   
   for k,v in pairs(kildare.fx) do
@@ -59,7 +59,7 @@ function snapshot.pack(voice,coll)
       end
     end
   else
-    -- delay, reverb, main
+    -- delay, feedback, main
     for i = 1, #kildare_fx_params[voice] do
       local d = kildare_fx_params[voice][i]
       if d.type ~= 'separator' and not d.lfo_exclude then
@@ -104,7 +104,7 @@ function snapshot.unpack(voice, coll)
       clock.cancel(snapshots[voice].fnl)
       snapshots[voice].partial_restore = false
     end
-    -- delay, reverb, main
+    -- delay, feedback, main
     for i = 1, #kildare_fx_params[voice] do
       local d = kildare_fx_params[voice][i]
       if d.type ~= 'separator' and not d.lfo_exclude and snapshots[voice][coll][d.id] ~= nil then
@@ -280,7 +280,7 @@ function snapshot.route_funnel(voice,coll,mod_idx)
         end
       end
     else
-      -- delay, reverb, main
+      -- delay, feedback, main
       for i = 1, #kildare_fx_params[voice] do
         local d = kildare_fx_params[voice][i]
         if d.type ~= 'separator' and not d.lfo_exclude then

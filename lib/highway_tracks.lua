@@ -4,6 +4,8 @@ track = {}
 
 track_clock = {}
 
+track_rec = false
+
 local fast_option = include 'lib/fast_option'
 
 track_paste_style = 1
@@ -66,210 +68,217 @@ local track_retrig_lookup =
   64
 }
 
-function track_actions.init(target)
-  track[target] = {}
-  track[target].active_hill = 1
-  track[target].seed_prob = 100
-  track[target].song_mute = {}
-  track[target].external_prm_change = {}
-  for hill_count = 1,8 do
-    track[target][hill_count] = {}
-    track[target][hill_count].playing = false
-    track[target][hill_count].pause = false
-    track[target][hill_count].hold = false
-    track[target][hill_count].enabled = false
-    track[target][hill_count].time = 1/4
-    track[target][hill_count].step = 1
-    track[target][hill_count].ui_position = 1
-    track[target][hill_count].ui_page = 1
-    
-    track[target][hill_count].notes = {}
-    track[target][hill_count].chord_degrees = {}
-    track[target][hill_count].velocities = {}
-    track[target][hill_count].trigs = {}
-    track[target][hill_count].muted_trigs = {}
-    track[target][hill_count].lock_trigs = {}
-    track[target][hill_count].prob = {}
-    track[target][hill_count].micro = {}
-    track[target][hill_count].song_mute = false
-    track[target][hill_count].er = {pulses = 0, steps = 16, shift = 0}
-    track[target][hill_count].last_condition = false
-    track[target][hill_count].conditional = {}
-    track[target][hill_count].conditional.cycle = 0
-    track[target][hill_count].conditional.A = {}
-    track[target][hill_count].conditional.B = {}
-    track[target][hill_count].conditional.mode = {}
-    track[target][hill_count].conditional.retrig_clock = nil
-    track[target][hill_count].conditional.retrig_count = {}
-    track[target][hill_count].conditional.retrig_time = {}
-    track[target][hill_count].conditional.retrig_slope = {}
-    track[target][hill_count].focus = "main"
-    track[target][hill_count].fill =
+local function build_params(target, hill_number, i)
+  track_paramset:add_option("track_retrig_time_"..target.."_"..hill_number..'_'..i,"",
     {
-      ["notes"] = {},
-      ["chord_degrees"] = {},
-      ["velocities"] = {},
-      ["trigs"] = {},
-      ["muted_trigs"] = {},
-      ["lock_trigs"] = {},
-      ["prob"] = {},
-      ['er'] = {pulses = 0, steps = 16, shift = 0},
-      ["conditional"] = {
-        ["A"] = {},
-        ["B"] = {},
-        ["mode"] = {},
-        ["retrig_count"] = {},
-        ["retrig_time"] = {},
-        ["retrig_slope"] = {}
-      }
+      '1/64',
+      '1/48',
+      '1/40',
+      '1/32',
+      '1/24',
+      '1/16',
+      '1/12',
+      '1/10',
+      '1/8',
+      '1/6',
+      '1/5',
+      '3/16',
+      '1/4',
+      '5/16',
+      '1/3',
+      '3/8',
+      '1/2',
+      '2/3',
+      '3/4',
+      '1',
+      '4/3',
+      '1.5',
+      '2',
+      '8/3',
+      '3',
+      '4',
+      '5',
+      '6',
+      '8',
+      '10',
+      '12',
+      '16',
+      '24',
+      '32',
+      '40',
+      '48',
+      '64'
+    },
+    13)
+  track_paramset:set_action("track_retrig_time_"..target.."_"..hill_number..'_'..i, function(x)
+    track[target][hill_number].conditional.retrig_time[i] = track_retrig_lookup[x]
+  end)
+
+  -- track_paramset:add { param=fast_option.new("track_fill_retrig_time_"..target.."_"..hill_number..'_'..i,"",
+  track_paramset:add_option("track_fill_retrig_time_"..target.."_"..hill_number..'_'..i,"",
+  {
+    '1/64',
+    '1/48',
+    '1/40',
+    '1/32',
+    '1/24',
+    '1/16',
+    '1/12',
+    '1/10',
+    '1/8',
+    '1/6',
+    '1/5',
+    '3/16',
+    '1/4',
+    '5/16',
+    '1/3',
+    '3/8',
+    '1/2',
+    '2/3',
+    '3/4',
+    '1',
+    '4/3',
+    '1.5',
+    '2',
+    '8/3',
+    '3',
+    '4',
+    '5',
+    '6',
+    '8',
+    '10',
+    '12',
+    '16',
+    '24',
+    '32',
+    '40',
+    '48',
+    '64'
+  },
+  13)
+  track_paramset:set_action("track_fill_retrig_time_"..target.."_"..hill_number..'_'..i, function(x)
+    track[target][hill_number].fill.conditional.retrig_time[i] = track_retrig_lookup[x]
+  end)
+end
+
+function track_actions.init(target, hill_number, clear_reset)
+  print('begin initialize track: '..target..', '..util.time())
+  local build_clock = false
+  local pre_clear_step;
+  if clear_reset and track[target].active_hill == hill_number then
+    pre_clear_step = track[target][hill_number].step
+  end
+  if track[target] == nil then
+    track[target] = {}
+    track[target].active_hill = 1
+    track[target].seed_prob = 100
+    track[target].song_mute = {}
+    track[target].external_prm_change = {}
+    build_clock = true
+  end
+
+  track[target][hill_number] = {}
+  track[target][hill_number].playing = false
+  track[target][hill_number].pause = false
+  track[target][hill_number].hold = false
+  track[target][hill_number].enabled = false
+  track[target][hill_number].time = 1/4
+  if not clear_reset or (clear_reset and track[target].active_hill ~= hill_number) then
+    track[target][hill_number].step = 1
+  elseif clear_reset and track[target].active_hill == hill_number then
+    track[target][hill_number].step = pre_clear_step
+  end
+  track[target][hill_number].ui_position = 1
+  track[target][hill_number].ui_page = 1
+  
+  track[target][hill_number].notes = {}
+  track[target][hill_number].chord_degrees = {}
+  track[target][hill_number].velocities = {}
+  track[target][hill_number].trigs = {}
+  track[target][hill_number].muted_trigs = {}
+  track[target][hill_number].lock_trigs = {}
+  track[target][hill_number].prob = {}
+  track[target][hill_number].micro = {}
+  track[target][hill_number].song_mute = false
+  track[target][hill_number].er = {pulses = 0, steps = 16, shift = 0}
+  track[target][hill_number].last_condition = false
+  track[target][hill_number].conditional = {}
+  track[target][hill_number].conditional.cycle = 0
+  track[target][hill_number].conditional.A = {}
+  track[target][hill_number].conditional.B = {}
+  track[target][hill_number].conditional.mode = {}
+  track[target][hill_number].conditional.retrig_clock = nil
+  track[target][hill_number].conditional.retrig_count = {}
+  track[target][hill_number].conditional.retrig_time = {}
+  track[target][hill_number].conditional.retrig_slope = {}
+  track[target][hill_number].focus = "main"
+  track[target][hill_number].fill =
+  {
+    ["notes"] = {},
+    ["chord_degrees"] = {},
+    ["velocities"] = {},
+    ["trigs"] = {},
+    ["muted_trigs"] = {},
+    ["lock_trigs"] = {},
+    ["prob"] = {},
+    ['er'] = {pulses = 0, steps = 16, shift = 0},
+    ["conditional"] = {
+      ["A"] = {},
+      ["B"] = {},
+      ["mode"] = {},
+      ["retrig_count"] = {},
+      ["retrig_time"] = {},
+      ["retrig_slope"] = {}
     }
-    for i = 1,128 do
-      track[target][hill_count].notes[i] = 1
-      track[target][hill_count].chord_degrees[i] = 1
-      track[target][hill_count].velocities[i] = 127
-      track[target][hill_count].trigs[i] = false
-      track[target][hill_count].muted_trigs[i] = false
-      track[target][hill_count].lock_trigs[i] = false
-      track[target][hill_count].prob[i] = 100
-      track[target][hill_count].conditional.A[i] = 1
-      track[target][hill_count].conditional.B[i] = 1
-      track[target][hill_count].conditional.mode[i] = "A:B"
-      track[target][hill_count].conditional.retrig_count[i] = 0
-      track[target][hill_count].micro[i] = 0
-      -- track_paramset:add { param=fast_option.new("track_retrig_time_"..target.."_"..hill_count..'_'..i,"",
-      track_paramset:add_option("track_retrig_time_"..target.."_"..hill_count..'_'..i,"",
-      {
-        '1/64',
-        '1/48',
-        '1/40',
-        '1/32',
-        '1/24',
-        '1/16',
-        '1/12',
-        '1/10',
-        '1/8',
-        '1/6',
-        '1/5',
-        '3/16',
-        '1/4',
-        '5/16',
-        '1/3',
-        '3/8',
-        '1/2',
-        '2/3',
-        '3/4',
-        '1',
-        '4/3',
-        '1.5',
-        '2',
-        '8/3',
-        '3',
-        '4',
-        '5',
-        '6',
-        '8',
-        '10',
-        '12',
-        '16',
-        '24',
-        '32',
-        '40',
-        '48',
-        '64'
-      },
-      13)
-    -- }
-      track_paramset:set_action("track_retrig_time_"..target.."_"..hill_count..'_'..i, function(x)
-        track[target][hill_count].conditional.retrig_time[i] = track_retrig_lookup[x]
-      end)
-
-      -- track_paramset:add { param=fast_option.new("track_fill_retrig_time_"..target.."_"..hill_count..'_'..i,"",
-      track_paramset:add_option("track_fill_retrig_time_"..target.."_"..hill_count..'_'..i,"",
-      {
-        '1/64',
-        '1/48',
-        '1/40',
-        '1/32',
-        '1/24',
-        '1/16',
-        '1/12',
-        '1/10',
-        '1/8',
-        '1/6',
-        '1/5',
-        '3/16',
-        '1/4',
-        '5/16',
-        '1/3',
-        '3/8',
-        '1/2',
-        '2/3',
-        '3/4',
-        '1',
-        '4/3',
-        '1.5',
-        '2',
-        '8/3',
-        '3',
-        '4',
-        '5',
-        '6',
-        '8',
-        '10',
-        '12',
-        '16',
-        '24',
-        '32',
-        '40',
-        '48',
-        '64'
-      },
-      13)
-    -- }
-      track_paramset:set_action("track_fill_retrig_time_"..target.."_"..hill_count..'_'..i, function(x)
-        track[target][hill_count].fill.conditional.retrig_time[i] = track_retrig_lookup[x]
-      end)
-      track[target][hill_count].conditional.retrig_time[i] = track_retrig_lookup[track_paramset:get("track_retrig_time_"..target.."_"..hill_count..'_'..i)]
-      track[target][hill_count].conditional.retrig_slope[i] = 0
-      
-      track[target][hill_count].fill.notes[i] = 1
-      track[target][hill_count].fill.chord_degrees[i] = 1
-      track[target][hill_count].fill.velocities[i] = 127
-      track[target][hill_count].fill.trigs[i] = false
-      track[target][hill_count].fill.muted_trigs[i] = false
-      track[target][hill_count].fill.lock_trigs[i] = false
-      track[target][hill_count].fill.prob[i] = 100
-      track[target][hill_count].fill.conditional.A[i] = 1
-      track[target][hill_count].fill.conditional.B[i] = 1
-      track[target][hill_count].fill.conditional.mode[i] = "A:B"
-      track[target][hill_count].fill.conditional.retrig_count[i] = 0
-      track[target][hill_count].fill.conditional.retrig_time[i] = track_retrig_lookup[track_paramset:get("track_fill_retrig_time_"..target.."_"..hill_count..'_'..i)]
-      track[target][hill_count].fill.conditional.retrig_slope[i] = 0
+  }
+  for i = 1,128 do
+    track[target][hill_number].notes[i] = 1
+    track[target][hill_number].chord_degrees[i] = 1
+    track[target][hill_number].velocities[i] = 127
+    track[target][hill_number].trigs[i] = false
+    track[target][hill_number].muted_trigs[i] = false
+    track[target][hill_number].lock_trigs[i] = false
+    track[target][hill_number].prob[i] = 100
+    track[target][hill_number].conditional.A[i] = 1
+    track[target][hill_number].conditional.B[i] = 1
+    track[target][hill_number].conditional.mode[i] = "A:B"
+    track[target][hill_number].conditional.retrig_count[i] = 0
+    track[target][hill_number].micro[i] = 0
+    if not clear_reset then
+      build_params(target,hill_number,i)
     end
+    track[target][hill_number].conditional.retrig_time[i] = track_retrig_lookup[track_paramset:get("track_retrig_time_"..target.."_"..hill_number..'_'..i)]
+    track[target][hill_number].conditional.retrig_slope[i] = 0
+    
+    track[target][hill_number].fill.notes[i] = 1
+    track[target][hill_number].fill.chord_degrees[i] = 1
+    track[target][hill_number].fill.velocities[i] = 127
+    track[target][hill_number].fill.trigs[i] = false
+    track[target][hill_number].fill.muted_trigs[i] = false
+    track[target][hill_number].fill.lock_trigs[i] = false
+    track[target][hill_number].fill.prob[i] = 100
+    track[target][hill_number].fill.conditional.A[i] = 1
+    track[target][hill_number].fill.conditional.B[i] = 1
+    track[target][hill_number].fill.conditional.mode[i] = "A:B"
+    track[target][hill_number].fill.conditional.retrig_count[i] = 0
+    track[target][hill_number].fill.conditional.retrig_time[i] = track_retrig_lookup[track_paramset:get("track_fill_retrig_time_"..target.."_"..hill_number..'_'..i)]
+    track[target][hill_number].fill.conditional.retrig_slope[i] = 0
+  end
 
-    track[target][hill_count].gate = {}
-    track[target][hill_count].gate.active = false
-    track[target][hill_count].gate.prob = 0
-    track[target][hill_count].swing = 50
-    track[target][hill_count].mode = "fwd"
-    track[target][hill_count].start_point = 1
-    track[target][hill_count].end_point = 16
-    track[target][hill_count].down = 0
-    track[target][hill_count].loop = true
-    if hill_count == track[target].active_hill then
-      track_clock[target] = clock.run(track_actions.iterate,target)
-    end
+  track[target][hill_number].gate = {}
+  track[target][hill_number].gate.active = false
+  track[target][hill_number].gate.prob = 0
+  track[target][hill_number].swing = 50
+  track[target][hill_number].mode = "fwd"
+  track[target][hill_number].start_point = 1
+  track[target][hill_number].end_point = 16
+  track[target][hill_number].down = 0
+  track[target][hill_number].loop = true
+  if build_clock then
+    track_clock[target] = clock.run(track_actions.iterate,target)
   end
   print('initializing track: '..target..', '..util.time())
 end
-
--- function track_actions.find_index(tab,el)
---   local rev = {}
---   for k,v in pairs(tab) do
---       rev[v]=k
---   end
---   return rev[el]
--- end
 
 function track_actions.add(target, value)
   local _active = track[target][track[target].active_hill]
@@ -819,31 +828,8 @@ function track_actions.retrig_step(target,step)
   end
 end
 
-function track_actions.clear(target)
-  local _active = track[target][track[target].active_hill]
-  -- for k,v in pairs(_active.notes) do
-  --   if tab.contains(held_keys[target],v) then
-  --     -- print("////>"..v)
-  --     grid_actions.kill_note(target,v)
-  --   end
-  -- end
-  -- if params:string("track_"..target.."_hold_style") ~= "sequencer" then
-    _active.playing = false
-    _active.pause = false
-    _active.hold = false
-    local focused_set = _active.focus == "main" and track[target] or _active.fill
-    focused_set.notes = {}
-    _active.start_point = 1
-    _active.end_point = 1
-    _active.step = _active.start_point
-    _active.loop = true
-    clock.cancel(track_clock[target])
-    track_clock[target] = nil
-    track_clock[target] = clock.run(track_actions.iterate,target)
-  -- elseif params:string("track_"..target.."_hold_style") == "sequencer" then
-  --   local focused_set = _active.focus == "main" and track[target] or _active.fill
-  --   focused_set.notes = {}
-  -- end
+function track_actions.clear(target,hill_number)
+  track_actions.init(target,hill_number,true)
 end
 
 function track_actions.savestate()

@@ -260,8 +260,8 @@ function m:delta(index, d, voice, hill, step)
 end
 
 function m:delta_many(index, d, voice, hill)
-  for i = 1,#data_entry_steps[voice] do
-    m:delta(index, d, voice, hill, data_entry_steps[voice][i])
+  for i = 1,#data_entry_steps.focus[voice] do
+    m:delta(index, d, voice, hill, data_entry_steps.focus[voice][i])
   end
 end
 

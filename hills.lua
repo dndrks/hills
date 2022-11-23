@@ -95,7 +95,7 @@ function init()
   
   _hsteps.init()
   for i = 1,10 do
-    _htracks.init(i)
+    _htracks.init(i,1)
   end
 
   print('initialized tracks: '..util.time())
@@ -692,7 +692,7 @@ for i = 1,10 do
   trigless_params_adjusted[i] = {param = {}, value = {}}
 end
 
-local non_indexed_voices = {'delay', 'reverb', 'main'}
+local non_indexed_voices = {'delay', 'feedback', 'main'}
 
 function fkmap(i,j,index,p)
   local target_trig;
@@ -721,7 +721,7 @@ local function extract_voice_from_string(s)
 end
 
 local function process_params_per_step(parent,i,j,k,index)
-  local is_drum_voice = parent[k] <= params.lookup['sample3_reverbSend']
+  local is_drum_voice = parent[k] <= params.lookup['sample3_feedbackSend']
   local id = parent[k]
   local drum_target;
   if id < params.lookup['sample1_sampleMode'] then
@@ -777,7 +777,7 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
             -- print(check_prm)
             if _fkprm.adjusted_params[i][j][index].params[check_prm] == nil then
               local lock_trig = track[i][j].focus == 'main' and track[i][j].lock_trigs[index] or track[i][j].fill.lock_trigs[index]
-              local is_drum_voice = check_prm <= params.lookup['sample3_reverbSend']
+              local is_drum_voice = check_prm <= params.lookup['sample3_feedbackSend']
               local id = check_prm
               if is_drum_voice and i <= 7 then
                 local target_voice = string.match(params:get_id(id),"%d+")
@@ -807,7 +807,7 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
         -- for k,v in next,_fkprm.adjusted_params[i][j][index].params do
         for k,v in next,target_trig[i][j][index].params do
 
-          local is_drum_voice = k <= params.lookup['sample3_reverbSend']
+          local is_drum_voice = k <= params.lookup['sample3_feedbackSend']
           local id = k
           local drum_target;
           if id < params.lookup['sample1_sampleMode'] then
@@ -837,6 +837,7 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
               local target_voice = drum_target
               local p_name = string.gsub(params:get_id(k),target_voice..'_','')
               -- TODO: how does this work??
+              -- FIXME: breaks if sending value for delay...
               if target_voice ~= 'sample'..(i-7) then
                 if not tab.contains(track[target_voice].external_prm_change,k) then
                   track[target_voice].external_prm_change[#track[target_voice].external_prm_change+1] = k

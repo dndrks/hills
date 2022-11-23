@@ -17,28 +17,14 @@ function hway_ui.init()
   highway_ui.alt_view_sel = 1
   highway_ui.alt_fill_sel = 1
   highway_ui.fill = {}
-  highway_ui.fill.start_point = {1,1,1,1,1,1,1,1,1,1}
-  highway_ui.fill.end_point = {16,16,16,16,16,16,16,16,16,16}
-  highway_ui.fill.snake = 1
+  -- highway_ui.fill.start_point = {1,1,1,1,1,1,1,1,1,1}
+  -- highway_ui.fill.end_point = {16,16,16,16,16,16,16,16,16,16}
+  -- highway_ui.fill.snake = 1
   _hui = highway_ui
-
-  snake_styles =
-  {
-      "horiz"
-    , "h.snake"
-    , "vert"
-    , "v.snake"
-    , "top-in"
-    , "bottom-in"
-    , "zig-zag"
-    , "wrap"
-    , "random"
-    , "random @"
-  }
 end
 
 local function check_for_menu_condition(i)
-  if (key1_hold or (#conditional_entry_steps[i] > 0)) and ui.control_set == 'edit' then
+  if (key1_hold or (#conditional_entry_steps.focus[i] > 0)) and ui.control_set == 'edit' then
     return true
   else
     return false
@@ -67,12 +53,12 @@ function hway_ui.draw_menu()
       screen.fill()
       local s_c = ui.screen_controls[hf][focus]
       local iter_index = seg.index-1 ~= 0 and seg.index-1 or hills[hf][focus].high_bound.note
-      local menus = {"hill: "..focus,"bound","notes","loop","smpl"}
+      local menus = {"hwy: "..focus,"bound","notes","loop","smpl"}
       screen.font_size(8)
       if ui.control_set == "edit" and ui.menu_focus ~= 1 then
         screen.move(0,22)
         screen.level(3)
-        screen.text("hill: "..focus)
+        screen.text("hwy: "..focus)
       end
       local upper_bound;
       if ui.hill_focus <= 7 then
@@ -462,7 +448,7 @@ function hway_ui.draw_menu()
       -- end
       -- // new drawing stuff
 
-      if (key1_hold or (#conditional_entry_steps[hf] > 0)) and ui.control_set == 'edit' then
+      if (key1_hold or (#conditional_entry_steps.focus[hf] > 0)) and ui.control_set == 'edit' then
         local current_step = track[hf][h.screen_focus].ui_position
         if ui.menu_focus == 1 then
           draw_popup("->")
@@ -533,6 +519,14 @@ function hway_ui.draw_menu()
           -- screen.move(55,50)
           -- screen.level(_s.popup_focus.tracks[hf][2] == 4 and 15 or 4)
           -- screen.text('GENERATE (K3)')
+        end
+      elseif grid_conditional_entry and #conditional_entry_steps.focus[hf] == 0 and ui.control_set == 'edit' then
+        if ui.menu_focus == 1 then
+          draw_prepop('STEP CONDITIONS')
+        end
+      elseif grid_data_entry and #data_entry_steps.focus[hf] == 0 and ui.control_set == 'edit' then
+        if ui.menu_focus == 1 then
+          draw_prepop('PARAMETER LOCKS')
         end
       end
 
@@ -726,8 +720,8 @@ local conditional_modes = {"NOT NEI","NEI","NOT PRE","PRE","A:B"}
 function hway_ui.cycle_conditional(i,j,step,d)
   local _active = track[i][j]
   local send_to_many = false
-  if grid_conditional_entry and #conditional_entry_steps[i] > 1 then
-    step = conditional_entry_steps[i][#conditional_entry_steps[i]]
+  if grid_conditional_entry and #conditional_entry_steps.focus[i] > 1 then
+    step = conditional_entry_steps.focus[i][#conditional_entry_steps.focus[i]]
   end
   local focused_set = _active.focus == 'main' and _active or _active.fill
   if d > 0 then
@@ -737,14 +731,14 @@ function hway_ui.cycle_conditional(i,j,step,d)
       if current_B > 8 then
         focused_set.conditional.A[step] = util.clamp(focused_set.conditional.A[step]+1,1,8)
         focused_set.conditional.B[step] = focused_set.conditional.A[step] ~= 8 and 1 or 8
-        for s = 2,#conditional_entry_steps[i] do
-          focused_set.conditional.A[conditional_entry_steps[i][s]] = focused_set.conditional.A[step]
-          focused_set.conditional.B[conditional_entry_steps[i][s]] = focused_set.conditional.B[step]
+        for s = 2,#conditional_entry_steps.focus[i] do
+          focused_set.conditional.A[conditional_entry_steps.focus[i][s]] = focused_set.conditional.A[step]
+          focused_set.conditional.B[conditional_entry_steps.focus[i][s]] = focused_set.conditional.B[step]
         end
       else
         focused_set.conditional.B[step] = current_B
-        for s = 2,#conditional_entry_steps[i] do
-          focused_set.conditional.B[conditional_entry_steps[i][s]] = focused_set.conditional.B[step]
+        for s = 2,#conditional_entry_steps.focus[i] do
+          focused_set.conditional.B[conditional_entry_steps.focus[i][s]] = focused_set.conditional.B[step]
         end
       end
     else
@@ -756,8 +750,8 @@ function hway_ui.cycle_conditional(i,j,step,d)
     if focused_set.conditional.mode[step] == "A:B" then
       if focused_set.conditional.A[step] == 1 and focused_set.conditional.B[step] == 1 then
         focused_set.conditional.mode[step] = "PRE"
-        for s = 1,#conditional_entry_steps[i] do
-          focused_set.conditional.mode[conditional_entry_steps[i][s]] = focused_set.conditional.mode[step]
+        for s = 1,#conditional_entry_steps.focus[i] do
+          focused_set.conditional.mode[conditional_entry_steps.focus[i][s]] = focused_set.conditional.mode[step]
         end
       else
         local current_B = focused_set.conditional.B[step]
@@ -766,14 +760,14 @@ function hway_ui.cycle_conditional(i,j,step,d)
           focused_set.conditional.A[step] = util.clamp(focused_set.conditional.A[step]-1,1,8)
           -- focused_set.conditional.B[step] = focused_set.conditional.A[step] ~= 1 and 8 or 1
           focused_set.conditional.B[step] = 8
-          for s = 1,#conditional_entry_steps[i] do
-            focused_set.conditional.A[conditional_entry_steps[i][s]] = focused_set.conditional.A[step]
-            focused_set.conditional.B[conditional_entry_steps[i][s]] = focused_set.conditional.B[step]
+          for s = 1,#conditional_entry_steps.focus[i] do
+            focused_set.conditional.A[conditional_entry_steps.focus[i][s]] = focused_set.conditional.A[step]
+            focused_set.conditional.B[conditional_entry_steps.focus[i][s]] = focused_set.conditional.B[step]
           end
         else
           focused_set.conditional.B[step] = current_B
-          for s = 1,#conditional_entry_steps[i] do
-            focused_set.conditional.B[conditional_entry_steps[i][s]] = focused_set.conditional.B[step]
+          for s = 1,#conditional_entry_steps.focus[i] do
+            focused_set.conditional.B[conditional_entry_steps.focus[i][s]] = focused_set.conditional.B[step]
           end
         end
       end
@@ -781,8 +775,8 @@ function hway_ui.cycle_conditional(i,j,step,d)
       local which_mode = tab.key(conditional_modes,focused_set.conditional.mode[step])
       which_mode = util.clamp(which_mode + d,1,#conditional_modes)
       focused_set.conditional.mode[step] = conditional_modes[which_mode]
-      for s = 1,#conditional_entry_steps[i] do
-        focused_set.conditional.mode[conditional_entry_steps[i][s]] = focused_set.conditional.mode[step]
+      for s = 1,#conditional_entry_steps.focus[i] do
+        focused_set.conditional.mode[conditional_entry_steps.focus[i][s]] = focused_set.conditional.mode[step]
       end
     end
   end
@@ -791,12 +785,12 @@ end
 function hway_ui.cycle_prob(i,j,step,d)
   local _active = track[i][j]
   local focused_set = _active.focus == 'main' and _active or _active.fill
-  if grid_conditional_entry and #conditional_entry_steps[i] > 1 then
-    step = conditional_entry_steps[i][#conditional_entry_steps[i]]
+  if grid_conditional_entry and #conditional_entry_steps.focus[i] > 1 then
+    step = conditional_entry_steps.focus[i][#conditional_entry_steps.focus[i]]
   end
   focused_set.prob[step] = util.clamp(focused_set.prob[step] + d, 0, 100)
-  for s = 1,#conditional_entry_steps[i] do
-    focused_set.prob[conditional_entry_steps[i][s]] = focused_set.prob[step]
+  for s = 1,#conditional_entry_steps.focus[i] do
+    focused_set.prob[conditional_entry_steps.focus[i][s]] = focused_set.prob[step]
   end
 end
 

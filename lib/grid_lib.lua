@@ -54,7 +54,7 @@ function grid_lib.pattern_execute(data)
       mod_idx = data.mod_index
     end
     _snapshots.route_funnel(data.x,data.y,mod_idx)
-    if data.x == 'delay' or data.x == 'reverb' or data.x == 'main' then
+    if data.x == 'delay' or data.x == 'feedback' or data.x == 'main' then
       snapshots[data.x].focus = data.y
     else
       hills[data.x].snapshot.focus = data.y
@@ -68,16 +68,25 @@ function grid_lib.pattern_execute(data)
   end
 end
 
+gkeys = {}
+gkeys.mute = {6,8}
+gkeys.fill = {7,8}
+gkeys.trigger = {8,8}
+
 grid_data_entry = false
-data_entry_steps = {}
+grid_data_blink = 0
+grid_loop_point_blink = 0
+data_entry_steps =  {['focus'] = {}, ['held'] = {}}
 for i = 1,10 do
-  data_entry_steps[i] = {}
+  data_entry_steps.focus[i] = {}
+  data_entry_steps.held[i] = 0
 end
 
 grid_conditional_entry = false
-conditional_entry_steps = {}
+conditional_entry_steps = {['focus'] = {}, ['held'] = {}}
 for i = 1,10 do
-  conditional_entry_steps[i] = {}
+  conditional_entry_steps.focus[i] = {}
+  conditional_entry_steps.held[i] = 0
 end
 
 grid_loop_modifier = false
@@ -214,6 +223,8 @@ function grid_lib.init()
   clock.run(function()
     while true do
       clock.sleep(1/30)
+      grid_data_blink = util.wrap(grid_data_blink + 1,1,15)
+      grid_loop_point_blink = util.wrap(grid_loop_point_blink + 3,1,15)
       if grid_dirty or overdubbing_pattern then
         grid_redraw()
         grid_dirty = false
@@ -360,7 +371,7 @@ function g.key(x,y,z)
           ui.control_set = "play"
         end
       end
-    elseif y > 2 and y <= 7 then
+    elseif y >= 2 and y <= 7 then
       grid_lib.highway_press(x,y,z)
     elseif y == 8 then
       mods['alt'] = z == 1 and true or false
@@ -432,7 +443,7 @@ function g.key(x,y,z)
       end
     end
   elseif x > 1 and x <= number_of_hills+1 and mod_held then
-    if mods["alt"] and z == 1 and not mods.snapshots and not mods.playmode then
+    if mods["alt"] and z == 1 and not mods.snapshots and not mods.playmode and not mods.hill then
       if hills[x-1][y].playmode == 'latch' then
         stop(x-1,true)
       elseif params:string('hill '..(x-1)..' reset at stop') == 'no' then
@@ -468,7 +479,7 @@ function g.key(x,y,z)
           end
         end
       end
-    elseif mods["alt"] and z == 0 and not mods.snapshots and not mods.playmode then
+    elseif mods["alt"] and z == 0 and not mods.snapshots and not mods.playmode and not mods.hill then
       stop(x-1,true)
       if params:string("hill "..(x-1).." sample momentary") == "yes" then
         _ca.stop_sample('sample'..params:get("hill "..(x-1).." sample slot"))
@@ -527,7 +538,7 @@ function g.key(x,y,z)
       end
     elseif not snapshot_overwrite_mod then
       if (mods["snapshots"] and not mods['snapshots_extended']) or (mods['snapshots'] and mods['snapshots_extended']) then
-        local fx = {'delay','reverb','main'}
+        local fx = {'delay','feedback','main'}
         local which_focus = (mods["snapshots"] and not mods['snapshots_extended']) and 'snapshots' or 'snapshots_extended'
         x = x - 1
         
@@ -589,7 +600,7 @@ function g.key(x,y,z)
         end
       end
     elseif snapshot_overwrite_mod then
-      local fx = {'delay','reverb','main'}
+      local fx = {'delay','feedback','main'}
       local which_focus = (mods["snapshots"] and not mods['snapshots_extended']) and 'snapshots' or 'snapshots_extended'
       x = x - 1
       local _snap, _snapover;
@@ -725,18 +736,56 @@ local function reset_step_mods(retain)
   end
 end
 
+local function process_modifier(parent,pressed_step,i,j)
+  if parent == data_entry_steps and ui.control_set ~= 'step parameters' then
+    _fkprm.flip_to_fkprm('edit',true)
+  end
+  if not tab.contains(parent.focus[i], pressed_step) then
+    track[i][j].ui_position = pressed_step
+    if parent.held[i] >= 1 then
+      parent.focus[i][#parent.focus[i]+1] = pressed_step
+    else
+      parent.focus[i] = {}
+      parent.focus[i][1] = pressed_step
+    end
+    parent.held[i] = parent.held[i] + 1
+    _fkprm.voice_focus = i
+    _fkprm.hill_focus = j
+    _fkprm.step_focus = pressed_step
+  else
+    table.remove(parent.focus[i],tab.key(parent.focus[i],pressed_step))
+    if track[i][j].ui_position ~= parent.focus[i][1]
+    and parent.focus[i][1] ~= nil then
+      track[i][j].ui_position = parent.focus[i][1]
+      _fkprm.voice_focus = i
+      _fkprm.hill_focus = j
+      _fkprm.step_focus = parent.focus[i][1]
+    end
+  end
+end
+
 function grid_lib.highway_press(x,y,z)
   -- change voice focus:
+  local i = ui.hill_focus
+  local j = hills[ui.hill_focus].screen_focus
   if y == 1 and z == 1 and x <= 11 then
     ui.hill_focus = x-1
   -- change pattern focus:
+  elseif y == 2 and x == 1 and z == 1 then
+    if not mods.alt then
+      if #track[i]+1 <= 8 then
+        _htracks.init(i,#track[i]+1)
+      end
+    end
   elseif y == 2 and z == 1 and (x > 1 and x <= 9) then
-    hills[ui.hill_focus].screen_focus = x-1
-    highway_ui.seq_page[ui.hill_focus] = math.ceil(track[ui.hill_focus][hills[ui.hill_focus].screen_focus].ui_position/32)
+    if not mods.alt then
+      hills[i].screen_focus = x-1
+      highway_ui.seq_page[i] = math.ceil(track[i][j].ui_position/32)
+    else
+      _htracks.clear(i,x-1)
+    end
   -- enter steps
   elseif y <= 6 and z == 1 and (x >= 1 and x <= 8) then
-    local i = ui.hill_focus
-    local j = hills[ui.hill_focus].screen_focus
     local _active = track[i][j]
     local focused_set = _active.focus == 'main' and _active or _active.fill
     local min_max = {{1,32},{33,64},{65,96},{97,128}}
@@ -746,25 +795,9 @@ function grid_lib.highway_press(x,y,z)
       track[i][j].ui_position = pressed_step
       focused_set.trigs[pressed_step] = not focused_set.trigs[pressed_step]
     elseif grid_data_entry then
-      if not tab.contains(data_entry_steps[i], pressed_step) then
-        track[i][j].ui_position = pressed_step
-        data_entry_steps[i][#data_entry_steps[i]+1] = pressed_step
-        _fkprm.voice_focus = i
-        _fkprm.hill_focus = j
-        _fkprm.step_focus = pressed_step
-      else
-        table.remove(data_entry_steps[i],tab.key(data_entry_steps[i],pressed_step))
-      end
+      process_modifier(data_entry_steps, pressed_step, i, j)
     elseif grid_conditional_entry then
-      if not tab.contains(conditional_entry_steps[i], pressed_step) then
-        track[i][j].ui_position = pressed_step
-        conditional_entry_steps[i][#conditional_entry_steps[i]+1] = pressed_step
-        _fkprm.voice_focus = i
-        _fkprm.hill_focus = j
-        _fkprm.step_focus = pressed_step
-      else
-        table.remove(conditional_entry_steps[i],tab.key(conditional_entry_steps[i],pressed_step))
-      end
+      process_modifier(conditional_entry_steps, pressed_step, i, j)
     elseif grid_loop_modifier then
       if loop_modifier_stage == 'define start' then
         track[i][j].start_point = util.clamp(pressed_step, 1, track[i][j].end_point)
@@ -780,6 +813,12 @@ function grid_lib.highway_press(x,y,z)
       end
     end
   -- grid lock mode:
+  elseif y <= 6 and z == 0 and (x >= 1 and x <= 8) then
+    if grid_conditional_entry then
+      conditional_entry_steps.held[i] = util.clamp(conditional_entry_steps.held[i] - 1,0,128)
+    elseif grid_data_entry then
+      data_entry_steps.held[i] = util.clamp(data_entry_steps.held[i] - 1,0,128)
+    end
   elseif y == 7 and x == 1 then
     if z == 1 then
       reset_step_mods('grid_loop_modifier')
@@ -788,28 +827,37 @@ function grid_lib.highway_press(x,y,z)
       reset_state.loop_modifier()
     end
   elseif y == 7 and z == 1 and (x >= 5 and x <= 8) then
-    highway_ui.seq_page[ui.hill_focus] = x-4
-    track[ui.hill_focus][hills[ui.hill_focus].screen_focus].ui_position = ((highway_ui.seq_page[ui.hill_focus] - 1) * 32) + 1
+    highway_ui.seq_page[i] = x-4
+    track[i][j].ui_position = ((highway_ui.seq_page[i] - 1) * 32) + 1
   elseif y == 8 and x == 4 and z == 1 then
     reset_step_mods('grid_data_entry')
     if not grid_data_entry then
-      data_entry_steps[ui.hill_focus] = {}
-      _fkprm.flip_from_fkprm()
-    else
-      _fkprm.flip_to_fkprm(ui.control_set,true)
+      data_entry_steps.focus[i] = {}
+      if ui.control_set == 'step parameters' then
+        _fkprm.flip_from_fkprm()
+      end
     end
   elseif y == 8 and x == 2 and z == 1 then
     reset_step_mods('grid_conditional_entry')
     if not grid_conditional_entry then
-      conditional_entry_steps[ui.hill_focus] = {}
-      -- _fkprm.flip_from_fkprm()
+      conditional_entry_steps.focus[i] = {}
     else
-      -- _fkprm.flip_to_fkprm(ui.control_set,true)
     end
-  elseif y == 8 and x == 7 then
+  elseif y == gkeys.mute[2] and x == gkeys.mute[1] then
     grid_mute = z == 1 and true or false
-  elseif y == 8 and x == 8 then
-    track[ui.hill_focus][hills[ui.hill_focus].screen_focus].focus = z == 1 and "fill" or "main"
+  elseif y == gkeys.fill[2] and x == gkeys.fill[1] then
+    track[i][j].focus = z == 1 and "fill" or "main"
+  elseif y == gkeys.trigger[2] and x == gkeys.trigger[1] then
+    grid_trigger = z == 1 and true or false
+    if z == 1 then
+      if not grid_mute then
+        engine.trig(i,track[i][j].velocities[track[i][j].ui_position],'false')
+      end
+      if track_rec then
+        local current_step = track[i][j].step
+        track[i][j].trigs[current_step] = true
+      end
+    end
   end
 end
 
@@ -904,7 +952,7 @@ function grid_redraw()
 
           if mods["snapshots"] then
             local display_level;
-            local fx = {'delay','reverb','main'}
+            local fx = {'delay','feedback','main'}
             local extension_limit = mods['snapshots_extended'] and 4 or number_of_hills+1
             local _snap, _snapover;
 
@@ -942,7 +990,7 @@ function grid_redraw()
         elseif not snapshot_overwrite_mod then
           if mods["snapshots"] then
             local display_level;
-            local fx = {'delay','reverb','main'}
+            local fx = {'delay','feedback','main'}
             local extension_limit = mods['snapshots_extended'] and 4 or number_of_hills+1
             if i-1 < extension_limit then
               local _snap,d_voice;
@@ -1142,15 +1190,21 @@ function grid_lib.draw_highway(i)
   if ui.hill_focus == i then
     local min_max = {{1,32},{33,64},{65,96},{97,128}}
     local lvl = 5
-    local flipped_entry_steps = tab.invert(grid_data_entry and data_entry_steps[i] or conditional_entry_steps[i])
+    local flipped_entry_steps = tab.invert(grid_data_entry and data_entry_steps.focus[i] or conditional_entry_steps.focus[i])
     for display_step = min_max[_hui.seq_page[i]][1], min_max[_hui.seq_page[i]][2] do
       if grid_loop_modifier then
         if display_step == _active.end_point or display_step == _active.start_point then
-          lvl = 10
+          if loop_modifier_stage == 'define start' and display_step == _active.start_point then
+            lvl = grid_data_blink
+          elseif loop_modifier_stage == 'define end' and display_step == _active.end_point then
+            lvl = grid_data_blink
+          else
+            lvl = 10
+          end
         elseif display_step < _active.end_point and display_step > _active.start_point then
           lvl = 3
         else
-          lvl = 2
+          lvl = 0
         end
         g:led(_hsteps.index_to_grid_pos(display_step,8)[1], util.wrap(_hsteps.index_to_grid_pos(display_step,8)[2],1,4)+2,lvl)
       else
@@ -1161,19 +1215,24 @@ function grid_lib.draw_highway(i)
             lvl = 3
           end
         else
-          lvl = 2
+          lvl = 0
         end
         if grid_data_entry or grid_conditional_entry then
           if flipped_entry_steps[display_step] ~= nil then
-            lvl = 15
+            -- lvl = 15
+            lvl = grid_data_blink
           else
             if focused_set.trigs[display_step] then
-              lvl = 3
+              lvl = 8
             else
               if _active.step == display_step and _active.playing then
                 lvl = 0
               else
-                lvl = 2
+                if display_step <= _active.end_point and display_step >= _active.start_point then
+                  lvl = 2
+                else
+                  lvl = 0
+                end
               end
             end
           end
@@ -1193,7 +1252,7 @@ function grid_lib.draw_highway(i)
         g:led(_hsteps.index_to_grid_pos(display_step,8)[1], util.wrap(_hsteps.index_to_grid_pos(display_step,8)[2],1,4)+2,lvl)
       end
     end
-    for j = 1,8 do
+    for j = 1,#track[i] do
       g:led(j+1, 2, focused == j and 15 or 4)
       if track[i].active_hill == j and track[i].active_hill ~= focused then
         g:led(j+1, 2, 10)
@@ -1213,8 +1272,9 @@ function grid_lib.draw_highway(i)
   g:led(1,7,grid_loop_modifier and 5 or 2)
   g:led(2,8,grid_conditional_entry and 15 or 5)
   g:led(4,8,grid_data_entry and 15 or 5)
-  g:led(7,8,grid_mute and 15 or 5)
-  g:led(8,8,track[ui.hill_focus][hills[ui.hill_focus].screen_focus].focus == 'fill' and 15 or 5)
+  g:led(gkeys.mute[1], gkeys.mute[2], grid_mute and 15 or 5)
+  g:led(gkeys.fill[1], gkeys.fill[2], track[ui.hill_focus][hills[ui.hill_focus].screen_focus].focus == 'fill' and 15 or 5)
+  g:led(gkeys.trigger[1], gkeys.trigger[2], grid_trigger and 15 or 5)
 end
 
 function start_dir_clock(dir,n,d)
