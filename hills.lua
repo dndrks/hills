@@ -81,6 +81,9 @@ local lin_lin = util.linlin
 
 function init()
   print('starting: '..util.time())
+  for i = 1,6 do
+    softcut.enable(i,0)
+  end
   kildare.init(true)
   _ca.init() -- initialize clips
   _snapshots.init()

@@ -10,13 +10,15 @@ function snapshot.init()
     snapshot_overwrite[i] = {}
   end
 
+  local all_the_voices = {"bd","sd","tm","cp","rs","cb","hh","saw","sample1","sample2","sample3"}
+
   for i = 1,#kildare.drums do
-    for j = 1,#kildare.drums do
-      snapshots[i][kildare.drums[j]] = {}
-      snapshot_overwrite[i][kildare.drums[j]] = {}
+    for j = 1,#all_the_voices do
+      snapshots[i][all_the_voices[j]] = {}
+      snapshot_overwrite[i][all_the_voices[j]] = {}
       for coll = 1,8 do
-        snapshots[i][kildare.drums[j]][coll] = {}
-        snapshot_overwrite[i][kildare.drums[j]][coll] = false
+        snapshots[i][all_the_voices[j]][coll] = {}
+        snapshot_overwrite[i][all_the_voices[j]][coll] = false
       end
     end
   end
