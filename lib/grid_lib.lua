@@ -15,6 +15,13 @@ for i = 1,16 do
   end
 end
 
+es = {}
+patterned_es = {}
+for i = 1,10 do
+  es[i] = {x = {}, y = {}}
+  patterned_es[i] = {x = {}, y = {}}
+end
+
 iter_link_held = {0,0}
 iter_link_source = {}
 function iter_link(p_voice, p_hill, c_voice, c_hill)
@@ -59,6 +66,17 @@ function grid_lib.pattern_execute(data)
     else
       hills[data.x].snapshot.focus = data.y
     end
+  elseif data.event == "es" then
+    local i = data.hill_i
+    local j = data.hill_j
+    local played_index = (((7-data.y)*5) + (data.x-1)-1)
+    if params:string('hill_'..i..'_iso_quantize') == 'yes' then
+      force_note(i,j,hills[i][j].note_ocean[played_index+1] + (12 * params:get('hill_'..i..'_iso_octave')))
+    else
+      force_note(i,j,(params:get('hill '..i..' base note') + played_index) + (12 * params:get('hill_'..i..'_iso_octave')))
+    end
+    patterned_es[i].x = data.x
+    patterned_es[i].y = data.y
   else
     if data.voice ~= nil then
       if params:string('voice_model_'..data.voice) == data.model then
@@ -265,8 +283,19 @@ local function enable_toggle(target)
   end
 end
 
+local function exit_mod(target)
+  if target == false then
+    if not mods['alt'] then
+      mod_held = false
+    end
+    if ui.control_set ~= "song" then
+      ui.control_set = "play"
+    end
+  end
+end
+
 function g.key(x,y,z)
-  if x == 1 and not mods['hill'] then
+  if x == 1 and (not mods['hill'] and not mods['bound'] and not mods['notes'] and not mods['loop']) then
     if y >= 1 and y <= 4 and z == 1 then
       for i = 1,#modkeys do
         if i ~= y then
@@ -363,18 +392,16 @@ function g.key(x,y,z)
   elseif x == 1 and mods['hill'] then
     if y == 1 and z == 1 then
       mods['hill'] = not mods['hill']
-      if not mods['hill'] then
-        if not mods['alt'] then
-          mod_held = false
-        end
-        if ui.control_set ~= "song" then
-          ui.control_set = "play"
-        end
-      end
+      exit_mod(mods['hill'])
     elseif y >= 2 and y <= 7 then
       grid_lib.highway_press(x,y,z)
     elseif y == 8 then
       mods['alt'] = z == 1 and true or false
+    end
+  elseif x == 1 and mods['notes'] then
+    if y == 3 and z == 1 then
+      mods['notes'] = not mods['notes']
+      exit_mod(mods['notes'])
     end
   end
   if x > 1 and x <= number_of_hills+1 and not mod_held then
@@ -494,11 +521,13 @@ function g.key(x,y,z)
           }
         )
       end
-    elseif mods["bound"] or mods["notes"] or mods["loop"] then
+    elseif mods["bound"] or mods["loop"] then
       ui.hill_focus = x-1
       hills[ui.hill_focus].screen_focus = y
     elseif mods['hill'] then
       grid_lib.highway_press(x,y,z)
+    elseif mods['notes'] then
+      grid_lib.earthsea_press(x,y,z)
     elseif mods["playmode"] and z == 1 then
       if mods['playmode_extended'] then
         if #iter_link_source == 0 then
@@ -734,6 +763,11 @@ local function reset_step_mods(retain)
       end
     end
   end
+  -- for i = 1,#step_mods do
+  --   if _G[step_mods[i]] then
+  --     break
+  --   end
+  -- end
 end
 
 local function process_modifier(parent,pressed_step,i,j)
@@ -779,10 +813,14 @@ function grid_lib.highway_press(x,y,z)
     end
   elseif y == 2 and z == 1 and (x > 1 and x <= 9) then
     if not mods.alt then
-      hills[i].screen_focus = x-1
-      highway_ui.seq_page[i] = math.ceil(track[i][j].ui_position/32)
+      if x <= #track[i]+1 then
+        hills[i].screen_focus = x-1
+        highway_ui.seq_page[i] = math.ceil(track[i][hills[i].screen_focus].ui_position/32)
+      end
     else
-      _htracks.clear(i,x-1)
+      if x <= #track[i]+1 then
+        _htracks.clear(i,x-1)
+      end
     end
   -- enter steps
   elseif y <= 6 and z == 1 and (x >= 1 and x <= 8) then
@@ -861,6 +899,50 @@ function grid_lib.highway_press(x,y,z)
   end
 end
 
+function grid_lib.earthsea_press(x,y,z)
+  -- change voice focus:
+  local i = ui.hill_focus
+  local j = hills[ui.hill_focus].screen_focus
+  if y >=3 and y<=7 and x>=2 and x<=6 and z == 1 then
+    es[i].x = x
+    es[i].y = y
+    local midi_notes = hills[i][j].note_ocean
+    local played_index = (((7-es[i].y)*5) + (es[i].x-1)-1)
+    if params:string('hill_'..i..'_iso_quantize') == 'yes' then
+      force_note(i,j,hills[i][j].note_ocean[played_index+1] + (12 * params:get('hill_'..i..'_iso_octave')))
+    else
+      force_note(i,j,(params:get('hill '..i..' base note') + played_index) + (12 * params:get('hill_'..i..'_iso_octave')))
+    end
+    for k = 1,16 do
+      if grid_pattern[k].rec == 1 and grid_pattern[k].step == 0 then
+        grid_pattern[k]:rec_start()
+        if not grid_pattern[k].event[1] then
+          grid_pattern[k].event[1] = {}
+        end
+        grid_pattern[k].event[1][1] = {
+          ["event"] = "es",
+          ["x"] = es[i].x,
+          ["y"] = es[i].y,
+          ["id"] = k,
+          ["hill_i"] = i,
+          ["hill_j"] = j
+        }
+      else
+        grid_pattern[k]:watch(
+          {
+            ["event"] = "es",
+            ["x"] = es[i].x,
+            ["y"] = es[i].y,
+            ["id"] = k,
+            ["hill_i"] = i,
+            ["hill_j"] = j
+          }
+        )
+      end
+    end
+  end
+end
+
 function grid_redraw()
   g:all(0)
   for i = 1,8 do
@@ -870,7 +952,7 @@ function grid_redraw()
     for j = 1,8 do
       if mod_held then
         if not mods["playmode"] and not mods["copy"] and not mods["snapshots"]
-        and not mods['hill'] then
+        and not mods['hill'] and not mods['notes'] then
           if i-1 == ui.hill_focus and hills[ui.hill_focus].screen_focus == j then
             g:led(i,j,15)
           else
@@ -948,6 +1030,8 @@ function grid_redraw()
           else
             grid_lib.draw_highway(i-1)
           end
+        elseif mods['notes'] then
+          grid_lib.draw_es()
         elseif snapshot_overwrite_mod then
 
           if mods["snapshots"] then
@@ -1275,6 +1359,33 @@ function grid_lib.draw_highway(i)
   g:led(gkeys.mute[1], gkeys.mute[2], grid_mute and 15 or 5)
   g:led(gkeys.fill[1], gkeys.fill[2], track[ui.hill_focus][hills[ui.hill_focus].screen_focus].focus == 'fill' and 15 or 5)
   g:led(gkeys.trigger[1], gkeys.trigger[2], grid_trigger and 15 or 5)
+end
+
+function grid_lib.draw_es()
+  local i = ui.hill_focus
+  local j = hills[ui.hill_focus].screen_focus
+  for x = 2,6 do
+    for y = 3,7 do
+      if es[i].x == x and es[i].y == y then
+        g:led(x,y,15)
+      elseif patterned_es[i].x == x and patterned_es[i].y == y then
+        g:led(x,y,12)
+      else
+        g:led(x,y,2)
+        if params:string('hill_'..i..'_iso_quantize') == 'no' then
+          local note_index = ((((7-y)*5) + (x-1)-1))%12 -- 0-base
+          if hills[i][j].note_intervals[note_index] ~= nil then
+            g:led(x,y,8)
+          end
+        else
+          local note_index = ((((7-y)*5) + (x-1)))
+          if hills[i][j].note_ocean[note_index] % 12 == 0 then
+            g:led(x,y,8)
+          end
+        end
+      end
+    end
+  end
 end
 
 function start_dir_clock(dir,n,d)

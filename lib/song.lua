@@ -138,7 +138,9 @@ function clock.transport.start()
     if song_atoms.transport_clock == nil then
       song_atoms.transport_clock = clock.run(
         function()
-          clock.sync(params:get('link_quantum'))
+          if params:string("clock_source") == 'link' then
+            clock.sync(params:get('link_quantum'))
+          end
           song.start()
         end
       )

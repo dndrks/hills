@@ -47,13 +47,13 @@ end
 function parameters.init()
   refresh_params_vports()
 
-  params:add_separator('hills_main_header', 'hills')
+  params:add_separator('hills_main_header', 'hills + highways')
   for i = 1,number_of_hills do
-    params:add_group('hill_'..i..'_group', hill_names[i], i > 7 and 64 or 67)
+    params:add_group('hill_'..i..'_group', hill_names[i], i > 7 and 68 or 71)
 
     params:add_separator('hill_'..i..'_highway_header', 'mode')
-    params:add_option('hill_'..i..'_highway', 'mode', {'hill','highway'}, 1)
-    params:set_action('hill_'..i..'_highway', function(x)
+    params:add_option('hill_'..i..'_mode', 'mode', {'hill','highway'}, 1)
+    params:set_action('hill_'..i..'_mode', function(x)
       if x == 1 then
         hills[i].highway = false
       else
@@ -67,6 +67,7 @@ function parameters.init()
     function(x)
       for j = 1,8 do
         hills[i][j].note_ocean = mu.generate_scale_of_length(params:get("hill "..i.." base note"),x,127)
+        hills[i][j].note_intervals = tab.invert(mu.SCALES[x].intervals)
       end
     end)
     params:add_number("hill "..i.." base note","base note",0,127,60)
@@ -122,6 +123,11 @@ function parameters.init()
     params:add_number("hill "..i.." random offset probability","random offset probability",0,100,0)
     params:add_option("hill "..i.." quant value","quant value",{"1/4", "1/4d", "1/4t", "1/8", "1/8d", "1/8t", "1/16", "1/16d", "1/16t", "1/32", "1/32d", "1/32t"},7)
     params:add_option('hill '..i..' reset at stop', 'reset index @ stop?', {'no','yes'}, 2)
+
+    params:add_separator('hill_'..i..'_iso_header', 'isometric keys management')
+    params:add_number('hill_'..i..'_iso_velocity', 'fixed velocity', 0, 127, 64)
+    params:add_number('hill_'..i..'_iso_octave', 'octave', -4, 4, 0)
+    params:add_option('hill_'..i..'_iso_quantize', 'quantize to scale?', {'no','yes'}, 1)
 
     if i <= 7 then
       params:add_separator('hill_'..i..'_kildare_header', "Kildare management "..hill_names[i])

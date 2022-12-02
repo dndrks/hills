@@ -55,7 +55,7 @@ end
 development_state = function()
   song_atoms.transport_active = true
   for i = 1,9 do
-    hills[i].highway = true
+    params:set('hill_'..i..'_mode', 2)
   end
   _htracks.sync_playheads()
   screen_dirty = true
@@ -751,9 +751,151 @@ local function process_params_per_step(parent,i,j,k,index)
   end
 end
 
+function play_chord(i,j,index)
+  local chord_target = hills[i].highway == false and hills[i][j].note_num.chord_degree[index] or track[i][j].chord_degrees[index]
+  local shell_notes = mu.generate_chord_scale_degree(
+    -- played_note,
+    params:get('hill '..i..' base note'),
+    params:string('hill '..i..' scale'),
+    -- hills[i][j].note_num.chord_degree[index],  -- TODO: this won't always be hill-active...track-active!!
+    chord_target,
+    true
+  )
+  engine.set_voice_param(i,"thirdHz",midi_to_hz(shell_notes[2]))
+  engine.set_voice_param(i,"seventhHz",midi_to_hz(shell_notes[4]))
+end
+
+force_note = function(i,j,played_note)
+  if i <= 7 then
+    engine.set_voice_param(i,"carHz",midi_to_hz(played_note))
+    engine.set_voice_param(i,"thirdHz",midi_to_hz(played_note))
+    engine.set_voice_param(i,"seventhHz",midi_to_hz(played_note))
+    engine.trig(i,params:get('hill_'..i..'_iso_velocity'),'false')
+    
+  --   if params:string("hill "..i.." sample output") == "yes" then
+  --     if params:get("hill "..i.." sample probability") >= math.random(100) then
+  --       local target = "sample"..params:get("hill "..i.." sample slot")
+  --       if params:string(target..'_sampleMode') == 'chop' then
+  --         local slice_count = params:get('hill '..i..' sample slice count') - 1
+  --         local slice = util.wrap(played_note - params:get("hill "..i.." base note"),0,slice_count) + 1
+  --         _ca.play_slice(target,slice,vel_target,i,j,played_note, retrig_index)  -- TODO: this won't always be hill-active...track-active!!
+  --       elseif params:string(target..'_sampleMode') == 'playthrough' then
+  --         _ca.play_through(target,vel_target,i,j,played_note, retrig_index)  -- TODO: this won't always be hill-active...track-active!!
+  --       elseif params:string(target..'_sampleMode') == 'distribute' then
+  --         local scaled_idx = util_round(sample_info[target].sample_count * (params:get('hill '..i..' sample distribution')/100))
+  --         if scaled_idx ~= 0 then
+  --           local idx = util.wrap(played_note - params:get("hill "..i.." base note"),0,scaled_idx-1) + 1
+  --            -- TODO: this won't always be hill-active...track-active!!:
+  --           _ca.play_index(target,idx,vel_target,i,j,played_note, retrig_index) -- TODO: adjust for actual sample pool size
+  --         end
+  --       end
+  --     end
+  --   end
+  -- else
+  --   -- TRIGGER SAMPLE
+  --   local vel_target = hills[i].highway == false and hills[i][j].note_velocity[index] or track[i][j].velocities[index]
+  --   if params:string("hill "..i.." sample output") == "yes" then
+  --     if params:get("hill "..i.." sample probability") >= math.random(100) then
+  --       local should_play;
+  --       if hills[i].highway then
+  --         -- local lock_trig = track[i][j].focus == 'main' and track[i][j].lock_trigs[index] or track[i][j].fill.lock_trigs[index]
+  --         if track[i][j].trigs[index] then
+  --           should_play = true
+  --         end
+  --       else
+  --         should_play = true
+  --       end
+  --       local target = "sample"..i-7
+  --       if params:string(target..'_sampleMode') == 'chop' and should_play then
+  --         local slice_count = params:get('hill '..i..' sample slice count') - 1
+  --         local slice = util.wrap(played_note - params:get("hill "..i.." base note"),0,slice_count) + 1
+  --         _ca.play_slice(target,slice,vel_target,i,j,played_note, retrig_index)
+  --       elseif params:string(target..'_sampleMode') == 'playthrough' and should_play then
+  --         _ca.play_through(target,vel_target,i,j,played_note, retrig_index)
+  --       elseif params:string(target..'_sampleMode') == 'distribute' and should_play then
+  --         local scaled_idx = util_round(sample_info[target].sample_count * (params:get('hill '..i..' sample distribution')/100))
+  --         if scaled_idx ~= 0 then
+  --           local idx = util.wrap(played_note - params:get("hill "..i.." base note"),0,scaled_idx-1) + 1
+  --           _ca.play_index(target,idx,vel_target,i,j,played_note, retrig_index) -- TODO: adjust for actual sample pool size
+  --         end
+  --       end
+  --     end
+  --   end
+  -- end
+  -- manual_iter(i,j)
+  -- if params:string("hill "..i.." MIDI output") == "yes" then
+  --   local ch = params:get("hill "..i.." MIDI note channel")
+  --   local dev = params:get("hill "..i.." MIDI device")
+  --   if pre_note[i] ~= nil then
+  --     midi_device[dev]:note_off(pre_note[i],seg.note_velocity,ch)
+  --   end
+  --   midi_device[dev]:note_on(played_note,seg.note_velocity,ch)
+  -- end
+  -- if params:string("hill "..i.." crow output") == "yes" then
+  --   if params:string("hill "..i.." crow output style") == "osc" then
+  --     local out = params:get("hill "..i.." crow output id")
+  --     if hills[i].crow_change_queued then
+  --       crow.output[out].action = "oscillate( dyn{pitch="..mu.note_num_to_freq(played_note).."}, dyn{lev="..(params:get("hill "..i.." crow osc level")/100).."}:mul(dyn{dur="..(params:get("hill "..i.." crow osc decay")/100).."}), '"..params:string("hill "..i.." crow osc shape").."')"
+  --       crow.output[out]()
+  --       if params:string("hill "..i.." crow osc aliasing") == 'none' then
+  --         crow.output[out].scale('none')
+  --       elseif params:string("hill "..i.." crow osc aliasing") == 'soft' then
+  --         crow.output[out].scale({0,2,3,5,7,8,10})
+  --       elseif params:string("hill "..i.." crow osc aliasing") == 'harsh' then
+  --         crow.output[out].scale({0})
+  --       end
+  --       hills[i].crow_change_queued = false
+  --     else
+  --       if params:string("hill "..i.." crow osc aliasing") == 'none' then
+  --         crow.output[out].scale('none')
+  --       elseif params:string("hill "..i.." crow osc aliasing") == 'soft' then
+  --         crow.output[out].scale({0,2,3,5,7,8,10})
+  --       elseif params:string("hill "..i.." crow osc aliasing") == 'harsh' then
+  --         crow.output[out].scale({0})
+  --       end
+  --       crow.output[out].dyn.pitch = mu.note_num_to_freq(played_note)
+  --       crow.output[out].dyn.lev = params:get("hill "..i.." crow osc level")/100
+  --       crow.output[out].dyn.dur = params:get("hill "..i.." crow osc decay")/100
+  --     end
+  --   elseif params:string("hill "..i.." crow output style") == "v/8" then
+  --     local out = params:get("hill "..i.." crow output id")
+  --     crow.output[out].scale('none')
+  --     -- crow.output[out].volts = (played_note - params:get("hill "..i.." base note"))/12
+  --     crow.output[out].volts = (played_note - 60)/12
+  --   elseif params:string("hill "..i.." crow output style") == "v/8+pulse" then
+  --     local v8_out = params:get("hill "..i.." crow output id")
+  --     local pulse_out = params:get("hill "..i.." crow v/8 pulse output id")
+  --     crow.output[v8_out].scale('none')
+  --     crow.output[v8_out].volts = (played_note - 60)/12
+  --     norns.crow.send ("output["..pulse_out.."]( pulse(0.001) )")
+  --   elseif params:string("hill "..i.." crow output style") == "pulse" then
+  --     local out = params:get("hill "..i.." crow output id")
+  --     norns.crow.send ("output["..out.."]( pulse(0.001) )")
+  --   end
+  -- end
+  -- if params:string("hill "..i.." JF output") == "yes" then
+  --   local ch = params:get("hill "..i.." JF output id")
+  --   if pre_note[i] ~= nil then
+  --     if params:string("hill "..i.." JF output style") == "sound" then
+  --       crow.ii.jf.play_voice(ch,0)
+  --     elseif params:string("hill "..i.." JF output style") == "shape" then
+  --       crow.ii.jf.trigger(ch,0)
+  --     end
+  --   end
+  --   if params:string("hill "..i.." JF output style") == "sound" then
+  --     crow.ii.jf.play_voice(ch,(played_note - 60)/12,5)
+  --     -- print(ch,(played_note - 60)/12,5)
+  --   elseif params:string("hill "..i.." JF output style") == "shape" then
+  --     crow.ii.jf.trigger(ch,1)
+  --   end
+  end
+  pre_note[i] = played_note
+end
+
 pass_note = function(i,j,seg,note_val,index,retrig_index)
   local midi_notes = hills[i][j].note_ocean
   local played_note = get_random_offset(i,midi_notes[note_val])
+  print(note_val, played_note)
   local _active = track[i][j]
   local focused_set;
   if hills[i].highway == true then
@@ -883,17 +1025,7 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
       if params:string("hill "..i.." kildare_notes") == "yes" then
         engine.set_voice_param(i,"carHz",midi_to_hz(played_note))
         if params:string("hill "..i.." kildare_chords") == 'yes' then
-          local chord_target = hills[i].highway == false and hills[i][j].note_num.chord_degree[index] or track[i][j].chord_degrees[index]
-          local shell_notes = mu.generate_chord_scale_degree(
-            -- played_note,
-            params:get('hill '..i..' base note'),
-            params:string('hill '..i..' scale'),
-            -- hills[i][j].note_num.chord_degree[index],  -- TODO: this won't always be hill-active...track-active!!
-            chord_target,
-            true
-          )
-          engine.set_voice_param(i,"thirdHz",midi_to_hz(shell_notes[2]))
-          engine.set_voice_param(i,"seventhHz",midi_to_hz(shell_notes[4]))
+          play_chord(i,j,index)
         else
           engine.set_voice_param(i,"thirdHz",midi_to_hz(played_note))
           engine.set_voice_param(i,"seventhHz",midi_to_hz(played_note))
