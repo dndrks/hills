@@ -755,7 +755,10 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
   local midi_notes = hills[i][j].note_ocean
   local played_note = get_random_offset(i,midi_notes[note_val])
   local _active = track[i][j]
-  local focused_set = _active.focus == 'main' and _active or _active.fill
+  local focused_set;
+  if hills[i].highway == true then
+    focused_set = _active.focus == 'main' and _active or _active.fill
+  end
   if (played_note ~= nil and hills[i].highway == false and hills[i][j].note_num.active[index]) or
     (played_note ~= nil and hills[i].highway == true and not focused_set.muted_trigs[index]) then
     -- per-step params //
