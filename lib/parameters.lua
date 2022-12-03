@@ -125,7 +125,7 @@ function parameters.init()
     params:add_option('hill '..i..' reset at stop', 'reset index @ stop?', {'no','yes'}, 2)
 
     params:add_separator('hill_'..i..'_iso_header', 'isometric keys management')
-    params:add_number('hill_'..i..'_iso_velocity', 'fixed velocity', 0, 127, 64)
+    params:add_number('hill_'..i..'_iso_velocity', 'fixed velocity', 0, 127, 70)
     params:add_number('hill_'..i..'_iso_octave', 'octave', -4, 4, 0)
     params:add_option('hill_'..i..'_iso_quantize', 'quantize to scale?', {'no','yes'}, 1)
 

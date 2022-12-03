@@ -71,9 +71,9 @@ function grid_lib.pattern_execute(data)
     local j = data.hill_j
     local played_index = (((7-data.y)*5) + (data.x-1)-1)
     if params:string('hill_'..i..'_iso_quantize') == 'yes' then
-      force_note(i,j,hills[i][j].note_ocean[played_index+1] + (12 * params:get('hill_'..i..'_iso_octave')))
+      force_note(i,j,hills[i][j].note_ocean[played_index+1] + (12 * data.octave))
     else
-      force_note(i,j,(params:get('hill '..i..' base note') + played_index) + (12 * params:get('hill_'..i..'_iso_octave')))
+      force_note(i,j,(params:get('hill '..i..' base note') + played_index) + (12 * data.octave))
     end
     patterned_es[i].x = data.x
     patterned_es[i].y = data.y
@@ -294,6 +294,22 @@ local function exit_mod(target)
   end
 end
 
+local function write_pattern_data(i,data_table,from_current)
+  if grid_pattern[i].rec == 1 and grid_pattern[i].step == 0 then
+    grid_pattern[i]:rec_start()
+    if not grid_pattern[i].event[1] then
+      grid_pattern[i].event[1] = {}
+    end
+    local current_count = 1
+    if from_current then
+      current_count = #grid_pattern[i].event[1] + 1
+    end
+    grid_pattern[i].event[1][current_count] = data_table
+  else
+    grid_pattern[i]:watch(data_table)
+  end
+end
+
 function g.key(x,y,z)
   if x == 1 and (not mods['hill'] and not mods['bound'] and not mods['notes'] and not mods['loop']) then
     if y >= 1 and y <= 4 and z == 1 then
@@ -419,28 +435,14 @@ function g.key(x,y,z)
       hills[x-1][y].perf_led = true
       grid_dirty = true
       for i = 1,16 do
-        if grid_pattern[i].rec == 1 and grid_pattern[i].step == 0 then
-          grid_pattern[i]:rec_start()
-          if not grid_pattern[i].event[1] then
-            grid_pattern[i].event[1] = {}
-          end
-          local current_count = #grid_pattern[i].event[1]
-          grid_pattern[i].event[1][current_count+1] = {
-            ["event"] = "start",
-            ["x"] = x-1,
-            ["y"] = y,
-            ["id"] = i
-          }
-        else
-          grid_pattern[i]:watch(
-            {
-              ["event"] = "start",
-              ["x"] = x-1,
-              ["y"] = y,
-              ["id"] = i
-            }
-          )
-        end
+        local table_to_record =
+        {
+          ["event"] = "start",
+          ["x"] = x-1,
+          ["y"] = y,
+          ["id"] = i
+        }
+        write_pattern_data(i,table_to_record,true)
       end
     end
     if z == 0 then
@@ -482,28 +484,14 @@ function g.key(x,y,z)
         hills[x-1][y].perf_led = true
         grid_dirty = true
         for i = 1,16 do
-          if grid_pattern[i].rec == 1 and grid_pattern[i].step == 0 then
-            grid_pattern[i]:rec_start()
-            if not grid_pattern[i].event[1] then
-              grid_pattern[i].event[1] = {}
-            end
-            local current_count = #grid_pattern[i].event[1]
-            grid_pattern[i].event[1][current_count+1] = {
-              ["event"] = "start with reset",
-              ["x"] = x-1,
-              ["y"] = y,
-              ["id"] = i
-            }
-          else
-            grid_pattern[i]:watch(
-              {
-                ["event"] = "start with reset",
-                ["x"] = x-1,
-                ["y"] = y,
-                ["id"] = i
-              }
-            )
-          end
+          local table_to_record =
+          {
+            ["event"] = "start with reset",
+            ["x"] = x-1,
+            ["y"] = y,
+            ["id"] = i
+          }
+          write_pattern_data(i,table_to_record,true)
         end
       end
     elseif mods["alt"] and z == 0 and not mods.snapshots and not mods.playmode and not mods.hill then
@@ -602,29 +590,15 @@ function g.key(x,y,z)
         end
         if z == 1 and tab.count(_snap[y]) > 0 then
           for i = 1,16 do
-            if grid_pattern[i].rec == 1 and grid_pattern[i].step == 0 then
-              grid_pattern[i]:rec_start()
-              if not grid_pattern[i].event[1] then
-                grid_pattern[i].event[1] = {}
-              end
-              grid_pattern[i].event[1][1] = {
-                ["event"] = "snapshot_restore",
-                ["x"] = x,
-                ["y"] = y,
-                ["id"] = i,
-                ['mod_index'] = snapshots.mod.index
-              }
-            else
-              grid_pattern[i]:watch(
-                {
-                  ["event"] = "snapshot_restore",
-                  ["x"] = x,
-                  ["y"] = y,
-                  ["id"] = i,
-                  ['mod_index'] = snapshots.mod.index
-                }
-              )
-            end
+            local table_to_record =
+            {
+              ["event"] = "snapshot_restore",
+              ["x"] = x,
+              ["y"] = y,
+              ["id"] = i,
+              ['mod_index'] = snapshots.mod.index
+            }
+            write_pattern_data(i,table_to_record,false)
           end
         end
       end
@@ -901,6 +875,9 @@ end
 
 function grid_lib.earthsea_press(x,y,z)
   -- change voice focus:
+  if y == 1 and z == 1 and x <= 11 then
+    ui.hill_focus = x-1
+  end
   local i = ui.hill_focus
   local j = hills[ui.hill_focus].screen_focus
   if y >=3 and y<=7 and x>=2 and x<=6 and z == 1 then
@@ -908,38 +885,42 @@ function grid_lib.earthsea_press(x,y,z)
     es[i].y = y
     local midi_notes = hills[i][j].note_ocean
     local played_index = (((7-es[i].y)*5) + (es[i].x-1)-1)
+    local played_note;
     if params:string('hill_'..i..'_iso_quantize') == 'yes' then
-      force_note(i,j,hills[i][j].note_ocean[played_index+1] + (12 * params:get('hill_'..i..'_iso_octave')))
+      played_note = hills[i][j].note_ocean[played_index+1] + (12 * params:get('hill_'..i..'_iso_octave'))
     else
-      force_note(i,j,(params:get('hill '..i..' base note') + played_index) + (12 * params:get('hill_'..i..'_iso_octave')))
+      played_note = (params:get('hill '..i..' base note') + played_index) + (12 * params:get('hill_'..i..'_iso_octave'))
+    end
+    force_note(i,j,played_note)
+    if track_rec then
+      if params:string('hill '..i..' kildare_notes') == 'no' then
+        params:set('hill '..i..' kildare_notes',2)
+      end
+      local current_step = track[i][j].step
+      track[i][j].trigs[current_step] = true
+      print(played_index+1)
+      track[i][j].notes[current_step] = played_index+1
     end
     for k = 1,16 do
-      if grid_pattern[k].rec == 1 and grid_pattern[k].step == 0 then
-        grid_pattern[k]:rec_start()
-        if not grid_pattern[k].event[1] then
-          grid_pattern[k].event[1] = {}
-        end
-        grid_pattern[k].event[1][1] = {
-          ["event"] = "es",
-          ["x"] = es[i].x,
-          ["y"] = es[i].y,
-          ["id"] = k,
-          ["hill_i"] = i,
-          ["hill_j"] = j
-        }
-      else
-        grid_pattern[k]:watch(
-          {
-            ["event"] = "es",
-            ["x"] = es[i].x,
-            ["y"] = es[i].y,
-            ["id"] = k,
-            ["hill_i"] = i,
-            ["hill_j"] = j
-          }
-        )
-      end
+      local table_to_record =
+      {
+        ["event"] = "es",
+        ["x"] = es[i].x,
+        ["y"] = es[i].y,
+        ["id"] = k,
+        ["hill_i"] = i,
+        ["hill_j"] = j,
+        ["octave"] = params:get('hill_'..i..'_iso_octave')
+      }
+      write_pattern_data(k,table_to_record,false)
     end
+  elseif x == 8 and y>=3 and y <=7 and z == 1 then
+    local vels = {127,98,70,39,10}
+    params:set('hill_'..i..'_iso_velocity',vels[y-2])
+  elseif x == 8 and y == 8 and z == 1 then
+    params:set('hill_'..i..'_iso_velocity',0)
+  elseif x >= 2 and x <= 3 and y == 8 and z == 1 then
+    params:delta('hill_'..i..'_iso_octave',x == 2 and -1 or 1)
   end
 end
 
@@ -1364,6 +1345,9 @@ end
 function grid_lib.draw_es()
   local i = ui.hill_focus
   local j = hills[ui.hill_focus].screen_focus
+  for k = 1,10 do
+    g:led(k+1,1,k == i and 15 or 4)
+  end
   for x = 2,6 do
     for y = 3,7 do
       if es[i].x == x and es[i].y == y then
@@ -1386,6 +1370,18 @@ function grid_lib.draw_es()
       end
     end
   end
+  local vel_to_led = util.round(util.linlin(0,127,7,3,params:get('hill_'..i..'_iso_velocity')))
+  for y = 3,7 do
+    if params:get('hill_'..i..'_iso_velocity') == 0 then
+      g:led(8,y,3)
+    elseif y < vel_to_led then
+      g:led(8,y,3)
+    else
+      g:led(8,y,8)
+    end
+  end
+  g:led(2,8,util.round(util.linlin(-4,0,15,4,params:get('hill_'..i..'_iso_octave'))))
+  g:led(3,8,util.round(util.linlin(0,4,4,15,params:get('hill_'..i..'_iso_octave'))))
 end
 
 function start_dir_clock(dir,n,d)

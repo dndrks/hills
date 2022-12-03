@@ -31,7 +31,6 @@ function pattern:clear()
   print('pattern clear')
   self:end_playback()
   self.rec = 0
-  self.play = 0
   self:set_overdub(0)
   self.event = {}
   self.count = 0
@@ -39,6 +38,10 @@ function pattern:clear()
   self.step = 0
   self.steps_with_mono_events = {}
   self.mono_event_idx = 0
+  if self.clock then
+    clock.cancel(self.clock)
+    self.clock = nil
+  end
 end
 
 --- start recording
@@ -88,9 +91,9 @@ end
 
 function pattern:end_playback()
   self.play = 0
-  if self.clock then clock.cancel(self.clock) end
+  -- if self.clock then clock.cancel(self.clock) end
   print('clock ending')
-  self.step = 0
+  -- self.step = 0
 end
 
 --- stop recording
