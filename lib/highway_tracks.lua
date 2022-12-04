@@ -170,6 +170,7 @@ function track_actions.init(target, hill_number, clear_reset)
   end
   if track[target] == nil then
     track[target] = {}
+    track[target].scale = {source = {}, index = 1}
     track[target].active_hill = 1
     track[target].seed_prob = 100
     track[target].song_mute = {}
@@ -232,7 +233,7 @@ function track_actions.init(target, hill_number, clear_reset)
     }
   }
   for i = 1,128 do
-    track[target][hill_number].notes[i] = 1
+    track[target][hill_number].notes[i] = 60
     track[target][hill_number].chord_degrees[i] = 1
     track[target][hill_number].velocities[i] = 127
     track[target][hill_number].trigs[i] = false
@@ -250,7 +251,7 @@ function track_actions.init(target, hill_number, clear_reset)
     track[target][hill_number].conditional.retrig_time[i] = track_retrig_lookup[track_paramset:get("track_retrig_time_"..target.."_"..hill_number..'_'..i)]
     track[target][hill_number].conditional.retrig_slope[i] = 0
     
-    track[target][hill_number].fill.notes[i] = 1
+    track[target][hill_number].fill.notes[i] = 60
     track[target][hill_number].fill.chord_degrees[i] = 1
     track[target][hill_number].fill.velocities[i] = 127
     track[target][hill_number].fill.trigs[i] = false

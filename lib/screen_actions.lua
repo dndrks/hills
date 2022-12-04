@@ -57,7 +57,7 @@ function screen_actions.draw()
     if ui.control_set ~= 'step parameters' then
       local focus = h.screen_focus
       local seg = h[focus]
-      local peak_pitch = util.clamp(seg.note_num.max,1,#seg.note_ocean)
+      local peak_pitch = util.clamp(seg.note_num.max,1,#h.note_ocean)
       screen.level(1)
       screen.rect(40,15,80,40)
       screen.fill()
@@ -65,7 +65,7 @@ function screen_actions.draw()
       local iter_index = seg.index-1 ~= 0 and seg.index-1 or hills[hf][focus].high_bound.note
       for i = hills[hf][focus].low_bound.note,hills[hf][focus].high_bound.note do
         local horizontal = util.linlin(hills[hf][focus].note_timestamp[hills[hf][focus].low_bound.note], hills[hf][focus].note_timestamp[hills[hf][focus].high_bound.note],40,120,hills[hf][focus].note_timestamp[i])
-        local vertical = util.linlin(hills[hf][focus].note_ocean[1],hills[hf][focus].note_ocean[peak_pitch],55,15,hills[hf][focus].note_ocean[hills[hf][focus].note_num.pool[i]])
+        local vertical = util.linlin(hills[hf].note_ocean[1],hills[hf].note_ocean[peak_pitch],55,15,hills[hf].note_ocean[hills[hf][focus].note_num.pool[i]])
         if ui.control_set == "edit" and (ui.menu_focus == 1 or ui.menu_focus == 3 or ui.menu_focus == 5) then
           if ui.menu_focus == 1 then
             screen.level(s_c["hills"]["focus"] == i and 15 or (iter_index == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0)))
@@ -159,7 +159,7 @@ function screen_actions.draw()
         elseif ui.menu_focus == 3 then
           screen.level(key1_hold == true and 3 or 15)
           screen.move(40,10)
-          local note_number = seg.note_ocean[seg.note_num.pool[s_c["notes"]["focus"]]]
+          local note_number = h.note_ocean[seg.note_num.pool[s_c["notes"]["focus"]]]
           if ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus].notes.velocity then
             screen.text(
               note_number.."/"..mu.note_num_to_name(note_number)..
@@ -223,7 +223,7 @@ function screen_actions.draw()
           screen.level(key1_hold == true and 3 or 15)
           screen.move(40,10)
           local note_number = seg.sample_controls.rate[s_c["samples"]["focus"]]
-          local slice_number = seg.note_ocean[seg.note_num.pool[s_c["notes"]["focus"]]]
+          local slice_number = h.note_ocean[seg.note_num.pool[s_c["notes"]["focus"]]]
           screen.text(
             sample_speedlist[note_number].."x"..
             " | "..(hills[hf][focus].sample_controls.loop[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["samples"]["focus"]] and "LOOP" or "ONCE")

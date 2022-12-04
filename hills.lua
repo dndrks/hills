@@ -185,6 +185,8 @@ function init()
       ["seq"] = {["focus"] = 1}
     }
 
+    hills[i].note_ocean = mu.generate_scale_of_length(params:get("hill "..i.." base note"),params:get("hill "..i.." scale"),127) -- the full range of notes
+
     for j = 1,8 do
       hills[i][j] = {}
       hills[i][j].duration = util_round(clock.get_beat_sec() * 16,0.01)
@@ -194,7 +196,6 @@ function init()
       hills[i][j].current_val = 0
       hills[i][j].step = 0
       hills[i][j].index = 1
-      hills[i][j].note_ocean = mu.generate_scale_of_length(params:get("hill "..i.." base note"),params:get("hill "..i.." scale"),127) -- the full range of notes
       hills[i][j].timing = {}
       hills[i][j].shape =  params:string("hill ["..i.."]["..j.."] shape")
       hills[i][j].constructed = false
@@ -450,7 +451,7 @@ end
 construct = function(i,j,shuffle)
   local h = hills[i]
   local seg = h[j]
-  local total_notes = util_round(#seg.note_ocean*seg.population)
+  local total_notes = util_round(#h.note_ocean*seg.population)
   local index = 0
   local reasonable_max = seg.note_num.min ~= seg.note_num.max and seg.note_num.max or seg.note_num.min+1
   for k = 0,seg.duration*100 do
@@ -619,7 +620,7 @@ end
 local function inject(shape,i,injection_point,duration)
   local h = hills[i]
   local seg = h[h.segment]
-  local total_notes = util_round(#seg.note_ocean*seg.population)
+  local total_notes = util_round(#h.note_ocean*seg.population)
   local index = injection_point-1
   local current_val = 0
   local reasonable_max = seg.note_num.min ~= seg.note_num.max and seg.note_num.max or seg.note_num.min+1
@@ -893,9 +894,14 @@ force_note = function(i,j,played_note)
 end
 
 pass_note = function(i,j,seg,note_val,index,retrig_index)
-  local midi_notes = hills[i][j].note_ocean
-  local played_note = get_random_offset(i,midi_notes[note_val])
-  print(note_val, played_note)
+  local midi_notes = hills[i].note_ocean
+  local played_note;
+  if hills[i].highway == true then
+    played_note = get_random_offset(i,note_val)
+  else
+    played_note = get_random_offset(i,midi_notes[note_val])
+  end
+  -- print(note_val, played_note)
   local _active = track[i][j]
   local focused_set;
   if hills[i].highway == true then

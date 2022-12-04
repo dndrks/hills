@@ -71,7 +71,7 @@ function grid_lib.pattern_execute(data)
     local j = data.hill_j
     local played_index = (((7-data.y)*5) + (data.x-1)-1)
     if params:string('hill_'..i..'_iso_quantize') == 'yes' then
-      force_note(i,j,hills[i][j].note_ocean[played_index+1] + (12 * data.octave))
+      force_note(i,j,hills[i].note_ocean[played_index+1] + (12 * data.octave))
     else
       force_note(i,j,(params:get('hill '..i..' base note') + played_index) + (12 * data.octave))
     end
@@ -883,14 +883,15 @@ function grid_lib.earthsea_press(x,y,z)
   if y >=3 and y<=7 and x>=2 and x<=6 and z == 1 then
     es[i].x = x
     es[i].y = y
-    local midi_notes = hills[i][j].note_ocean
+    local midi_notes = hills[i].note_ocean
     local played_index = (((7-es[i].y)*5) + (es[i].x-1)-1)
     local played_note;
     if params:string('hill_'..i..'_iso_quantize') == 'yes' then
-      played_note = hills[i][j].note_ocean[played_index+1] + (12 * params:get('hill_'..i..'_iso_octave'))
+      played_note = hills[i].note_ocean[played_index+1] + (12 * params:get('hill_'..i..'_iso_octave'))
     else
       played_note = (params:get('hill '..i..' base note') + played_index) + (12 * params:get('hill_'..i..'_iso_octave'))
     end
+    -- print(played_index+1, played_note)
     force_note(i,j,played_note)
     if track_rec then
       if params:string('hill '..i..' kildare_notes') == 'no' then
@@ -898,8 +899,7 @@ function grid_lib.earthsea_press(x,y,z)
       end
       local current_step = track[i][j].step
       track[i][j].trigs[current_step] = true
-      print(played_index+1)
-      track[i][j].notes[current_step] = played_index+1
+      track[i][j].notes[current_step] = played_note
     end
     for k = 1,16 do
       local table_to_record =
@@ -1358,12 +1358,12 @@ function grid_lib.draw_es()
         g:led(x,y,2)
         if params:string('hill_'..i..'_iso_quantize') == 'no' then
           local note_index = ((((7-y)*5) + (x-1)-1))%12 -- 0-base
-          if hills[i][j].note_intervals[note_index] ~= nil then
+          if hills[i].note_intervals[note_index] ~= nil then
             g:led(x,y,8)
           end
         else
           local note_index = ((((7-y)*5) + (x-1)))
-          if hills[i][j].note_ocean[note_index] % 12 == 0 then
+          if hills[i].note_ocean[note_index] % 12 == 0 then
             g:led(x,y,8)
           end
         end

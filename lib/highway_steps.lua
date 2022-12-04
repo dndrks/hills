@@ -120,7 +120,8 @@ function hway_ui.draw_menu()
           local note_index = focused_set.notes[i]
           display_step_data = 
             (focused_set.notes[i] ~= nil and focused_set.trigs[i] == true)
-              and hills[hf][h.screen_focus].note_ocean[note_index]
+              -- and hills[hf].note_ocean[note_index]
+              and note_index
               or '-'
         end
 
@@ -219,7 +220,7 @@ function hway_ui.draw_menu()
             else
               local note_index = focused_set[pos]
               screen.level(15)
-              -- display_text = hills[hf][h.screen_focus].note_ocean[note_index]
+              -- display_text = hills[hf].note_ocean[note_index]
             end
           else
             focused_set = _active.fill.notes
@@ -229,7 +230,7 @@ function hway_ui.draw_menu()
             else
               local note_index = focused_set[pos]
               screen.level(15)
-              -- display_text = hills[hf][h.screen_focus].note_ocean[note_index]
+              -- display_text = hills[hf].note_ocean[note_index]
             end
           end
           screen.move(40,10)
@@ -603,117 +604,117 @@ function hway_ui.process_key(n,z)
   grid_dirty = true
 end
 
-function hway_ui.process_encoder(n,d) -- NONE OF THIS GETS CALLED!!!
-  -- local _active = track[_hui.sel][track[_hui.sel].active_hill]
-  local hf = ui.hill_focus
-  local h = hills[hf]
-  local _active = track[hf][h.screen_focus]
-  local focused_set = _active.focus == "main" and track[_hui.sel] or _active.fill
-  if n == 1 then
-    _hui.sel = util.clamp(_hui.sel+d,1,3)
-  end
-  if _hui.focus == "params" and not highway_ui.alt then
-    if n == 2 then
-      _hui.param = util.clamp(_hui.param + d,1,5)
-    elseif n == 3 then
-      local id = _hui.sel
-      local focus_arp = track[_hui.sel]
-      if _hui.param == 1 then
-        local deci_to_int =
-        { ["0.125"] = 1 --1/32
-        , ["0.1667"] = 2 --1/16T
-        , ["0.25"] = 3 -- 1/16
-        , ["0.3333"] = 4 -- 1/8T
-        , ["0.5"] = 5 -- 1/8
-        , ["0.6667"] = 6 -- 1/4T
-        , ["1.0"] = 7 -- 1/4
-        , ["1.3333"] = 8 -- 1/2T
-        , ["2.0"] = 9 -- 1/2
-        , ["2.6667"] = 10  -- 1T
-        , ["4.0"] = 11 -- 1
-        }
-        local rounded = util.round(track[id].time,0.0001)
-        local working = deci_to_int[tostring(rounded)]
-        working = util.clamp(working+d,1,11)
-        local int_to_deci = {0.125,1/6,0.25,1/3,0.5,2/3,1,4/3,2,8/3,4}
-        for i = 1,16 do
-          bank[id][i].arp_time = int_to_deci[working]
-        end
-        track[id].time = int_to_deci[working]
-      elseif _hui.param == 2 then
-        local dir_to_int =
-        { ["fwd"] = 1
-        , ["bkwd"] = 2
-        , ["pend"] = 3
-        , ["rnd"] = 4
-        }
-        local dir = dir_to_int[focus_arp.mode]
-        dir = util.clamp(dir+d,1,4)
-        local int_to_dir = {"fwd","bkwd","pend","rnd"}
-        focus_arp.mode = int_to_dir[dir]
-      elseif _hui.param == 3 then
-        focus_arp.start_point = util.clamp(focus_arp.start_point+d,1,focus_arp.end_point)
-        _hui.fill.start_point[_hui.sel] = focus_arp.start_point
-      elseif _hui.param == 4 then
-        focus_arp.end_point = util.clamp(focus_arp.end_point+d,focus_arp.start_point,128)
-        _hui.fill.end_point[_hui.sel] = focus_arp.end_point
-      elseif _hui.param == 5 then
-        _active.swing = util.clamp(_active.swing+d,50,99)
-      end
-    end
-  elseif _hui.focus == "params" and highway_ui.alt then
-    if n == 2 then
-      _hui.alt_fill_sel = util.clamp(_hui.alt_fill_sel+d,1,3)
-    elseif n == 3 then
-      if _hui.alt_fill_sel == 1 then
-        _hui.fill.start_point[_hui.sel] = util.clamp(_hui.fill.start_point[_hui.sel]+d,1,_hui.fill.end_point[_hui.sel])
-      elseif _hui.alt_fill_sel == 2 then
-        _hui.fill.end_point[_hui.sel] = util.clamp(_hui.fill.end_point[_hui.sel]+d,_hui.fill.start_point[_hui.sel],128)
-      elseif _hui.alt_fill_sel == 3 then
-       _hui.fill.snake = util.clamp(_hui.fill.snake+d,1,#snake_styles)
-      end
-    end
-  elseif _hui.focus == "seq" then
-    if n == 2 then
-      if not highway_ui.alt then
-        print(_hui.sel)
-        track[_hui.sel][_hui.hill_sel].ui_position = util.clamp(track[_hui.sel][_hui.hill_sel].ui_position+d,1,128)
-        _hui.seq_page[_hui.sel] = math.ceil(track[_hui.sel][_hui.hill_sel].ui_position/32)
-      else
-        _hui.alt_view_sel = util.clamp(_hui.alt_view_sel+d,1,4)
-      end
-    elseif n == 3 then
-      if not highway_ui.alt then
-        if key2_hold then
-          arp_paste_style = util.clamp(arp_paste_style+d,1,3)
-        else
-          local current = focused_set.notes[track[_hui.sel][_hui.hill_sel].ui_position]
-          if current == nil then current = 0 end
-          current = util.clamp(current+d,0,16)
-          if current == 0 then current = nil end
-          focused_set.notes[track[_hui.sel][_hui.hill_sel].ui_position] = current
-          hway_ui.check_for_first_touch()
-        end
-      else
-        local current = track[_hui.sel][_hui.hill_sel].ui_position
-        if _hui.alt_view_sel == 1 then
-          focused_set.prob[current] = util.clamp(focused_set.prob[current]+d,0,100)
-        elseif _hui.alt_view_sel == 2 then
-          hway_ui.cycle_conditional(_hui.sel,current,d)
-        elseif _hui.alt_view_sel == 3 then
-          hway_ui.cycle_retrig_count(_hui.sel,current,d)
-        elseif _hui.alt_view_sel == 4 then
-          if _active.focus == "main" then
-            arp_paramset:delta("arp_retrig_time_".._hui.sel.."_"..current,d)
-          else
-            arp_paramset:delta("arp_fill_retrig_time_".._hui.sel.."_"..current,d)
-          end
-        end
-      end
-    end
-  end
-  grid_dirty = true
-end
+-- function hway_ui.process_encoder(n,d) -- NONE OF THIS GETS CALLED!!!
+--   -- local _active = track[_hui.sel][track[_hui.sel].active_hill]
+--   local hf = ui.hill_focus
+--   local h = hills[hf]
+--   local _active = track[hf][h.screen_focus]
+--   local focused_set = _active.focus == "main" and track[_hui.sel] or _active.fill
+--   if n == 1 then
+--     _hui.sel = util.clamp(_hui.sel+d,1,3)
+--   end
+--   if _hui.focus == "params" and not highway_ui.alt then
+--     if n == 2 then
+--       _hui.param = util.clamp(_hui.param + d,1,5)
+--     elseif n == 3 then
+--       local id = _hui.sel
+--       local focus_arp = track[_hui.sel]
+--       if _hui.param == 1 then
+--         local deci_to_int =
+--         { ["0.125"] = 1 --1/32
+--         , ["0.1667"] = 2 --1/16T
+--         , ["0.25"] = 3 -- 1/16
+--         , ["0.3333"] = 4 -- 1/8T
+--         , ["0.5"] = 5 -- 1/8
+--         , ["0.6667"] = 6 -- 1/4T
+--         , ["1.0"] = 7 -- 1/4
+--         , ["1.3333"] = 8 -- 1/2T
+--         , ["2.0"] = 9 -- 1/2
+--         , ["2.6667"] = 10  -- 1T
+--         , ["4.0"] = 11 -- 1
+--         }
+--         local rounded = util.round(track[id].time,0.0001)
+--         local working = deci_to_int[tostring(rounded)]
+--         working = util.clamp(working+d,1,11)
+--         local int_to_deci = {0.125,1/6,0.25,1/3,0.5,2/3,1,4/3,2,8/3,4}
+--         for i = 1,16 do
+--           bank[id][i].arp_time = int_to_deci[working]
+--         end
+--         track[id].time = int_to_deci[working]
+--       elseif _hui.param == 2 then
+--         local dir_to_int =
+--         { ["fwd"] = 1
+--         , ["bkwd"] = 2
+--         , ["pend"] = 3
+--         , ["rnd"] = 4
+--         }
+--         local dir = dir_to_int[focus_arp.mode]
+--         dir = util.clamp(dir+d,1,4)
+--         local int_to_dir = {"fwd","bkwd","pend","rnd"}
+--         focus_arp.mode = int_to_dir[dir]
+--       elseif _hui.param == 3 then
+--         focus_arp.start_point = util.clamp(focus_arp.start_point+d,1,focus_arp.end_point)
+--         _hui.fill.start_point[_hui.sel] = focus_arp.start_point
+--       elseif _hui.param == 4 then
+--         focus_arp.end_point = util.clamp(focus_arp.end_point+d,focus_arp.start_point,128)
+--         _hui.fill.end_point[_hui.sel] = focus_arp.end_point
+--       elseif _hui.param == 5 then
+--         _active.swing = util.clamp(_active.swing+d,50,99)
+--       end
+--     end
+--   elseif _hui.focus == "params" and highway_ui.alt then
+--     if n == 2 then
+--       _hui.alt_fill_sel = util.clamp(_hui.alt_fill_sel+d,1,3)
+--     elseif n == 3 then
+--       if _hui.alt_fill_sel == 1 then
+--         _hui.fill.start_point[_hui.sel] = util.clamp(_hui.fill.start_point[_hui.sel]+d,1,_hui.fill.end_point[_hui.sel])
+--       elseif _hui.alt_fill_sel == 2 then
+--         _hui.fill.end_point[_hui.sel] = util.clamp(_hui.fill.end_point[_hui.sel]+d,_hui.fill.start_point[_hui.sel],128)
+--       elseif _hui.alt_fill_sel == 3 then
+--        _hui.fill.snake = util.clamp(_hui.fill.snake+d,1,#snake_styles)
+--       end
+--     end
+--   elseif _hui.focus == "seq" then
+--     if n == 2 then
+--       if not highway_ui.alt then
+--         print(_hui.sel)
+--         track[_hui.sel][_hui.hill_sel].ui_position = util.clamp(track[_hui.sel][_hui.hill_sel].ui_position+d,1,128)
+--         _hui.seq_page[_hui.sel] = math.ceil(track[_hui.sel][_hui.hill_sel].ui_position/32)
+--       else
+--         _hui.alt_view_sel = util.clamp(_hui.alt_view_sel+d,1,4)
+--       end
+--     elseif n == 3 then
+--       if not highway_ui.alt then
+--         if key2_hold then
+--           arp_paste_style = util.clamp(arp_paste_style+d,1,3)
+--         else
+--           local current = focused_set.notes[track[_hui.sel][_hui.hill_sel].ui_position]
+--           if current == nil then current = 0 end
+--           current = util.clamp(current+d,0,16)
+--           if current == 0 then current = nil end
+--           focused_set.notes[track[_hui.sel][_hui.hill_sel].ui_position] = current
+--           hway_ui.check_for_first_touch()
+--         end
+--       else
+--         local current = track[_hui.sel][_hui.hill_sel].ui_position
+--         if _hui.alt_view_sel == 1 then
+--           focused_set.prob[current] = util.clamp(focused_set.prob[current]+d,0,100)
+--         elseif _hui.alt_view_sel == 2 then
+--           hway_ui.cycle_conditional(_hui.sel,current,d)
+--         elseif _hui.alt_view_sel == 3 then
+--           hway_ui.cycle_retrig_count(_hui.sel,current,d)
+--         elseif _hui.alt_view_sel == 4 then
+--           if _active.focus == "main" then
+--             arp_paramset:delta("arp_retrig_time_".._hui.sel.."_"..current,d)
+--           else
+--             arp_paramset:delta("arp_fill_retrig_time_".._hui.sel.."_"..current,d)
+--           end
+--         end
+--       end
+--     end
+--   end
+--   grid_dirty = true
+-- end
 
 local conditional_modes = {"NOT NEI","NEI","NOT PRE","PRE","A:B"}
 

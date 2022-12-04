@@ -65,22 +65,24 @@ function parameters.init()
     params:add_option("hill "..i.." scale","scale",scale_names,1)
     params:set_action("hill "..i.." scale",
     function(x)
-      for j = 1,8 do
-        hills[i][j].note_ocean = mu.generate_scale_of_length(params:get("hill "..i.." base note"),x,127)
-        hills[i][j].note_intervals = tab.invert(mu.SCALES[x].intervals)
+      hills[i].note_ocean = mu.generate_scale_of_length(params:get("hill "..i.." base note"),x,127)
+      hills[i].note_intervals = tab.invert(mu.SCALES[x].intervals)
+      track[i].scale.source = mu.generate_scale_of_length(0,x,127)
+      if track[i].scale.index > #track[i].scale.source then
+        track[i].scale.index = 1
       end
     end)
     params:add_number("hill "..i.." base note","base note",0,127,60)
     params:set_action("hill "..i.." base note",
     function(x)
+      hills[i].note_ocean = mu.generate_scale_of_length(x,params:get("hill "..i.." scale"),127)
       for j = 1,8 do
-        hills[i][j].note_ocean = mu.generate_scale_of_length(x,params:get("hill "..i.." scale"),127)
-        if params:get("hill "..i.." span") > #hills[i][j].note_ocean then
-          params:set("hill "..i.." span",#hills[i][j].note_ocean)
+        if params:get("hill "..i.." span") > #hills[i].note_ocean then
+          params:set("hill "..i.." span",#hills[i].note_ocean)
         end
         for k = 1,#hills[i][j].note_num.pool do
-          if hills[i][j].note_num.pool[k] > #hills[i][j].note_ocean then
-            hills[i][j].note_num.pool[k] = #hills[i][j].note_ocean
+          if hills[i][j].note_num.pool[k] > #hills[i].note_ocean then
+            hills[i][j].note_num.pool[k] = #hills[i].note_ocean
           end
         end
       end
@@ -89,10 +91,10 @@ function parameters.init()
     params:set_action("hill "..i.." span",
     function(x)
       for j = 1,8 do
-        if x > #hills[i][j].note_ocean then
-          params:set("hill "..i.." span",#hills[i][j].note_ocean)
+        if x > #hills[i].note_ocean then
+          params:set("hill "..i.." span",#hills[i].note_ocean)
         else
-          hills[i][j].note_num.max = util.clamp(x+1,1,#hills[i][j].note_ocean)
+          hills[i][j].note_num.max = util.clamp(x+1,1,#hills[i].note_ocean)
         end
         for k = 1,#hills[i][j].note_num.pool do
           if hills[i][j].note_num.pool[k] > x+1 then
