@@ -766,63 +766,42 @@ function play_chord(i,j,index)
   engine.set_voice_param(i,"seventhHz",midi_to_hz(shell_notes[4]))
 end
 
+local function play_linked_sample(i, j, played_note, vel_target, retrig_index)
+  if params:string("hill "..i.." sample output") == "yes" then
+    if params:get("hill "..i.." sample probability") >= math.random(100) then
+      local target = "sample"..params:get("hill "..i.." sample slot")
+      if params:string(target..'_sampleMode') == 'chop' then
+        local slice_count = params:get('hill '..i..' sample slice count') - 1
+        local slice = util.wrap(played_note - params:get("hill "..i.." base note"),0,slice_count) + 1
+        _ca.play_slice(target, slice, vel_target, i, j, played_note, retrig_index)  -- TODO: this won't always be hill-active...track-active!!
+      elseif params:string(target..'_sampleMode') == 'playthrough' then
+        _ca.play_through(target, vel_target, i, j, played_note, retrig_index)  -- TODO: this won't always be hill-active...track-active!!
+      elseif params:string(target..'_sampleMode') == 'distribute' then
+        local scaled_idx = util_round(sample_info[target].sample_count * (params:get('hill '..i..' sample distribution')/100))
+        if scaled_idx ~= 0 then
+          local idx = util.wrap(played_note - params:get("hill "..i.." base note"),0,scaled_idx-1) + 1
+          -- TODO: this won't always be hill-active...track-active!!:
+          _ca.play_index(target, idx, vel_target, i, j, played_note, retrig_index) -- TODO: adjust for actual sample pool size
+        end
+      end
+    end
+  end
+end
+
 force_note = function(i,j,played_note)
+  local vel_target = params:get('hill_'..i..'_iso_velocity')
+  local retrig_index = 0
+
   if i <= 7 then
     engine.set_voice_param(i,"carHz",midi_to_hz(played_note))
     engine.set_voice_param(i,"thirdHz",midi_to_hz(played_note))
     engine.set_voice_param(i,"seventhHz",midi_to_hz(played_note))
-    engine.trig(i,params:get('hill_'..i..'_iso_velocity'),'false')
-    
-  --   if params:string("hill "..i.." sample output") == "yes" then
-  --     if params:get("hill "..i.." sample probability") >= math.random(100) then
-  --       local target = "sample"..params:get("hill "..i.." sample slot")
-  --       if params:string(target..'_sampleMode') == 'chop' then
-  --         local slice_count = params:get('hill '..i..' sample slice count') - 1
-  --         local slice = util.wrap(played_note - params:get("hill "..i.." base note"),0,slice_count) + 1
-  --         _ca.play_slice(target,slice,vel_target,i,j,played_note, retrig_index)  -- TODO: this won't always be hill-active...track-active!!
-  --       elseif params:string(target..'_sampleMode') == 'playthrough' then
-  --         _ca.play_through(target,vel_target,i,j,played_note, retrig_index)  -- TODO: this won't always be hill-active...track-active!!
-  --       elseif params:string(target..'_sampleMode') == 'distribute' then
-  --         local scaled_idx = util_round(sample_info[target].sample_count * (params:get('hill '..i..' sample distribution')/100))
-  --         if scaled_idx ~= 0 then
-  --           local idx = util.wrap(played_note - params:get("hill "..i.." base note"),0,scaled_idx-1) + 1
-  --            -- TODO: this won't always be hill-active...track-active!!:
-  --           _ca.play_index(target,idx,vel_target,i,j,played_note, retrig_index) -- TODO: adjust for actual sample pool size
-  --         end
-  --       end
-  --     end
-  --   end
-  -- else
-  --   -- TRIGGER SAMPLE
-  --   local vel_target = hills[i].highway == false and hills[i][j].note_velocity[index] or track[i][j].velocities[index]
-  --   if params:string("hill "..i.." sample output") == "yes" then
-  --     if params:get("hill "..i.." sample probability") >= math.random(100) then
-  --       local should_play;
-  --       if hills[i].highway then
-  --         -- local lock_trig = track[i][j].focus == 'main' and track[i][j].lock_trigs[index] or track[i][j].fill.lock_trigs[index]
-  --         if track[i][j].trigs[index] then
-  --           should_play = true
-  --         end
-  --       else
-  --         should_play = true
-  --       end
-  --       local target = "sample"..i-7
-  --       if params:string(target..'_sampleMode') == 'chop' and should_play then
-  --         local slice_count = params:get('hill '..i..' sample slice count') - 1
-  --         local slice = util.wrap(played_note - params:get("hill "..i.." base note"),0,slice_count) + 1
-  --         _ca.play_slice(target,slice,vel_target,i,j,played_note, retrig_index)
-  --       elseif params:string(target..'_sampleMode') == 'playthrough' and should_play then
-  --         _ca.play_through(target,vel_target,i,j,played_note, retrig_index)
-  --       elseif params:string(target..'_sampleMode') == 'distribute' and should_play then
-  --         local scaled_idx = util_round(sample_info[target].sample_count * (params:get('hill '..i..' sample distribution')/100))
-  --         if scaled_idx ~= 0 then
-  --           local idx = util.wrap(played_note - params:get("hill "..i.." base note"),0,scaled_idx-1) + 1
-  --           _ca.play_index(target,idx,vel_target,i,j,played_note, retrig_index) -- TODO: adjust for actual sample pool size
-  --         end
-  --       end
-  --     end
-  --   end
-  -- end
+    engine.trig(i,vel_target,'false') 
+    play_linked_sample(i, j, played_note, vel_target, retrig_index)
+  else
+    play_linked_sample(i, j, played_note, vel_target, retrig_index)
+  end
+
   -- manual_iter(i,j)
   -- if params:string("hill "..i.." MIDI output") == "yes" then
   --   local ch = params:get("hill "..i.." MIDI note channel")
@@ -889,11 +868,12 @@ force_note = function(i,j,played_note)
   --   elseif params:string("hill "..i.." JF output style") == "shape" then
   --     crow.ii.jf.trigger(ch,1)
   --   end
-  end
+  -- end
   pre_note[i] = played_note
 end
 
 pass_note = function(i,j,seg,note_val,index,retrig_index)
+  -- print(clock.get_beats(), track[i][j].swing)
   local midi_notes = hills[i].note_ocean
   local played_note;
   if hills[i].highway == true then
@@ -1063,25 +1043,7 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
       else
         engine.trig(i,vel_target,'false')
       end
-      if params:string("hill "..i.." sample output") == "yes" then
-        if params:get("hill "..i.." sample probability") >= math.random(100) then
-          local target = "sample"..params:get("hill "..i.." sample slot")
-          if params:string(target..'_sampleMode') == 'chop' then
-            local slice_count = params:get('hill '..i..' sample slice count') - 1
-            local slice = util.wrap(played_note - params:get("hill "..i.." base note"),0,slice_count) + 1
-            _ca.play_slice(target,slice,vel_target,i,j,played_note, retrig_index)  -- TODO: this won't always be hill-active...track-active!!
-          elseif params:string(target..'_sampleMode') == 'playthrough' then
-            _ca.play_through(target,vel_target,i,j,played_note, retrig_index)  -- TODO: this won't always be hill-active...track-active!!
-          elseif params:string(target..'_sampleMode') == 'distribute' then
-            local scaled_idx = util_round(sample_info[target].sample_count * (params:get('hill '..i..' sample distribution')/100))
-            if scaled_idx ~= 0 then
-              local idx = util.wrap(played_note - params:get("hill "..i.." base note"),0,scaled_idx-1) + 1
-               -- TODO: this won't always be hill-active...track-active!!:
-              _ca.play_index(target,idx,vel_target,i,j,played_note, retrig_index) -- TODO: adjust for actual sample pool size
-            end
-          end
-        end
-      end
+      play_linked_sample(i, j, played_note, vel_target, retrig_index)
     else
       -- TRIGGER SAMPLE
       local vel_target = hills[i].highway == false and hills[i][j].note_velocity[index] or track[i][j].velocities[index]

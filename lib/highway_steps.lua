@@ -49,7 +49,7 @@ function hway_ui.draw_menu()
       local focus = h.screen_focus
       local seg = h[focus]
       screen.level(1)
-      screen.rect(40,15,80,40)
+      screen.rect(31,15,97,40)
       screen.fill()
       local s_c = ui.screen_controls[hf][focus]
       local iter_index = seg.index-1 ~= 0 and seg.index-1 or hills[hf][focus].high_bound.note
@@ -74,7 +74,11 @@ function hway_ui.draw_menu()
         screen.level(ui.menu_focus == i and (key1_hold and ((ui.menu_focus > 2 and  ui.control_set == "edit") and 3 or 15) or 15) or 3)
         screen.move(0,12+(10*i))
         if ui.control_set == "edit" and ui.menu_focus == i then
-          screen.text("["..menus[i].."]")
+          if h.highway == true then
+            screen.text(menus[i])
+          else
+            screen.text("["..menus[i].."]")
+          end
         elseif ui.control_set ~= "edit" then
           screen.text(menus[i])
         end
@@ -87,10 +91,11 @@ function hway_ui.draw_menu()
       screen.level(3)
       screen.level(_hui.focus == "seq" and 8 or 0)
       local e_pos = track[hf][h.screen_focus].ui_position
-      screen.rect(40+(hway_ui.index_to_grid_pos(e_pos,8)[1]-1)*10,7+(10*hway_ui.index_to_grid_pos(e_pos,8)[2]),9,7)
+      screen.rect(31+(hway_ui.index_to_grid_pos(e_pos,8)[1]-1)*12,6+(10*hway_ui.index_to_grid_pos(e_pos,8)[2]),13,8)
       screen.fill()
       local min_max = {{1,32},{33,64},{65,96},{97,128}}
       local lvl = 5
+      screen.font_face(2)
       for i = min_max[_hui.seq_page[hf]][1], min_max[_hui.seq_page[hf]][2] do
         if e_pos == i then
           if _active.step == i and _active.playing then
@@ -110,9 +115,7 @@ function hway_ui.draw_menu()
           end
         end
         screen.level(lvl)
-        -- screen.move(5+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-        screen.move(44+(hway_ui.index_to_grid_pos(i,8)[1]-1)*10,13+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-
+        screen.move(37+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,13+(10*hway_ui.index_to_grid_pos(i,8)[2]))
         local display_step_data
         if ui.menu_focus ~= 3 then
           display_step_data = focused_set.trigs[i] == true and (focused_set.muted_trigs[i] and 'M' or '|') or '-'
@@ -145,39 +148,48 @@ function hway_ui.draw_menu()
           -- if display_step_data == '|' then
             -- display_step_data = '|*'
             if focused_set.prob[i] ~= 100 then
-              if focused_set.prob[i] <= 25 then
-                for pix = 41,42 do
-                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*10,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+              if focused_set.prob[i] <= 20 then
+                for pix = 33,34 do
+                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
                 end
-              elseif focused_set.prob[i] <= 50 then
-                for pix = 41,42 do
-                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*10,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*10,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+              elseif focused_set.prob[i] <= 40 then
+                for pix = 33,34 do
+                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
                 end
-              elseif focused_set.prob[i] <= 75 then
-                for pix = 41,42 do
-                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*10,10+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*10,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*10,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+              elseif focused_set.prob[i] <= 60 then
+                for pix = 33,34 do
+                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,10+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                end
+              elseif focused_set.prob[i] <= 80 then
+                for pix = 33,34 do
+                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,9+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,10+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
                 end
               elseif focused_set.prob[i] < 100 then
-                for pix = 41,42 do
-                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*10,9+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*10,10+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*10,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*10,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                for pix = 33,34 do
+                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,8+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,9+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,10+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
                 end
               end
               screen.fill()
             end
             if focused_set.conditional.retrig_count[i] > 0 then
-              screen.pixel(47+(hway_ui.index_to_grid_pos(i,8)[1]-1)*10,9+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-              screen.pixel(47+(hway_ui.index_to_grid_pos(i,8)[1]-1)*10,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+              screen.pixel(40+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,9+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+              screen.pixel(40+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
               screen.fill()
             end
           -- end
         end
       end
+      screen.font_face(1)
 
       if key2_hold then
         screen.font_size(8)
@@ -190,21 +202,25 @@ function hway_ui.draw_menu()
         screen.text_right(track[hf][h.screen_focus].ui_position..' / '..min_max[_hui.seq_page[hf]][1]..'-'..min_max[_hui.seq_page[hf]][2])
       end
 
-      if ui.menu_focus == 2 then
+      if ui.menu_focus == 1 then
+        screen.level(15)
+        screen.move(32,10)
+        screen.text(track[hf][h.screen_focus].focus == "fill" and "FILL ENGAGED" or "")
+      elseif ui.menu_focus == 2 then
         local s_c = ui.screen_controls[hf][h.screen_focus]
         if ui.control_set == 'play' then
           screen.level(3)
         else
           screen.level(s_c["bounds"]["focus"] == 1 and 15 or 3)
         end
-        screen.move(40,10)
+        screen.move(32,10)
         screen.text("min: "..track[hf][h.screen_focus].start_point)
         if ui.control_set == 'play' then
           screen.level(3)
         else
           screen.level(s_c["bounds"]["focus"] == 1 and 3 or 15)
         end
-        screen.move(120,10)
+        screen.move(128,10)
         screen.text_right("max: "..track[hf][h.screen_focus].end_point)
       elseif ui.menu_focus == 3 then
         if ui.control_set == 'edit' then

@@ -30,24 +30,29 @@ m.track_transpose = function(i,j,pos,delta)
   if _active.focus == "main" then
     focused_set = _active.notes
     if _active.trigs[pos] == false then
-      _active.trigs[pos] = true
+      if delta > 0 then
+        _active.trigs[pos] = true
+      end
       goto finished
     end
   else
     focused_set = _active.fill.notes
     if _active.fill.trigs[pos] == false then
-      _active.fill.trigs[pos] = true
+      if delta > 0 then
+        _active.fill.trigs[pos] = true
+      end
       goto finished
     end
   end
-  if focused_set[pos] == 1 and delta < 1 then
+  if focused_set[pos] == 0 and delta < 1 then
     if focused_set == _active.notes then
       _active.trigs[pos] = false
     else
       _active.fill.trigs[pos] = false
     end
+    focused_set[pos] = params:get('hill '..i..' base note')
   else
-    focused_set[pos] = util.clamp(focused_set[pos] + delta, 1, hills[i][j].note_num.max)
+    focused_set[pos] = util.clamp(focused_set[pos] + delta, 0, 127)
   end
   ::finished::
 end

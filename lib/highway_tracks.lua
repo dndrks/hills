@@ -4,8 +4,6 @@ track = {}
 
 track_clock = {}
 
-track_rec = false
-
 local fast_option = include 'lib/fast_option'
 
 track_paste_style = 1
@@ -175,6 +173,9 @@ function track_actions.init(target, hill_number, clear_reset)
     track[target].seed_prob = 100
     track[target].song_mute = {}
     track[target].external_prm_change = {}
+    track[target].rec = false
+    track[target].rec_note_entry = false
+    track[target].manual_note_entry = false
     build_clock = true
   end
 
@@ -427,50 +428,50 @@ function track_actions.retrig_fill(target,s_p,e_p,val,type)
   end
 end
 
-function track_actions.fill(target,s_p,e_p,style)
-  local _active = track[target][track[target].active_hill]
-  local focused_set = _active.focus == "main" and _active or _active.fill
-  local snakes = 
-  { 
-      [1] = { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16 }
-    , [2] = { 1,2,3,4,8,7,6,5,9,10,11,12,16,15,14,13 }
-    , [3] = { 1,5,9,13,2,6,10,14,3,7,11,15,4,8,12,16 }
-    , [4] = { 1,5,9,13,14,10,6,2,3,7,11,15,16,12,8,4 }
-    , [5] = { 1,2,3,4,8,12,16,15,14,13,9,5,6,7,11,10 }
-    , [6] = { 13,14,15,16,12,8,4,3,2,1,5,9,10,11,7,6 }
-    , [7] = { 1,2,5,9,6,3,4,7,10,13,14,11,8,12,15,16 }
-    , [8] = { 1,6,11,16,15,10,5,2,7,12,8,3,9,14,13,4 }
-  }
-  if style < 9 then
-    for i = s_p,e_p do
-      focused_set.notes[i] = snakes[style][wrap(i,1,16)]
-    end
-  elseif style == 9 then
-    for i = s_p,e_p do
-      focused_set.notes[i] = math.random(1,16)
-    end
-  elseif style == 10 then
-    for i = s_p,e_p do
-      if params:get("track_"..target.."_rand_prob") >= math.random(100) then
-        focused_set.notes[i] = math.random(1,16)
-      else
-        focused_set.notes[i] = nil
-      end
-    end
-  elseif style == 11 then -- alt layer
+-- function track_actions.fill(target,s_p,e_p,style)
+--   local _active = track[target][track[target].active_hill]
+--   local focused_set = _active.focus == "main" and _active or _active.fill
+--   local snakes = 
+--   { 
+--       [1] = { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16 }
+--     , [2] = { 1,2,3,4,8,7,6,5,9,10,11,12,16,15,14,13 }
+--     , [3] = { 1,5,9,13,2,6,10,14,3,7,11,15,4,8,12,16 }
+--     , [4] = { 1,5,9,13,14,10,6,2,3,7,11,15,16,12,8,4 }
+--     , [5] = { 1,2,3,4,8,12,16,15,14,13,9,5,6,7,11,10 }
+--     , [6] = { 13,14,15,16,12,8,4,3,2,1,5,9,10,11,7,6 }
+--     , [7] = { 1,2,5,9,6,3,4,7,10,13,14,11,8,12,15,16 }
+--     , [8] = { 1,6,11,16,15,10,5,2,7,12,8,3,9,14,13,4 }
+--   }
+--   if style < 9 then
+--     for i = s_p,e_p do
+--       focused_set.notes[i] = snakes[style][wrap(i,1,16)]
+--     end
+--   elseif style == 9 then
+--     for i = s_p,e_p do
+--       focused_set.notes[i] = math.random(1,16)
+--     end
+--   elseif style == 10 then
+--     for i = s_p,e_p do
+--       if params:get("track_"..target.."_rand_prob") >= math.random(100) then
+--         focused_set.notes[i] = math.random(1,16)
+--       else
+--         focused_set.notes[i] = nil
+--       end
+--     end
+--   elseif style == 11 then -- alt layer
 
-  end
-  if not _active.playing
-  and not _active.pause
-  and not _active.enabled
-  then
-    track_actions.enable(target,true)
-    _active.pause = true
-    _active.hold = true
-    grid_dirty = true
-  end
-  screen_dirty = true
-end
+--   end
+--   if not _active.playing
+--   and not _active.pause
+--   and not _active.enabled
+--   then
+--     track_actions.enable(target,true)
+--     _active.pause = true
+--     _active.hold = true
+--     grid_dirty = true
+--   end
+--   screen_dirty = true
+-- end
 
 function track_actions.copy(target)
   local _active = track[target][track[target].active_hill]
@@ -564,7 +565,7 @@ function track_actions.process(target,source)
   elseif _active.mode == "rnd" then
     track_actions.random(target)
   end
-  if menu ~= 1 then screen_dirty = true end
+  screen_dirty = true
   track_actions.run(target,_active.step,source)
 end
 
