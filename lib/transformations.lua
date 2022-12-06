@@ -119,6 +119,26 @@ m['rotate notes'] = function(i,j,start_point,end_point,focus,sc)
   end
 end
 
+m['rotate track notes'] = function(i,j)
+  local target = track[i][j].focus == 'main' and track[i][j].notes or track[i][j].fill.notes
+  local originals = {}
+  local steps_with_trigs
+  for k = track[i][j].start_point, track[i][j].end_point do
+    if track[i][j].trigs[k] then
+      originals[k] = target[k]
+    else
+      originals[k] = 'none'
+    end
+  end
+  tab.print(originals)
+  for k = 1,#originals do
+    if originals[k] ~= 'none' then
+      print(util.wrap(track[i][j].start_point+k, track[i][j].start_point, track[i][j].end_point), originals[k])
+      target[util.wrap(track[i][j].start_point+k, track[i][j].start_point, track[i][j].end_point)] = originals[k]
+    end
+  end
+end
+
 m.rotate = function(i,j,start_point,end_point,focus,sc)
   local target = sc ~= nil and hills[i][j].sample_controls.rate or hills[i][j].note_num.pool
   local originals = {}

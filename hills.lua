@@ -872,6 +872,16 @@ force_note = function(i,j,played_note)
   pre_note[i] = played_note
 end
 
+send_note_data = function(i,j,index,played_note)
+  engine.set_voice_param(i,"carHz",midi_to_hz(played_note))
+  if params:string("hill "..i.." kildare_chords") == 'yes' then
+    play_chord(i,j,index)
+  else
+    engine.set_voice_param(i,"thirdHz",midi_to_hz(played_note))
+    engine.set_voice_param(i,"seventhHz",midi_to_hz(played_note))
+  end
+end
+
 pass_note = function(i,j,seg,note_val,index,retrig_index)
   -- print(clock.get_beats(), track[i][j].swing)
   local midi_notes = hills[i].note_ocean
@@ -1009,24 +1019,21 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
     -- print('done with fkprm stuff')
     if i <= 7 then
       if params:string("hill "..i.." kildare_notes") == "yes" then
-        engine.set_voice_param(i,"carHz",midi_to_hz(played_note))
-        if params:string("hill "..i.." kildare_chords") == 'yes' then
-          play_chord(i,j,index)
-        else
-          engine.set_voice_param(i,"thirdHz",midi_to_hz(played_note))
-          engine.set_voice_param(i,"seventhHz",midi_to_hz(played_note))
-        end
+        send_note_data(i,j,index,played_note)
       end
-      local vel_target = hills[i].highway == false and hills[i][j].note_velocity[index] or track[i][j].velocities[index]
+      local accent_vel = tonumber(params:string("hill "..i.." accent mult"):sub(1,-2))
+      local vel_target = hills[i].highway == false
+        and hills[i][j].note_velocity[index]
+        or (focused_set.velocities[index] * (focused_set.accented_trigs[index] and accent_vel or 1))
       if hills[i].highway then
         local lock_trig = track[i][j].focus == 'main' and track[i][j].lock_trigs[index] or track[i][j].fill.lock_trigs[index]
         if focused_set.trigs[index] and not focused_set.muted_trigs[index] then
           if retrig_index == nil then
             engine.trig(i,vel_target,'false')
           else
-            local destination_vel = track[i][j].focus == 'main' and track[i][j].velocities[index] or track[i][j].fill.velocities[index]
-            local destination_count = track[i][j].focus == 'main' and track[i][j].conditional.retrig_count[index] or track[i][j].fill.conditional.retrig_count[index]
-            local destination_curve = track[i][j].focus == 'main' and track[i][j].conditional.retrig_slope[index] or track[i][j].fill.conditional.retrig_slope[index]
+            local destination_vel = focused_set.velocities[index] * (focused_set.accented_trigs[index] and accent_vel or 1)
+            local destination_count = focused_set.conditional.retrig_count[index]
+            local destination_curve = focused_set.conditional.retrig_slope[index]
             local retrig_vel;
             if destination_curve < 0 and destination_count > 0 then
               local destination_min = lin_lin(-128, -1, 0, destination_vel, destination_curve)
@@ -1046,7 +1053,10 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
       play_linked_sample(i, j, played_note, vel_target, retrig_index)
     else
       -- TRIGGER SAMPLE
-      local vel_target = hills[i].highway == false and hills[i][j].note_velocity[index] or track[i][j].velocities[index]
+      local accent_vel = tonumber(params:string("hill "..i.." accent mult"):sub(1,-2))
+      local vel_target = hills[i].highway == false
+        and hills[i][j].note_velocity[index]
+        or (focused_set.velocities[index] * (focused_set.accented_trigs[index] and accent_vel or 1))
       if params:string("hill "..i.." sample output") == "yes" then
         if params:get("hill "..i.." sample probability") >= math.random(100) then
           local should_play;

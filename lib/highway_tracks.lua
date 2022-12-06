@@ -198,6 +198,8 @@ function track_actions.init(target, hill_number, clear_reset)
   track[target][hill_number].velocities = {}
   track[target][hill_number].trigs = {}
   track[target][hill_number].muted_trigs = {}
+  track[target][hill_number].accented_trigs = {}
+  track[target][hill_number].legato_trigs = {}
   track[target][hill_number].lock_trigs = {}
   track[target][hill_number].prob = {}
   track[target][hill_number].micro = {}
@@ -221,6 +223,8 @@ function track_actions.init(target, hill_number, clear_reset)
     ["velocities"] = {},
     ["trigs"] = {},
     ["muted_trigs"] = {},
+    ["accented_trigs"] = {},
+    ["legato_trigs"] = {},
     ["lock_trigs"] = {},
     ["prob"] = {},
     ['er'] = {pulses = 0, steps = 16, shift = 0},
@@ -239,6 +243,8 @@ function track_actions.init(target, hill_number, clear_reset)
     track[target][hill_number].velocities[i] = 127
     track[target][hill_number].trigs[i] = false
     track[target][hill_number].muted_trigs[i] = false
+    track[target][hill_number].accented_trigs[i] = false
+    track[target][hill_number].legato_trigs[i] = false
     track[target][hill_number].lock_trigs[i] = false
     track[target][hill_number].prob[i] = 100
     track[target][hill_number].conditional.A[i] = 1
@@ -257,6 +263,8 @@ function track_actions.init(target, hill_number, clear_reset)
     track[target][hill_number].fill.velocities[i] = 127
     track[target][hill_number].fill.trigs[i] = false
     track[target][hill_number].fill.muted_trigs[i] = false
+    track[target][hill_number].fill.accented_trigs[i] = false
+    track[target][hill_number].fill.legato_trigs[i] = false
     track[target][hill_number].fill.lock_trigs[i] = false
     track[target][hill_number].fill.prob[i] = 100
     track[target][hill_number].fill.conditional.A[i] = 1
@@ -653,7 +661,7 @@ end
 function track_actions.run(target,step,source)
   local _active = track[target][track[target].active_hill]
   if (_active.focus == "main" and 
-        (_active.trigs[step] == true or _active.lock_trigs[step] == true))
+        (_active.trigs[step] == true or _active.lock_trigs[step] == true or _active.legato_trigs[step] == true))
       or (_active.focus == "fill" and
         (_active.fill.trigs[step] == true or _active.fill.lock_trigs[step] == true))
   then   
@@ -758,26 +766,11 @@ function track_actions.resolve_step(target, step, last_pad)
   else
     focused_set = _active.fill.notes
   end
-  if last_pad ~= nil then
-    local next_pad = focused_set[wrap(step+1,_active.start_point,_active.end_point)]
-    -- cheat(target,bank[target].id)
-    local i,j = target, track[target].active_hill
-    pass_note(
-      i,
-      j,
-      hills[i][j], -- seg
-      focused_set[step], -- note_val
-      step, -- index
-      0 -- retrig index
-    )
-    if _active.trigs[step] then
-      track_actions.retrig_step(target,step)
-    end
-    if next_pad == nil then
-    end
+  local i,j = target, track[target].active_hill
+  if _active.legato_trigs[step] and not _active.trigs[step] then
+    print('legato seeding note')
+    send_note_data(i,j,step,focused_set[step])
   else
-    -- cheat(target,bank[target].id)
-    local i,j = target, track[target].active_hill
     pass_note(
       i,
       j,
@@ -786,9 +779,9 @@ function track_actions.resolve_step(target, step, last_pad)
       step, -- index
       0 -- retrig_index
     )
-    if _active.trigs[step] then
-      track_actions.retrig_step(target,step)
-    end
+  end
+  if _active.trigs[step] then
+    track_actions.retrig_step(target,step)
   end
   _active.last_condition = true
 end
@@ -815,7 +808,6 @@ function track_actions.retrig_step(target,step)
         for retrigs = 1,focused_set.retrig_count[step] do
           print('passing')
           clock.sleep(((clock.get_beat_sec() * _active.time)*focused_set.retrig_time[step])+swung_time)
-          -- cheat(target,bank[target].id)
           pass_note(
             i,
             j,

@@ -92,6 +92,7 @@ function grid_lib.pattern_execute(data)
 end
 
 gkeys = {}
+gkeys.accent = {5,8}
 gkeys.mute = {6,8}
 gkeys.fill = {7,8}
 gkeys.trigger = {8,8}
@@ -118,6 +119,11 @@ local reset_state = {}
 local loop_modifier_stage = 'define start'
 function reset_state.loop_modifier()
   loop_modifier_stage = 'define start'
+  grid_loop_modifier = false
+end
+
+function get_loop_modifier_stage()
+  return loop_modifier_stage
 end
 
 grid_pattern = {}
@@ -738,9 +744,7 @@ function g.key(x,y,z)
       end
     end
   end
-  -- if not mods.notes then
-    grid_dirty = true
-  -- end
+  grid_dirty = true
   screen_dirty = true
 end
 
@@ -754,9 +758,6 @@ local function reset_step_mods(retain)
   local step_mods = {'grid_conditional_entry', 'grid_data_entry', 'grid_loop_modifier'}
   for i = 1,#step_mods do
     if step_mods[i] ~= retain then
-      if step_mods[i] == 'grid_data_entry' and grid_data_entry then
-        _fkprm.flip_from_fkprm()
-      end
       _G[step_mods[i]] = false
     else
       if _G[retain] == false then
@@ -766,6 +767,21 @@ local function reset_step_mods(retain)
       end
     end
   end
+  if grid_conditional_entry and ui.control_set == 'step parameters' then
+    ui.control_set = 'edit'
+    grid_data_entry = false
+  end
+  if not grid_data_entry then
+    data_entry_steps.focus[ui.hill_focus] = {}
+    if ui.control_set == 'step parameters' then
+      _fkprm.flip_from_fkprm()
+    end
+  end
+  if not grid_conditional_entry then
+    conditional_entry_steps.focus[ui.hill_focus] = {}
+  end
+  grid_mute = false
+  grid_accent = false
   -- for i = 1,#step_mods do
   --   if _G[step_mods[i]] then
   --     break
@@ -801,6 +817,14 @@ local function process_modifier(parent,pressed_step,i,j)
   end
 end
 
+local function check_other_mods()
+  if grid_data_entry or grid_conditional_entry or grid_loop_modifier or grid_accent or grid_mute then
+    return true
+  else
+    return false
+  end
+end
+
 function grid_lib.highway_press(x,y,z)
   -- change voice focus:
   local i = ui.hill_focus
@@ -832,7 +856,11 @@ function grid_lib.highway_press(x,y,z)
     local min_max = {{1,32},{33,64},{65,96},{97,128}}
     local pos = ((y - 3) * 8) + x
     local pressed_step = pos + ((highway_ui.seq_page[i] - 1) * 32)
-    if not grid_data_entry and not grid_conditional_entry and not grid_loop_modifier and not grid_mute then
+    if not grid_data_entry
+    and not grid_conditional_entry
+    and not grid_loop_modifier
+    and not grid_accent
+    and not grid_mute then
       track[i][j].ui_position = pressed_step
       focused_set.trigs[pressed_step] = not focused_set.trigs[pressed_step]
       for k = 1,16 do
@@ -860,6 +888,11 @@ function grid_lib.highway_press(x,y,z)
         track[i][j].end_point = util.clamp(pressed_step, track[i][j].start_point, 128)
         reset_state.loop_modifier()
       end
+    elseif grid_accent then
+      track[i][j].ui_position = pressed_step
+      if focused_set.trigs[pressed_step] then
+        focused_set.accented_trigs[pressed_step] = not focused_set.accented_trigs[pressed_step]
+      end
     elseif grid_mute then
       track[i][j].ui_position = pressed_step
       if focused_set.trigs[pressed_step] then
@@ -873,7 +906,7 @@ function grid_lib.highway_press(x,y,z)
     elseif grid_data_entry then
       data_entry_steps.held[i] = util.clamp(data_entry_steps.held[i] - 1,0,128)
     end
-  elseif y == 7 and x == 1 then
+  elseif y == 7 and x == 3 then
     if z == 1 then
       reset_step_mods('grid_loop_modifier')
     else
@@ -883,22 +916,36 @@ function grid_lib.highway_press(x,y,z)
   elseif y == 7 and z == 1 and (x >= 5 and x <= 8) then
     highway_ui.seq_page[i] = x-4
     track[i][j].ui_position = ((highway_ui.seq_page[i] - 1) * 32) + 1
-  elseif y == 8 and x == 4 and z == 1 then
-    reset_step_mods('grid_data_entry')
-    if not grid_data_entry then
-      data_entry_steps.focus[i] = {}
-      if ui.control_set == 'step parameters' then
-        _fkprm.flip_from_fkprm()
-      end
+  elseif y == 8 and x == 3 and z == 1 then
+    if not grid_loop_modifier then
+      reset_step_mods('grid_data_entry')
     end
   elseif y == 8 and x == 2 and z == 1 then
-    reset_step_mods('grid_conditional_entry')
-    if not grid_conditional_entry then
-      conditional_entry_steps.focus[i] = {}
+    if not grid_loop_modifier then
+      reset_step_mods('grid_conditional_entry')
+    end
+  elseif y == gkeys.accent[2] and x == gkeys.accent[1] then
+    if z == 1 then
+      if not check_other_mods() then
+        grid_accent = true
+      end
     else
+      grid_accent = false
+    end
+    if grid_accent and grid_mute then
+      grid_mute = false
     end
   elseif y == gkeys.mute[2] and x == gkeys.mute[1] then
-    grid_mute = z == 1 and true or false
+    if z == 1 then
+      if not check_other_mods() then
+        grid_mute = true
+      end
+    else
+      grid_mute = false
+    end
+    if grid_mute and grid_accent then
+      grid_accent = false
+    end
   elseif y == gkeys.fill[2] and x == gkeys.fill[1] then
     if mods.alt and z == 1 then
       track[i][j].focus = track[i][j].focus == "fill" and "main" or "fill"
@@ -956,7 +1003,7 @@ function grid_lib.earthsea_press(x,y,z)
       focused_set.trigs[pos] = true
       focused_set.notes[pos] = played_note
       focused_set.velocities[pos] = params:get('hill_'..i..'_iso_velocity')
-      track[i][j].ui_position = util.clamp(track[i][j].ui_position+1,1,128)
+      track[i][j].ui_position = util.wrap(track[i][j].ui_position+1,track[i][j].start_point,track[i][j].end_point)
     else
       force_note(i,j,played_note)
     end
@@ -982,6 +1029,15 @@ function grid_lib.earthsea_press(x,y,z)
     params:delta('hill_'..i..'_iso_octave',x == 2 and -1 or 1)
   elseif x == 1 and y == 2 and z == 1 then
     track[i].manual_note_entry = not track[i].manual_note_entry
+  elseif x == 6 and y == 8 and z == 1 then
+    if track[i].manual_note_entry then
+      local focused_set = track[i][j].focus == 'main' and track[i][j] or track[i][j].fill
+      local pos = track[i][j].ui_position
+      focused_set.trigs[pos] = false
+      track[i][j].ui_position = util.wrap(track[i][j].ui_position+1,track[i][j].start_point,track[i][j].end_point)
+    end
+  elseif (x == 5 or x == 7) and y == 8 and z == 1 and track[i].manual_note_entry then
+    track[i][j].ui_position = util.clamp(track[i][j].ui_position + (x == 5 and -1 or 1), 1, 128)
   end
   if z == 1 then
     grid_dirty = true
@@ -1403,9 +1459,10 @@ function grid_lib.draw_highway()
   end
 
   -- draw grid_lock:
-  g:led(1,7,grid_loop_modifier and 5 or 2)
+  g:led(3,7,grid_loop_modifier and 5 or 2)
   g:led(2,8,grid_conditional_entry and 15 or 5)
-  g:led(4,8,grid_data_entry and 15 or 5)
+  g:led(3,8,grid_data_entry and 15 or 5)
+  g:led(gkeys.accent[1], gkeys.accent[2], grid_accent and 15 or 5)
   g:led(gkeys.mute[1], gkeys.mute[2], grid_mute and 15 or 5)
   g:led(gkeys.fill[1], gkeys.fill[2], track[ui.hill_focus][hills[ui.hill_focus].screen_focus].focus == 'fill' and 15 or 5)
   g:led(gkeys.trigger[1], gkeys.trigger[2], grid_trigger and 15 or 5)
@@ -1453,6 +1510,9 @@ function grid_lib.draw_es()
   g:led(2,8,util.round(util.linlin(-4,0,15,4,params:get('hill_'..i..'_iso_octave'))))
   g:led(3,8,util.round(util.linlin(0,4,4,15,params:get('hill_'..i..'_iso_octave'))))
   g:led(1,2,track[i].manual_note_entry and grid_data_blink or 3)
+  g:led(5,8,track[i].manual_note_entry and 6 or 0)
+  g:led(6,8,track[i].manual_note_entry and 3 or 0)
+  g:led(7,8,track[i].manual_note_entry and 6 or 0)
   -- print(util.time())
 end
 
