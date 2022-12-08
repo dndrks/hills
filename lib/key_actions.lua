@@ -47,6 +47,8 @@ function key_actions.parse(n,z)
               if key1_hold and _s.popup_focus.tracks[i][2] == 4 then
                 _htracks.generate_er(i,j)
               end
+            elseif ui.menu_focus == 3 then
+              _htracks.reset_note_to_default(i,j)
             end
           end
         else

@@ -95,11 +95,12 @@ function init()
   
   key1_hold = false
   key2_hold = false
-  
-  _hsteps.init()
-  for i = 1,10 do
-    _htracks.init(i,1)
-  end
+
+  -- pulled this down:
+  -- _hsteps.init()
+  -- for i = 1,10 do
+  --   _htracks.init(i,1)
+  -- end
 
   print('initialized tracks: '..util.time())
 
@@ -421,6 +422,11 @@ function init()
       snapshot_overwrite[hill][model][i] = false
     end
     -- snapshot_overwrite_mod = false
+  end
+
+  _hsteps.init()
+  for i = 1,10 do
+    _htracks.init(i,1)
   end
 
   print('wrapped with startup: '..util.time())

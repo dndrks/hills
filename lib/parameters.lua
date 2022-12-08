@@ -134,7 +134,7 @@ function parameters.init()
 
     if i <= 7 then
       params:add_separator('hill_'..i..'_kildare_header', "Kildare management "..hill_names[i])
-      params:add_option("hill "..i.." kildare_notes","send pitches?",{"no","yes"},1)
+      params:add_option("hill "..i.." kildare_notes","send pitches?",{"no","yes"},params:string('hill_'..i..'_mode') == 'hill' and 2 or 1)
       params:set_action("hill "..i.." kildare_notes",
         function(x)
           if x == 1 then

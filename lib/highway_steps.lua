@@ -121,11 +121,17 @@ function hway_ui.draw_menu()
           display_step_data = focused_set.trigs[i] == true and (focused_set.muted_trigs[i] and 'M' or '|') or '-'
         else
           local note_index = focused_set.notes[i]
-          display_step_data = 
-            (focused_set.notes[i] ~= nil and focused_set.trigs[i] == true)
-              -- and hills[hf].note_ocean[note_index]
-              and note_index
-              or '-'
+          if focused_set.trigs[i] == true then
+            if focused_set.notes[i] == -1 then
+              local note_check = hf <= 7 and params:get(hf..'_'..params:string('voice_model_'..hf)..'_carHz')
+                or params:get('hill '..hf..' base note')
+              display_step_data = note_check
+            else
+              display_step_data = note_index
+            end
+          else
+            display_step_data = '-'
+          end
         end
 
         if highway_ui.alt and _hui.focus == "params" then
@@ -145,48 +151,18 @@ function hway_ui.draw_menu()
           screen.text_center(first..second..third)
         else
           screen.text_center(display_step_data)
-          -- if display_step_data == '|' then
-            -- display_step_data = '|*'
-            if focused_set.prob[i] ~= 100 then
-              if focused_set.prob[i] <= 20 then
-                for pix = 33,34 do
-                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                end
-              elseif focused_set.prob[i] <= 40 then
-                for pix = 33,34 do
-                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                end
-              elseif focused_set.prob[i] <= 60 then
-                for pix = 33,34 do
-                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,10+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                end
-              elseif focused_set.prob[i] <= 80 then
-                for pix = 33,34 do
-                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,9+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,10+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                end
-              elseif focused_set.prob[i] < 100 then
-                for pix = 33,34 do
-                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,8+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,9+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,10+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                  screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                end
-              end
-              screen.fill()
+          local note_check = hf <= 7 and params:get(hf..'_'..params:string('voice_model_'..hf)..'_carHz')
+            or params:get('hill '..hf..' base note')
+          if focused_set.notes[i] == note_check then
+            if e_pos == i then
+              screen.level(15)
+            else
+              screen.level(4)
             end
-            if focused_set.conditional.retrig_count[i] > 0 then
-              screen.pixel(40+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,9+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-              screen.pixel(40+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-              screen.fill()
-            end
-          -- end
+            screen.move(33+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,15+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+            screen.line_rel(9,0)
+            screen.stroke()
+          end
         end
       end
       screen.font_face(1)
@@ -238,27 +214,16 @@ function hway_ui.draw_menu()
         if ui.control_set == 'edit' then
           local _active = track[hf][h.screen_focus]
           local pos = _active.ui_position
-          local focused_set = {}
           local display_text = ''
-          if _active.focus == "main" then
-            focused_set = _active.notes
-            if _active.trigs[pos] == false then
-              screen.level(3)
-              display_text = 'set note adds trig'
-            else
-              local note_index = focused_set[pos]
-              screen.level(15)
-              -- display_text = hills[hf].note_ocean[note_index]
-            end
+          local focused_set = _active.focus == "main" and _active or _active.fill
+          screen.level(3)
+          if focused_set.trigs[pos] == false then
+            display_text = 'set note adds trig'
           else
-            focused_set = _active.fill.notes
-            if _active.fill.trigs[pos] == false then
-              screen.level(3)
-              display_text = 'set note adds trig'
-            else
-              local note_index = focused_set[pos]
-              screen.level(15)
-              -- display_text = hills[hf].note_ocean[note_index]
+            local note_check = hf <= 7 and params:get(hf..'_'..params:string('voice_model_'..hf)..'_carHz')
+              or params:get('hill '..hf..' base note')
+            if focused_set.notes[pos] == note_check then
+              display_text = 'K3: clear to default'
             end
           end
           screen.move(40,10)

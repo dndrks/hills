@@ -194,6 +194,7 @@ function track_actions.init(target, hill_number, clear_reset)
   track[target][hill_number].ui_page = 1
   
   track[target][hill_number].notes = {}
+  track[target][hill_number].seed_default_note = {}
   track[target][hill_number].chord_degrees = {}
   track[target][hill_number].velocities = {}
   track[target][hill_number].trigs = {}
@@ -219,6 +220,7 @@ function track_actions.init(target, hill_number, clear_reset)
   track[target][hill_number].fill =
   {
     ["notes"] = {},
+    ["seed_default_note"] = {},
     ["chord_degrees"] = {},
     ["velocities"] = {},
     ["trigs"] = {},
@@ -238,7 +240,12 @@ function track_actions.init(target, hill_number, clear_reset)
     }
   }
   for i = 1,128 do
-    track[target][hill_number].notes[i] = 60
+    if target <= 7 then
+      track[target][hill_number].notes[i] = -1
+    else
+      track[target][hill_number].notes[i] = params:get('hill '..target..' base note')
+    end
+    track[target][hill_number].seed_default_note[i] = true
     track[target][hill_number].chord_degrees[i] = 1
     track[target][hill_number].velocities[i] = 127
     track[target][hill_number].trigs[i] = false
@@ -258,7 +265,12 @@ function track_actions.init(target, hill_number, clear_reset)
     track[target][hill_number].conditional.retrig_time[i] = track_retrig_lookup[track_paramset:get("track_retrig_time_"..target.."_"..hill_number..'_'..i)]
     track[target][hill_number].conditional.retrig_slope[i] = 0
     
-    track[target][hill_number].fill.notes[i] = 60
+    if target <= 7 then
+      track[target][hill_number].fill.notes[i] = -1
+    else
+      track[target][hill_number].fill.notes[i] = params:get('hill '..target..' base note')
+    end
+    track[target][hill_number].fill.seed_default_note[i] = true
     track[target][hill_number].fill.chord_degrees[i] = 1
     track[target][hill_number].fill.velocities[i] = 127
     track[target][hill_number].fill.trigs[i] = false
@@ -663,7 +675,7 @@ function track_actions.run(target,step,source)
   if (_active.focus == "main" and 
         (_active.trigs[step] == true or _active.lock_trigs[step] == true or _active.legato_trigs[step] == true))
       or (_active.focus == "fill" and
-        (_active.fill.trigs[step] == true or _active.fill.lock_trigs[step] == true))
+        (_active.fill.trigs[step] == true or _active.fill.lock_trigs[step] == true or _active.fill.legato_trigs[step] == true))
   then   
     local should_happen = track_actions.check_prob(target,step)
     if should_happen then
@@ -760,26 +772,32 @@ end
 
 function track_actions.resolve_step(target, step, last_pad)
   local _active = track[target][track[target].active_hill]
-  local focused_set = {}
+  local focused_trigs = {}
+  local focused_notes = {}
+  local focused_legato = {}
   if _active.focus == "main" then
-    focused_set = _active.notes
+    focused_trigs = _active.trigs[step]
+    focused_notes = _active.notes[step]
+    focused_legato = _active.legato_trigs[step]
   else
-    focused_set = _active.fill.notes
+    focused_trigs = _active.fill.trigs[step]
+    focused_notes = _active.fill.notes[step]
+    focused_legato = _active.fill.legato_trigs[step]
   end
   local i,j = target, track[target].active_hill
-  if _active.legato_trigs[step] and not _active.trigs[step] then
-    print('legato seeding note')
-    send_note_data(i,j,step,focused_set[step])
+  if focused_legato and not focused_trigs then
+    send_note_data(i,j,step,focused_notes)
   else
     pass_note(
       i,
       j,
       hills[i][j], -- seg
-      focused_set[step], -- note_val
+      focused_notes == -1 and params:get(i..'_'..params:string('voice_model_'..i)..'_carHz') or focused_notes, -- note_val
       step, -- index
       0 -- retrig_index
     )
   end
+  -- TODO: should these be focuseD???
   if _active.trigs[step] then
     track_actions.retrig_step(target,step)
   end
@@ -812,7 +830,7 @@ function track_actions.retrig_step(target,step)
             i,
             j,
             hills[i][j], -- seg
-            focused_notes[step], -- note_val
+            focused_set[step] == -1 and params:get(i..'_'..params:string('voice_model_'..i)..'_carHz') or focused_set[step], -- note_val
             step, -- index
             retrigs
           )
@@ -824,6 +842,14 @@ end
 
 function track_actions.clear(target,hill_number)
   track_actions.init(target,hill_number,true)
+end
+
+function track_actions.reset_note_to_default(i,j)
+  local _active = track[i][j]
+  local focused_set = _active.focus == 'main' and _active or _active.fill
+  if focused_set.notes[_active.ui_position] == params:get(i..'_'..params:string('voice_model_'..i)..'_carHz') then
+    focused_set.notes[_active.ui_position] = -1
+  end
 end
 
 function track_actions.savestate()

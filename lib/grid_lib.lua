@@ -18,7 +18,7 @@ end
 es = {}
 patterned_es = {}
 for i = 1,10 do
-  es[i] = {x = {}, y = {}}
+  es[i] = {x = {}, y = {}, legato = false}
   patterned_es[i] = {x = {}, y = {}}
 end
 
@@ -71,9 +71,17 @@ function grid_lib.pattern_execute(data)
     local j = data.hill_j
     local played_index = (((7-data.y)*5) + (data.x-1)-1)
     if params:string('hill_'..i..'_iso_quantize') == 'yes' then
-      force_note(i,j,hills[i].note_ocean[played_index+1] + (12 * data.octave))
+      if data.legato then
+        send_note_data(i,j,1,hills[i].note_ocean[played_index+1] + (12 * data.octave))
+      else
+        force_note(i,j,hills[i].note_ocean[played_index+1] + (12 * data.octave))
+      end
     else
-      force_note(i,j,(params:get('hill '..i..' base note') + played_index) + (12 * data.octave))
+      if data.legato then
+        send_note_data(i,j,1,(params:get('hill '..i..' base note') + played_index) + (12 * data.octave))
+      else  
+        force_note(i,j,(params:get('hill '..i..' base note') + played_index) + (12 * data.octave))
+      end
     end
     patterned_es[i].x = data.x
     patterned_es[i].y = data.y
@@ -436,7 +444,7 @@ function g.key(x,y,z)
     if y == 3 and z == 1 then
       mods['notes'] = not mods['notes']
       exit_mod(mods['notes'])
-    elseif y == 2 and z == 1 then
+    elseif y == 2 then
       grid_lib.earthsea_press(x,y,z)
     elseif y == 8 then
       mods['alt'] = z == 1 and true or false
@@ -546,9 +554,7 @@ function g.key(x,y,z)
     elseif mods['hill'] then
       grid_lib.highway_press(x,y,z)
     elseif mods['notes'] then
-      if z == 1 then
-        grid_lib.earthsea_press(x,y,z)
-      end
+      grid_lib.earthsea_press(x,y,z)
     elseif mods["playmode"] and z == 1 then
       if mods['playmode_extended'] then
         if #iter_link_source == 0 then
@@ -991,21 +997,34 @@ function grid_lib.earthsea_press(x,y,z)
         params:set('hill '..i..' kildare_notes',2)
       end
       local current_step = track[i][j].step
-      focused_set.trigs[current_step] = true
+      if es[i].legato then
+        focused_set.legato_trigs[current_step] = true
+        send_note_data(i,j,1,played_note)
+      else
+        focused_set.trigs[current_step] = true
+        force_note(i,j,played_note)
+      end
       focused_set.notes[current_step] = played_note
       focused_set.velocities[current_step] = params:get('hill_'..i..'_iso_velocity')
-      force_note(i,j,played_note)
     elseif track[i].manual_note_entry then
       if params:string('hill '..i..' kildare_notes') == 'no' then
         params:set('hill '..i..' kildare_notes',2)
       end
       local pos = track[i][j].ui_position
-      focused_set.trigs[pos] = true
+      if es[i].legato then
+        focused_set.legato_trigs[pos] = true
+      else
+        focused_set.trigs[pos] = true
+      end
       focused_set.notes[pos] = played_note
       focused_set.velocities[pos] = params:get('hill_'..i..'_iso_velocity')
       track[i][j].ui_position = util.wrap(track[i][j].ui_position+1,track[i][j].start_point,track[i][j].end_point)
     else
-      force_note(i,j,played_note)
+      if es[i].legato then
+        send_note_data(i,j,1,played_note)
+      else
+        force_note(i,j,played_note)
+      end
     end
     for k = 1,16 do
       local table_to_record =
@@ -1016,7 +1035,8 @@ function grid_lib.earthsea_press(x,y,z)
         ["id"] = k,
         ["hill_i"] = i,
         ["hill_j"] = j,
-        ["octave"] = params:get('hill_'..i..'_iso_octave')
+        ["octave"] = params:get('hill_'..i..'_iso_octave'),
+        ["legato"] = es[i].legato
       }
       write_pattern_data(k,table_to_record,false)
     end
@@ -1037,7 +1057,9 @@ function grid_lib.earthsea_press(x,y,z)
       track[i][j].ui_position = util.wrap(track[i][j].ui_position+1,track[i][j].start_point,track[i][j].end_point)
     end
   elseif (x == 5 or x == 7) and y == 8 and z == 1 and track[i].manual_note_entry then
-    track[i][j].ui_position = util.clamp(track[i][j].ui_position + (x == 5 and -1 or 1), 1, 128)
+    track[i][j].ui_position = util.wrap(track[i][j].ui_position + (x == 5 and -1 or 1), track[i][j].start_point, track[i][j].end_point)
+  elseif x == 7 and y == 7 then
+    es[i].legato = z == 1
   end
   if z == 1 then
     grid_dirty = true
