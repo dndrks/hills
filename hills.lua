@@ -11,6 +11,11 @@ end
 
 kildare = include('kildare/lib/kildare')
 
+function kildare.restart_needed_callback()
+  norns.script.clear()
+  norns.script.load('code/hills/lib/restart_notify.lua')
+end
+
 engine.name = "Kildare"
 
 number_of_hills = 10
