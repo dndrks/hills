@@ -587,7 +587,7 @@ function parameters.init()
   end
 
   _menu.rebuild_params()
-  clock.run(function() clock.sleep(1) params:bang() end)
+  clock.run(function() clock.sleep(1) params:bang() all_loaded = true end)
 end
 
 return parameters

@@ -10,7 +10,7 @@ function snapshot.init()
     snapshot_overwrite[i] = {}
   end
 
-  local all_the_voices = {"bd","sd","tm","cp","rs","cb","hh","saw","fld","sample1","sample2","sample3"}
+  local all_the_voices = {"bd","sd","tm","cp","rs","cb","hh","saw","fld",'sample',"sample1","sample2","sample3"}
 
   for i = 1,#kildare.drums do
     for j = 1,#all_the_voices do

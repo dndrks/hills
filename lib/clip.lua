@@ -54,11 +54,10 @@ function ca.init()
     if rate ~= 0 and len ~= 0 then
       sample_info[voice].sample_rates[1] = rate
       sample_info[voice].sample_lengths[1] = len/rate
-      local num = string.gsub(voice,'sample','')
       for i = 1,10 do
-        if params:get('hill '..i..' sample slot') == tonumber(num)  and params:string('hill '..i..' sample output') == 'yes' then
+        if params:get('hill '..i..' sample slot') == voice and params:string('hill '..i..' sample output') == 'yes' then
           params:hide('hill '..i..' sample distribution')
-          if params:string(voice..'_sampleMode') == 'chop' then
+          if params:string(voice..'_sample_sampleMode') == 'chop' then
             params:show('hill '..i..' sample slice count')
           else
             params:hide('hill '..i..' sample slice count')
@@ -138,17 +137,17 @@ end
 
 function ca.get_resampled_rate(voice, i, j, pitched)
   local total_offset;
-  total_offset = params:get(voice..'_playbackRateOffset')
+  total_offset = params:get(voice..'_sample_playbackRateOffset')
   local step_rate = hills[i][j].sample_controls.rate[hills[i][hills[i].segment].index]
   total_offset = math.pow(0.5, -total_offset / 12) * sample_speedlist[step_rate]  
   if pitched then
     total_offset = total_offset * pitched
   end
-  if util.round(params:get(voice..'_playbackPitchControl'),0.01) ~= 0 then
-    total_offset = total_offset + (total_offset * (util.round(params:get(voice..'_playbackPitchControl'),0.01)/100))
+  if util.round(params:get(voice..'_sample_playbackPitchControl'),0.01) ~= 0 then
+    total_offset = total_offset + (total_offset * (util.round(params:get(voice..'_sample_playbackPitchControl'),0.01)/100))
   end
-  -- print(total_offset * sample_speedlist[params:get(voice..'_playbackRateBase')])
-  return (total_offset * sample_speedlist[params:get(voice..'_playbackRateBase')])
+  -- print(total_offset * sample_speedlist[params:get(voice..'_sample_playbackRateBase')])
+  return (total_offset * sample_speedlist[params:get(voice..'_sample_playbackRateBase')])
 end
 
 function ca.get_pitched_rate(target,i,j,played_note)
@@ -177,14 +176,14 @@ function ca.get_pitched_rate(target,i,j,played_note)
 end
 
 function ca.play_slice(target,slice,velocity,i,j, played_note, retrig_index)
-  if params:get(target..'_sampleFile') ~= _path.audio then
+  if params:get(target..'_sample_sampleFile') ~= _path.audio then
     local length = sample_info[target].sample_lengths[1]
     local slice_count = params:get('hill '..i..' sample slice count')
     local synced_length = util.round_up((length) - (length * ((slice_count-1)/slice_count)), clock.get_beat_sec())
     synced_length = util.clamp((synced_length + (length * ((slice-1)/slice_count)))/length,0,1)
     engine.set_voice_param(target,'sampleStart',(slice-1)/slice_count)
     engine.set_voice_param(target,'sampleEnd',synced_length)
-    if params:string(target..'_loop') == 'off' then
+    if params:string(target..'_sample_loop') == 'off' then
       engine.set_voice_param(target,'loop',hills[i][j].sample_controls.loop[hills[i][j].index] and 1 or 0)
     else
       engine.set_voice_param(target,'loop',1)

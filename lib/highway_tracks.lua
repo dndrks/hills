@@ -824,13 +824,12 @@ function track_actions.retrig_step(target,step)
     _active.conditional.retrig_clock = clock.run(
       function()
         for retrigs = 1,focused_set.retrig_count[step] do
-          print('passing')
           clock.sleep(((clock.get_beat_sec() * _active.time)*focused_set.retrig_time[step])+swung_time)
           pass_note(
             i,
             j,
             hills[i][j], -- seg
-            focused_set[step] == -1 and params:get(i..'_'..params:string('voice_model_'..i)..'_carHz') or focused_set[step], -- note_val
+            focused_notes[step] == -1 and params:get(i..'_'..params:string('voice_model_'..i)..'_carHz') or focused_notes[step], -- note_val
             step, -- index
             retrigs
           )
