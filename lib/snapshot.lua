@@ -10,9 +10,9 @@ function snapshot.init()
     snapshot_overwrite[i] = {}
   end
 
-  local all_the_voices = {"bd","sd","tm","cp","rs","cb","hh","saw","fld",'sample',"sample1","sample2","sample3"}
+  local all_the_voices = {'bd','sd','tm','cp','rs','cb','hh','saw','fld','sample'}
 
-  for i = 1,#kildare.drums do
+  for i = 1,number_of_hills do
     for j = 1,#all_the_voices do
       snapshots[i][all_the_voices[j]] = {}
       snapshot_overwrite[i][all_the_voices[j]] = {}
@@ -46,12 +46,9 @@ function snapshot.pack(voice,coll)
   if type(voice) == "number" and voice <= 10 then
    
     local d_voice, d_string;
-    if voice <= 7 then
+    if voice <= 10 then
       d_voice = params:string('voice_model_'..voice)
       d_string = voice..'_'..d_voice..'_'
-    else
-      d_voice = 'sample'..voice-7
-      d_string = d_voice..'_'
     end
 
     for i = 1, #kildare_drum_params[d_voice] do
@@ -86,12 +83,9 @@ function snapshot.unpack(voice, coll)
     end
 
     local d_voice, d_string;
-    if voice <= 7 then
+    if voice <= 10 then
       d_voice = params:string('voice_model_'..voice)
       d_string = voice..'_'..d_voice..'_'
-    else
-      d_voice = 'sample'..voice-7
-      d_string = d_voice..'_'
     end
 
     for i = 1, #kildare_drum_params[d_voice] do
@@ -146,11 +140,8 @@ end
 function snapshot.clear(_t,slot)
   local d_voice, _snap;
   if type(_t) == 'number' then
-    if _t <= 7 then
+    if _t <= 10 then
       d_voice = params:string('voice_model_'.._t)
-      snapshots[_t][d_voice][slot] = {}
-    elseif _t <= 10 then
-      d_voice = 'sample'.._t-7
       snapshots[_t][d_voice][slot] = {}
     end
   else
@@ -196,14 +187,9 @@ function snapshot.crossfade(voice,scene_a,scene_b,val)
   -- focus.partial_restore = true
 
   local d_voice, d_string, original_srcs, focus;
-  if voice <= 7 then
+  if voice <= 10 then
     d_voice = params:string('voice_model_'..voice)
     d_string = voice..'_'..d_voice..'_'
-    focus = snapshots[voice][d_voice]
-    -- original_srcs = _t.deep_copy(snapshots[voice][d_voice][coll])
-  elseif voice <= 10 then
-    d_voice = 'sample'..voice-7
-    d_string = d_voice..'_'
     focus = snapshots[voice][d_voice]
     -- original_srcs = _t.deep_copy(snapshots[voice][d_voice][coll])
   else
@@ -262,13 +248,9 @@ function snapshot.route_funnel(voice,coll,mod_idx)
     focus.partial_restore = true
 
     local d_voice, d_string, original_srcs;
-    if type(voice) ~= 'string' and voice <= 7 then
+    if type(voice) ~= 'string' and voice <= 10 then
       d_voice = params:string('voice_model_'..voice)
       d_string = voice..'_'..d_voice..'_'
-      original_srcs = _t.deep_copy(snapshots[voice][d_voice][coll])
-    elseif type(voice) ~= 'string' and voice <= 10 then
-      d_voice = 'sample'..voice-7
-      d_string = d_voice..'_'
       original_srcs = _t.deep_copy(snapshots[voice][d_voice][coll])
     else
       original_srcs = _t.deep_copy(snapshots[voice][coll])

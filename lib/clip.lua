@@ -3,23 +3,7 @@ local ca = {}
 function ca.init()
   sample_speedlist = {-4, -2, -1, -0.5, -0.25, 0, 0.25, 0.5, 1, 2, 4}
 
-  sample_info = {
-    sample1 = {
-      sample_rates = {},
-      sample_lengths = {},
-      sample_count = 0
-    },
-    sample2 = {
-      sample_rates = {},
-      sample_lengths = {},
-      sample_count = 0
-    },
-    sample3 = {
-      sample_rates = {},
-      sample_lengths = {},
-      sample_count = 0
-    }
-  }
+  sample_info = {}
 
   function kildare.folder_callback(voice,folder)
     sample_info[voice] = {}
@@ -36,7 +20,7 @@ function ca.init()
       end
     end
     local num = string.gsub(voice,'sample','')
-    for i = 1,10 do
+    for i = 1,number_of_hills do
       if params:get('hill '..i..' sample slot') == tonumber(num) and params:string('hill '..i..' sample output') == 'yes' then
         params:show('hill '..i..' sample distribution')
         params:hide('hill '..i..' sample slice count')
@@ -54,7 +38,7 @@ function ca.init()
     if rate ~= 0 and len ~= 0 then
       sample_info[voice].sample_rates[1] = rate
       sample_info[voice].sample_lengths[1] = len/rate
-      for i = 1,10 do
+      for i = 1,number_of_hills do
         if params:get('hill '..i..' sample slot') == voice and params:string('hill '..i..' sample output') == 'yes' then
           params:hide('hill '..i..' sample distribution')
           if params:string(voice..'_sample_sampleMode') == 'chop' then
@@ -74,7 +58,7 @@ function ca.init()
     sample_info[voice].sample_lengths = {}
     sample_info[voice].sample_count = 0
     local num = string.gsub(voice,'sample','')
-    for i = 1,10 do
+    for i = 1,number_of_hills do
       if params:get('hill '..i..' sample slot') == tonumber(num) then
         params:hide('hill '..i..' sample distribution')
         params:hide('hill '..i..' sample slice count')
@@ -183,6 +167,36 @@ function ca.play_slice(target,slice,velocity,i,j, played_note, retrig_index)
     synced_length = util.clamp((synced_length + (length * ((slice-1)/slice_count)))/length,0,1)
     engine.set_voice_param(target,'sampleStart',(slice-1)/slice_count)
     engine.set_voice_param(target,'sampleEnd',synced_length)
+    if params:string(target..'_sample_loop') == 'off' then
+      engine.set_voice_param(target,'loop',hills[i][j].sample_controls.loop[hills[i][j].index] and 1 or 0)
+    else
+      engine.set_voice_param(target,'loop',1)
+    end
+    local rate;
+    if params:string('hill '..i..' sample repitch') == "yes" and played_note ~= nil then
+      rate = ca.get_pitched_rate(target,i,j,played_note)
+    else
+      rate = ca.get_resampled_rate(target, i, j)
+    end
+    engine.set_voice_param(target, 'rate', rate)
+    if retrig_index == 0 then
+      engine.trig(target,velocity,'false')
+    else
+      engine.trig(target,velocity,'true')
+    end
+    -- print('> playing slice: '..target,slice,velocity,i,j, played_note, retrig_index)
+  end
+end
+
+function ca.play_transient(target,slice,velocity,i,j, played_note, retrig_index)
+  if params:get(target..'_sample_sampleFile') ~= _path.audio then
+    
+    local slice_count = params:get('hill '..i..' sample slice count')
+    local start_time_as_percent = cursors[slice]/sample_info[target].sample_lengths[1]
+    local end_time_as_percent = slice ~= slice_count and ((cursors[slice+1]/sample_info[target].sample_lengths[1])-0.01) or 1
+    
+    engine.set_voice_param(target,'sampleStart',start_time_as_percent)
+    engine.set_voice_param(target,'sampleEnd',end_time_as_percent)
     if params:string(target..'_sample_loop') == 'off' then
       engine.set_voice_param(target,'loop',hills[i][j].sample_controls.loop[hills[i][j].index] and 1 or 0)
     else

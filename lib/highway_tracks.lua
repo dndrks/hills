@@ -366,7 +366,7 @@ function track_actions.stop_playback(i)
 end
 
 function track_actions.sync_playheads()
-  for i = 1,10 do
+  for i = 1,number_of_hills do
     track[i][track[i].active_hill].step = track[i][track[i].active_hill].start_point
   end
 end
@@ -788,11 +788,13 @@ function track_actions.resolve_step(target, step, last_pad)
   if focused_legato and not focused_trigs then
     send_note_data(i,j,step,focused_notes)
   else
+    local note_check = params:string('voice_model_'..i) ~= 'sample' and params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+      or params:get('hill '..i..' base note')
     pass_note(
       i,
       j,
       hills[i][j], -- seg
-      focused_notes == -1 and params:get(i..'_'..params:string('voice_model_'..i)..'_carHz') or focused_notes, -- note_val
+      focused_notes == -1 and note_check or focused_notes, -- note_val
       step, -- index
       0 -- retrig_index
     )
@@ -825,11 +827,13 @@ function track_actions.retrig_step(target,step)
       function()
         for retrigs = 1,focused_set.retrig_count[step] do
           clock.sleep(((clock.get_beat_sec() * _active.time)*focused_set.retrig_time[step])+swung_time)
+          local note_check = params:string('voice_model_'..i) ~= 'sample' and params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+            or params:get('hill '..i..' base note')
           pass_note(
             i,
             j,
             hills[i][j], -- seg
-            focused_notes[step] == -1 and params:get(i..'_'..params:string('voice_model_'..i)..'_carHz') or focused_notes[step], -- note_val
+            focused_notes[step] == -1 and note_check or focused_notes[step], -- note_val
             step, -- index
             retrigs
           )
@@ -846,7 +850,9 @@ end
 function track_actions.reset_note_to_default(i,j)
   local _active = track[i][j]
   local focused_set = _active.focus == 'main' and _active or _active.fill
-  if focused_set.notes[_active.ui_position] == params:get(i..'_'..params:string('voice_model_'..i)..'_carHz') then
+  local note_check = params:string('voice_model_'..i) ~= 'sample' and params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+    or params:get('hill '..i..' base note')
+  if focused_set.notes[_active.ui_position] == note_check then
     focused_set.notes[_active.ui_position] = -1
   end
 end

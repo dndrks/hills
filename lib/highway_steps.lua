@@ -123,7 +123,7 @@ function hway_ui.draw_menu()
           local note_index = focused_set.notes[i]
           if focused_set.trigs[i] == true then
             if focused_set.notes[i] == -1 then
-              local note_check = hf <= 7 and params:get(hf..'_'..params:string('voice_model_'..hf)..'_carHz')
+              local note_check = params:string('voice_model_'..hf) ~= 'sample' and params:get(hf..'_'..params:string('voice_model_'..hf)..'_carHz')
                 or params:get('hill '..hf..' base note')
               display_step_data = note_check
             else
@@ -151,7 +151,7 @@ function hway_ui.draw_menu()
           screen.text_center(first..second..third)
         else
           screen.text_center(display_step_data)
-          local note_check = hf <= 7 and params:get(hf..'_'..params:string('voice_model_'..hf)..'_carHz')
+          local note_check = params:string('voice_model_'..hf) ~= 'sample' and params:get(hf..'_'..params:string('voice_model_'..hf)..'_carHz')
             or params:get('hill '..hf..' base note')
           if focused_set.notes[i] == note_check then
             if e_pos == i then
@@ -220,7 +220,7 @@ function hway_ui.draw_menu()
           if focused_set.trigs[pos] == false then
             display_text = 'set note adds trig'
           else
-            local note_check = hf <= 7 and params:get(hf..'_'..params:string('voice_model_'..hf)..'_carHz')
+            local note_check = params:string('voice_model_'..hf) ~= 'sample' and params:get(hf..'_'..params:string('voice_model_'..hf)..'_carHz')
               or params:get('hill '..hf..' base note')
             if focused_set.notes[pos] == note_check then
               display_text = 'K3: clear to default'

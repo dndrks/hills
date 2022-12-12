@@ -18,7 +18,7 @@ end
 
 engine.name = "Kildare"
 
-number_of_hills = 10
+number_of_hills = 8
 hill_names = {
   "1: bd",
   "2: sd",
@@ -27,12 +27,59 @@ hill_names = {
   "5: rs",
   "6: cb",
   "7: hh",
-  "8: s1",
-  "9: s2",
-  "10: s3"
+  "8: saw"
 }
 
 pre_step_page = 'play'
+
+aubiodone=function(args)
+  local id=tonumber(args[1])
+  local data_s=args[2]
+  print(id,data_s)
+end
+
+osc_fun={
+  progressbar=function(args)
+    print(args[1],tonumber(args[2]))
+  end,
+  aubiodone=function(args)
+    local id=tonumber(args[1])
+    stuff=args[2]
+    local data=kildare.json.parse(stuff)
+    if data==nil then
+      print("error getting onset data!")
+      do return end
+    end
+    if data.error~=nil then
+      print("error getting onset data: "..data.error)
+      do return end
+    end
+    if data.result==nil then
+      print("no onset results!")
+      do return end
+    end
+    cursors=data.result
+    -- self:do_move(0)
+    -- show_message(string.format("[%d] loaded",self.id),2)
+  
+    -- -- save the top_slices
+    -- print("writing cursor file",self.path_to_cursors)
+    -- local file=io.open(self.path_to_cursors,"w+")
+    -- io.output(file)
+    -- io.write(json.encode({cursors=self.cursors}))
+    -- io.close(file)
+  end,
+}
+
+osc.event=function(path,args,from)
+  if string.sub(path,1,1)=="/" then
+    path=string.sub(path,2)
+  end
+  print(path)
+  if osc_fun[path]~= 'progressbar' or 'aubiodone' then
+    osc_fun[path](args)
+  end
+end
 
 pt = include 'lib/hills_new_pt'
 curves = include 'lib/easing'
@@ -59,7 +106,7 @@ end
 
 development_state = function()
   song_atoms.transport_active = true
-  for i = 1,9 do
+  for i = 1,number_of_hills do
     params:set('hill_'..i..'_mode', 2)
   end
   _htracks.sync_playheads()
@@ -173,7 +220,7 @@ function init()
       hills[i].iter_links[j] = {}
       hills[i].iter_pulses[j] = {}
       hills[i].iter_counter[j] = {}
-      for k = 1,10 do
+      for k = 1,number_of_hills do
         hills[i].iter_links[j][k] = 0
         hills[i].iter_pulses[j][k] = 1
         hills[i].iter_counter[j][k] = 1
@@ -286,7 +333,7 @@ function init()
         for j = 1,8 do
           hills[i].iter_pulses[j] = {}
           hills[i].iter_counter[j] = {}
-          for k = 1,10 do
+          for k = 1,number_of_hills do
             hills[i].iter_pulses[j][k] = 1
             hills[i].iter_counter[j][k] = 1
           end
@@ -426,11 +473,15 @@ function init()
     for i = 1,8 do
       snapshot_overwrite[hill][model][i] = false
     end
+
+    if model == 'sample' then
+      params:set('hill '..hill..' sample output',2)
+    end
     -- snapshot_overwrite_mod = false
   end
 
   _hsteps.init()
-  for i = 1,10 do
+  for i = 1,number_of_hills do
     _htracks.init(i,1)
   end
 
@@ -702,7 +753,7 @@ end
 
 per_step_params_adjusted = {}
 trigless_params_adjusted = {}
-for i = 1,10 do
+for i = 1,number_of_hills do
   per_step_params_adjusted[i] = {param = {}, value = {}}
   trigless_params_adjusted[i] = {param = {}, value = {}}
 end
@@ -736,15 +787,10 @@ local function extract_voice_from_string(s)
 end
 
 local function process_params_per_step(parent,i,j,k,index)
-  local is_drum_voice = parent[k] <= params.lookup['sample3_feedbackSend']
+  local is_drum_voice = parent[k] <= params.lookup['10_sample_feedbackSend']
   local id = parent[k]
-  local drum_target;
-  if id < params.lookup['sample1_sampleMode'] then
-    drum_target = params:get_id(id):match('(.+)_(.+)_(.+)')
-    drum_target = tonumber(drum_target)
-  else
-    drum_target = params:get_id(id):match('(.+)_(.+)')
-  end
+  local drum_target = params:get_id(id):match('(.+)_(.+)_(.+)')
+  drum_target = tonumber(drum_target)
 
   if is_drum_voice and type(drum_target) == 'number' and drum_target <= 7 and drum_target == i then
     local p_name = string.gsub(params:get_id(id),drum_target..'_'..params:string('voice_model_'..drum_target)..'_','')
@@ -773,26 +819,33 @@ function play_chord(i,j,index)
     chord_target,
     true
   )
-  engine.set_voice_param(i,"thirdHz",midi_to_hz(shell_notes[2]))
-  engine.set_voice_param(i,"seventhHz",midi_to_hz(shell_notes[4]))
+  engine.set_voice_param(i,"carHzThird",midi_to_hz(shell_notes[2]))
+  engine.set_voice_param(i,"carHzSeventh",midi_to_hz(shell_notes[4]))
 end
 
-local function play_linked_sample(i, j, played_note, vel_target, retrig_index)
+local function play_linked_sample(i, j, played_note, vel_target, retrig_index, force)
   if params:string("hill "..i.." sample output") == "yes" then
     if params:get("hill "..i.." sample probability") >= math.random(100) then
-      local target = "sample"..params:get("hill "..i.." sample slot")
-      if params:string(target..'_sampleMode') == 'chop' then
+      local should_play;
+      if hills[i].highway then
+        if track[i][j].trigs[index] or force then
+          should_play = true
+        end
+      else
+        should_play = true
+      end
+      local target = i..'_sample_'
+      if params:string(target..'sampleMode') == 'chop' and should_play then
         local slice_count = params:get('hill '..i..' sample slice count') - 1
         local slice = util.wrap(played_note - params:get("hill "..i.." base note"),0,slice_count) + 1
-        _ca.play_slice(target, slice, vel_target, i, j, played_note, retrig_index)  -- TODO: this won't always be hill-active...track-active!!
-      elseif params:string(target..'_sampleMode') == 'playthrough' then
-        _ca.play_through(target, vel_target, i, j, played_note, retrig_index)  -- TODO: this won't always be hill-active...track-active!!
-      elseif params:string(target..'_sampleMode') == 'distribute' then
-        local scaled_idx = util_round(sample_info[target].sample_count * (params:get('hill '..i..' sample distribution')/100))
+        _ca.play_slice(i,slice,vel_target,i,j,played_note, retrig_index)
+      elseif params:string(target..'sampleMode') == 'playthrough' and should_play then
+        _ca.play_through(i,vel_target,i,j,played_note, retrig_index)
+      elseif params:string(target..'sampleMode') == 'distribute' and should_play then
+        local scaled_idx = util_round(sample_info[i].sample_count * (params:get('hill '..i..' sample distribution')/100))
         if scaled_idx ~= 0 then
           local idx = util.wrap(played_note - params:get("hill "..i.." base note"),0,scaled_idx-1) + 1
-          -- TODO: this won't always be hill-active...track-active!!:
-          _ca.play_index(target, idx, vel_target, i, j, played_note, retrig_index) -- TODO: adjust for actual sample pool size
+          _ca.play_index(i,idx,vel_target,i,j,played_note, retrig_index) -- TODO: adjust for actual sample pool size
         end
       end
     end
@@ -803,14 +856,14 @@ force_note = function(i,j,played_note)
   local vel_target = params:get('hill_'..i..'_iso_velocity')
   local retrig_index = 0
 
-  if i <= 7 then
+  if params:string('voice_model_'..i) ~= 'sample' then
+    engine.trig(i,vel_target,'false')
     engine.set_voice_param(i,"carHz",midi_to_hz(played_note))
-    engine.set_voice_param(i,"thirdHz",midi_to_hz(played_note))
-    engine.set_voice_param(i,"seventhHz",midi_to_hz(played_note))
-    engine.trig(i,vel_target,'false') 
-    play_linked_sample(i, j, played_note, vel_target, retrig_index)
+    engine.set_voice_param(i,"carHzThird",midi_to_hz(played_note))
+    engine.set_voice_param(i,"carHzSeventh",midi_to_hz(played_note))
+    -- play_linked_sample(i, j, played_note, vel_target, retrig_index)
   else
-    play_linked_sample(i, j, played_note, vel_target, retrig_index)
+    play_linked_sample(i, j, played_note, vel_target, retrig_index, true)
   end
 
   -- manual_iter(i,j)
@@ -888,8 +941,8 @@ send_note_data = function(i,j,index,played_note)
   if params:string("hill "..i.." kildare_chords") == 'yes' then
     play_chord(i,j,index)
   else
-    engine.set_voice_param(i,"thirdHz",midi_to_hz(played_note))
-    engine.set_voice_param(i,"seventhHz",midi_to_hz(played_note))
+    engine.set_voice_param(i,"carHzThird",midi_to_hz(played_note))
+    engine.set_voice_param(i,"carHzSeventh",midi_to_hz(played_note))
   end
 end
 
@@ -911,7 +964,7 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
   if (played_note ~= nil and hills[i].highway == false and hills[i][j].note_num.active[index]) or
     (played_note ~= nil and hills[i].highway == true and not focused_set.muted_trigs[index]) then
     -- per-step params //
-    if i <= 10 then
+    if i <= number_of_hills then
       -- print(i,j,index,check_subtables(i,j,index),retrig_index)
       if check_subtables(i,j,index) then
         -- tab.print(per_step_params_adjusted[i].param)
@@ -964,13 +1017,8 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
 
           local is_drum_voice = k <= params.lookup['sample3_feedbackSend']
           local id = k
-          local drum_target;
-          if id < params.lookup['sample1_sampleMode'] then
-            drum_target = params:get_id(id):match('(.+)_(.+)_(.+)')
-            drum_target = tonumber(drum_target)
-          else
-            drum_target = params:get_id(id):match('(.+)_(.+)')
-          end
+          local drum_target = params:get_id(id):match('(.+)_(.+)_(.+)')
+          drum_target = tonumber(drum_target)
 
           if is_drum_voice and type(drum_target) == 'number' and drum_target <= 7 then
             if retrig_index == 0 then
@@ -1028,7 +1076,7 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
     end
     -- // per-step params
     -- print('done with fkprm stuff')
-    if i <= 7 then
+    if params:string('voice_model_'..i) ~= 'sample' then
       if params:string("hill "..i.." kildare_notes") == "yes" then
         send_note_data(i,j,index,played_note)
       end
@@ -1068,33 +1116,7 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
       local vel_target = hills[i].highway == false
         and hills[i][j].note_velocity[index]
         or (focused_set.velocities[index] * (focused_set.accented_trigs[index] and accent_vel or 1))
-      if params:string("hill "..i.." sample output") == "yes" then
-        if params:get("hill "..i.." sample probability") >= math.random(100) then
-          local should_play;
-          if hills[i].highway then
-            -- local lock_trig = track[i][j].focus == 'main' and track[i][j].lock_trigs[index] or track[i][j].fill.lock_trigs[index]
-            if track[i][j].trigs[index] then
-              should_play = true
-            end
-          else
-            should_play = true
-          end
-          local target = "sample"..i-7
-          if params:string(target..'_sampleMode') == 'chop' and should_play then
-            local slice_count = params:get('hill '..i..' sample slice count') - 1
-            local slice = util.wrap(played_note - params:get("hill "..i.." base note"),0,slice_count) + 1
-            _ca.play_slice(target,slice,vel_target,i,j,played_note, retrig_index)
-          elseif params:string(target..'_sampleMode') == 'playthrough' and should_play then
-            _ca.play_through(target,vel_target,i,j,played_note, retrig_index)
-          elseif params:string(target..'_sampleMode') == 'distribute' and should_play then
-            local scaled_idx = util_round(sample_info[target].sample_count * (params:get('hill '..i..' sample distribution')/100))
-            if scaled_idx ~= 0 then
-              local idx = util.wrap(played_note - params:get("hill "..i.." base note"),0,scaled_idx-1) + 1
-              _ca.play_index(target,idx,vel_target,i,j,played_note, retrig_index) -- TODO: adjust for actual sample pool size
-            end
-          end
-        end
-      end
+      play_linked_sample(i, j, played_note, vel_target, retrig_index)
     end
     manual_iter(i,j)
     if params:string("hill "..i.." MIDI output") == "yes" then

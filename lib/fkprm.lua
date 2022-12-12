@@ -149,7 +149,7 @@ m.enc = function(n,d)
       m.alt_menu_focus = util.clamp(m.alt_menu_focus+d,1,3)
     elseif n == 3 then
       if m.alt_menu_focus == 1 then
-        m.voice_focus = util.clamp(m.voice_focus+d,1,10)
+        m.voice_focus = util.clamp(m.voice_focus+d,1,number_of_hills)
         local i = m.voice_focus
         local j = m.hill_focus
         local low_bound = hills[i].highway == true and 1 or hills[i][j].low_bound.note

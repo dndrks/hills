@@ -50,10 +50,14 @@ m.track_transpose = function(i,j,pos,delta)
     else
       _active.fill.trigs[pos] = false
     end
-    focused_set[pos] = params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+    local note_check = params:string('voice_model_'..i) ~= 'sample' and params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+      or params:get('hill '..i..' base note')
+    focused_set[pos] = note_check
   else
     if focused_set[pos] == -1 then
-      focused_set[pos] = params:get(i..'_'..params:string('voice_model_'..i)..'_carHz') + delta
+      local note_check = params:string('voice_model_'..i) ~= 'sample' and params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+        or params:get('hill '..i..' base note')
+      focused_set[pos] = note_check + delta
     else
       focused_set[pos] = util.clamp(focused_set[pos] + delta, 0, 127)
     end

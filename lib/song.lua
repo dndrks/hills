@@ -60,7 +60,7 @@ song.check_step = function(i)
           end
         end
       elseif shot >= 17 and shot <= 24 then
-        for k = 1,10 do
+        for k = 1,number_of_hills do
           if hills[k].highway then
             _htracks.stop_playback(k)
             track[k].active_hill = shot - 16
@@ -101,7 +101,7 @@ song.start = function()
   end
 
   if params:string('global_transport_mode') == 'highways' then
-    for i = 1,10 do
+    for i = 1,number_of_hills do
       if hills[i].highway then
         _htracks.start_playback(i)
       end
@@ -125,7 +125,7 @@ song.stop = function()
       _g.stop_pattern_playback(i)
     end
   end
-  for i = 1,10 do
+  for i = 1,number_of_hills do
     _htracks.stop_playback(i)
   end
   screen_dirty = true

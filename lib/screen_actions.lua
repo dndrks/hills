@@ -35,7 +35,7 @@ end
 
 screen_actions.popup_focus = {1,1,1,1,1,1,1,1,1,1}
 screen_actions.popup_focus.tracks = {}
-for i = 1,10 do
+for i = 1,number_of_hills do
   screen_actions.popup_focus.tracks[i] = {}
   for j = 1,5 do
     screen_actions.popup_focus.tracks[i][j] = 1

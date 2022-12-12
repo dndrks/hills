@@ -28,15 +28,15 @@ end
 -- }
 
 function parameters.change_UI_name(id, new_name)
+  -- print(id,new_name)
   params.params[params.lookup[id]].name = new_name
 end
 
 function parameters.send_to_engine(voice,param,value)
-  print(param)
   if param == 'carHz' then
     engine.set_voice_param(voice, param, mu.note_num_to_freq(value))
-    engine.set_voice_param(voice,"thirdHz", mu.note_num_to_freq(value))
-    engine.set_voice_param(voice,"seventhHz", mu.note_num_to_freq(value))
+    engine.set_voice_param(voice,"carHzThird", mu.note_num_to_freq(value))
+    engine.set_voice_param(voice,"carHzSeventh", mu.note_num_to_freq(value))
   elseif param == 'poly' then
     engine.set_voice_param(voice, param, value == 1 and 0 or 1)
   else
@@ -49,7 +49,7 @@ function parameters.init()
 
   params:add_separator('hills_main_header', 'hills + highways')
   for i = 1,number_of_hills do
-    params:add_group('hill_'..i..'_group', hill_names[i], i > 7 and 69 or 72)
+    params:add_group('hill_'..i..'_group', hill_names[i], 72)
 
     params:add_separator('hill_'..i..'_highway_header', 'mode')
     params:add_option('hill_'..i..'_mode', 'mode', {'hill','highway'}, 1)
@@ -132,39 +132,40 @@ function parameters.init()
     params:add_number('hill_'..i..'_iso_octave', 'octave', -4, 4, 0)
     params:add_option('hill_'..i..'_iso_quantize', 'quantize to scale?', {'no','yes'}, 1)
 
-    if i <= 7 then
-      params:add_separator('hill_'..i..'_kildare_header', "Kildare management "..hill_names[i])
-      params:add_option("hill "..i.." kildare_notes","send pitches?",{"no","yes"},params:string('hill_'..i..'_mode') == 'hill' and 2 or 1)
-      params:set_action("hill "..i.." kildare_notes",
-        function(x)
-          if x == 1 then
-            local note_to_send = mu.note_num_to_freq(params:get(i.."_"..(params:string('voice_model_'..i)).."_carHz"))
-            engine.set_voice_param(i,"carHz", note_to_send)
-            engine.set_voice_param(i,"thirdHz", note_to_send)
-            engine.set_voice_param(i,"seventhHz", note_to_send)
-            params:hide("hill "..i.." kildare_chords")
-            params:set("hill "..i.." kildare_chords",1)
-          elseif x == 2 then
-            params:show("hill "..i.." kildare_chords")
-          end
-          _menu.rebuild_params()
+    params:add_separator('hill_'..i..'_kildare_header', "Kildare management "..hill_names[i])
+    params:add_option("hill "..i.." kildare_notes","send pitches?",{"no","yes"},params:string('hill_'..i..'_mode') == 'hill' and 2 or 1)
+    params:set_action("hill "..i.." kildare_notes",
+      function(x)
+        if x == 1 then
+          local note_check = params:string('voice_model_'..i) ~= 'sample' and params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+            or params:get('hill '..i..' base note')
+          local note_to_send = mu.note_num_to_freq(note_check)
+          engine.set_voice_param(i,"carHz", note_to_send)
+          engine.set_voice_param(i,"carHzThird", note_to_send)
+          engine.set_voice_param(i,"carHzSeventh", note_to_send)
+          params:hide("hill "..i.." kildare_chords")
+          params:set("hill "..i.." kildare_chords",1)
+        elseif x == 2 then
+          params:show("hill "..i.." kildare_chords")
         end
-      )
-      params:add_option("hill "..i.." kildare_chords","send chords?",{"no","yes"},1)
-      params:set_action("hill "..i.." kildare_chords",
-        function(x)
-          if x == 1 then
-            local return_to = mu.note_num_to_freq(params:get(i.."_"..(params:string('voice_model_'..i)).."_carHz"))
-            engine.set_voice_param(i,"thirdHz", return_to)
-            engine.set_voice_param(i,"seventhHz", return_to)
-          end
+        _menu.rebuild_params()
+      end
+    )
+    params:add_option("hill "..i.." kildare_chords","send chords?",{"no","yes"},1)
+    params:set_action("hill "..i.." kildare_chords",
+      function(x)
+        if x == 1 then
+          local note_check = params:string('voice_model_'..i) ~= 'sample' and params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+            or params:get('hill '..i..' base note')
+          local return_to = mu.note_num_to_freq(note_check)
+          engine.set_voice_param(i,"carHzThird", return_to)
+          engine.set_voice_param(i,"carHzSeventh", return_to)
         end
-      )
-      -- params:add_number("hill "..i.." kildare_chord_degree","chord degree",1,7,1)
-    end
+      end
+    )
 
     params:add_separator('hill_'..i..'_sample_header', "sample management "..hill_names[i])
-    params:add_option("hill "..i.." sample output","sample output?",{"no","yes"},i<= 7 and 1 or 2)
+    params:add_option("hill "..i.." sample output","sample output?",{"no","yes"},1)
     params:set_action("hill "..i.." sample output",
       function(x)
         if x == 1 then
@@ -179,16 +180,16 @@ function parameters.init()
           if i <= 7 then
             params:show("hill "..i.." sample slot")
           end
-          if params:string('sample'..params:string('hill '..i..' sample slot')..'_sampleMode') == 'distribute' then
-            params:show("hill "..i.." sample distribution")
-            params:hide("hill "..i.." sample slice count")
-          elseif params:string('sample'..params:string('hill '..i..' sample slot')..'_sampleMode') == 'chop' then
-            params:hide("hill "..i.." sample distribution")
-            params:show("hill "..i.." sample slice count")
-          else
-            params:hide("hill "..i.." sample distribution")
-            params:hide("hill "..i.." sample slice count")
-          end
+          -- if params:string('sample'..params:string('hill '..i..' sample slot')..'_sampleMode') == 'distribute' then
+          --   params:show("hill "..i.." sample distribution")
+          --   params:hide("hill "..i.." sample slice count")
+          -- elseif params:string('sample'..params:string('hill '..i..' sample slot')..'_sampleMode') == 'chop' then
+          --   params:hide("hill "..i.." sample distribution")
+          --   params:show("hill "..i.." sample slice count")
+          -- else
+          --   params:hide("hill "..i.." sample distribution")
+          --   params:hide("hill "..i.." sample slice count")
+          -- end
           params:show("hill "..i.." sample probability")
           params:show("hill "..i.." sample repitch")
           params:show("hill "..i.." sample momentary")
@@ -196,18 +197,18 @@ function parameters.init()
         end
       end
     )
-    params:add_number("hill "..i.." sample slot", "sample slot",1,3,i<= 7 and 1 or i-7)
+    params:add_number("hill "..i.." sample slot", "sample slot",1,3,1)
     params:set_action("hill "..i.." sample slot", function(x)
-      if params:string('sample'..x..'_sampleMode') == 'distribute' then
-        params:show("hill "..i.." sample distribution")
-        params:hide("hill "..i.." sample slice count")
-      elseif params:string('sample'..x..'_sampleMode') == 'chop' then
-        params:hide("hill "..i.." sample distribution")
-        params:show("hill "..i.." sample slice count")
-      else
-        params:hide("hill "..i.." sample distribution")
-        params:hide("hill "..i.." sample slice count")
-      end
+      -- if params:string('sample'..x..'_sampleMode') == 'distribute' then
+      --   params:show("hill "..i.." sample distribution")
+      --   params:hide("hill "..i.." sample slice count")
+      -- elseif params:string('sample'..x..'_sampleMode') == 'chop' then
+      --   params:hide("hill "..i.." sample distribution")
+      --   params:show("hill "..i.." sample slice count")
+      -- else
+      --   params:hide("hill "..i.." sample distribution")
+      --   params:hide("hill "..i.." sample slice count")
+      -- end
       _menu.rebuild_params() 
     end)
     if i > 7 then
@@ -431,7 +432,7 @@ function parameters.init()
     )
   end
 
-  params:add_group('snapshot_crossfade_settings', 'snapshot crossfaders', 32 + 140)
+  params:add_group('snapshot_crossfade_settings', 'snapshot crossfaders', 32 + 112)
 
   local function spec_format(param, value, units)
     return value.." "..(units or param.controlspec.units or "")
@@ -528,7 +529,7 @@ function parameters.init()
     lb('reset_target')
   end
 
-  for i = 1,10 do
+  for i = 1,number_of_hills do
     params:add_separator('snapshot_crossfade_header_'..i, 'crossfader '..hill_names[i])
     params:add_number('snapshot_crossfade_left_'..i, 'left snapshot',1,16,1)
     params:add_number('snapshot_crossfade_right_'..i, 'right snapshot',1,16,1)

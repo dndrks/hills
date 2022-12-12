@@ -17,7 +17,7 @@ end
 
 es = {}
 patterned_es = {}
-for i = 1,10 do
+for i = 1,number_of_hills do
   es[i] = {x = {}, y = {}, legato = false}
   patterned_es[i] = {x = {}, y = {}}
 end
@@ -109,14 +109,14 @@ grid_data_entry = false
 grid_data_blink = 0
 grid_loop_point_blink = 0
 data_entry_steps =  {['focus'] = {}, ['held'] = {}}
-for i = 1,10 do
+for i = 1,number_of_hills do
   data_entry_steps.focus[i] = {}
   data_entry_steps.held[i] = 0
 end
 
 grid_conditional_entry = false
 conditional_entry_steps = {['focus'] = {}, ['held'] = {}}
-for i = 1,10 do
+for i = 1,number_of_hills do
   conditional_entry_steps.focus[i] = {}
   conditional_entry_steps.held[i] = 0
 end
@@ -599,11 +599,8 @@ function g.key(x,y,z)
         x = x - 1
         
         local _snap;
-        if x <= 7 and which_focus ~= 'snapshots_extended' then
+        if x <= number_of_hills and which_focus ~= 'snapshots_extended' then
           local d_voice = params:string('voice_model_'..x)
-          _snap = snapshots[x][d_voice]
-        elseif x <= 10 and which_focus ~= 'snapshots_extended' then
-          local d_voice = 'sample'..x-7
           _snap = snapshots[x][d_voice]
         elseif which_focus == 'snapshots_extended' then
           _snap = snapshots[fx[x]]
@@ -646,12 +643,8 @@ function g.key(x,y,z)
       local which_focus = (mods["snapshots"] and not mods['snapshots_extended']) and 'snapshots' or 'snapshots_extended'
       x = x - 1
       local _snap, _snapover;
-      if  x <= 7 and which_focus ~= 'snapshots_extended' then
+      if  x <= number_of_hills and which_focus ~= 'snapshots_extended' then
         local d_voice = params:string('voice_model_'..x)
-        _snap = snapshots[x][d_voice]
-        _snapover = snapshot_overwrite[x][d_voice]
-      elseif x <= 10 and which_focus ~= 'snapshots_extended' then
-        local d_voice = 'sample'..x-7
         _snap = snapshots[x][d_voice]
         _snapover = snapshot_overwrite[x][d_voice]
       elseif which_focus == 'snapshots_extended' then
@@ -1162,12 +1155,8 @@ function grid_redraw()
             local extension_limit = mods['snapshots_extended'] and 4 or number_of_hills+1
             local _snap, _snapover;
 
-            if i-1 <= 7 then
+            if i-1 <= 10 then
               local d_voice = params:string('voice_model_'..i-1)
-              _snap = snapshots[i-1][d_voice]
-              _snapover = snapshot_overwrite[i-1][d_voice]
-            elseif i - 1 <= 10 then
-              local d_voice = 'sample'..(i-8)
               _snap = snapshots[i-1][d_voice]
               _snapover = snapshot_overwrite[i-1][d_voice]
             else
@@ -1200,11 +1189,8 @@ function grid_redraw()
             local extension_limit = mods['snapshots_extended'] and 4 or number_of_hills+1
             if i-1 < extension_limit then
               local _snap,d_voice;
-              if i-1 <= 7 then
+              if i-1 <= 10 then
                 d_voice = params:string('voice_model_'..i-1)
-                _snap = snapshots[i-1][d_voice]
-              elseif i-1 <= 10 then
-                d_voice = 'sample'..(i-8)
                 _snap = snapshots[i-1][d_voice]
               else
                 print('else?')
@@ -1396,7 +1382,7 @@ function grid_lib.draw_highway()
   local epos = _active.ui_position
   
   -- draw top row hill selector
-  for j = 1,10 do
+  for j = 1,number_of_hills do
     g:led(j+1,1,j == i and 15 or 4)
   end
 
@@ -1494,7 +1480,7 @@ function grid_lib.draw_es()
   -- print(util.time())
   local i = ui.hill_focus
   local j = hills[ui.hill_focus].screen_focus
-  for k = 1,10 do
+  for k = 1,number_of_hills do
     g:led(k+1,1,k == i and 15 or 4)
   end
   for x = 2,6 do
