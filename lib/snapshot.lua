@@ -10,7 +10,7 @@ function snapshot.init()
     snapshot_overwrite[i] = {}
   end
 
-  local all_the_voices = {'bd','sd','tm','cp','rs','cb','hh','saw','fld','sample'}
+  local all_the_voices = {'bd','sd','tm','cp','rs','cb','hh','saw','fld','timbre','ptr','sample'}
 
   for i = 1,number_of_hills do
     for j = 1,#all_the_voices do

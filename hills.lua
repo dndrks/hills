@@ -136,7 +136,7 @@ function init()
   for i = 1,6 do
     softcut.enable(i,0)
   end
-  kildare.init(true)
+  kildare.init(number_of_hills, true)
   _ca.init() -- initialize clips
   _snapshots.init()
   _flow.init()
