@@ -18,7 +18,7 @@ end
 
 engine.name = "Kildare"
 
-number_of_hills = 8
+number_of_hills = 7
 hill_names = {
   "1: bd",
   "2: sd",

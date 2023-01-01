@@ -432,7 +432,7 @@ function parameters.init()
     )
   end
 
-  params:add_group('snapshot_crossfade_settings', 'snapshot crossfaders', 32 + 112)
+  params:add_group('snapshot_crossfade_settings', 'snapshot crossfaders', (4*number_of_hills) + (14*number_of_hills))
 
   local function spec_format(param, value, units)
     return value.." "..(units or param.controlspec.units or "")
