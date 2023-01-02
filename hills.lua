@@ -811,9 +811,23 @@ end
 
 function play_chord(i,j,index)
   local chord_target = hills[i].highway == false and hills[i][j].note_num.chord_degree[index] or track[i][j].chord_degrees[index]
+  local base_note;
+  if params:string('hill_'..i..'_mode') == 'highway' then
+    if track[i][j].focus == 'main' then
+      base_note = track[i][j].notes[index]
+    else
+      base_note = track[i][j].fill.notes[index]
+    end
+    if base_note == -1 then
+      base_note = params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+    end
+  else
+    base_note = params:get('hill '..i..' base note')
+  end
+  print(index,base_note)
   local shell_notes = mu.generate_chord_scale_degree(
     -- played_note,
-    params:get('hill '..i..' base note'),
+    base_note,
     params:string('hill '..i..' scale'),
     -- hills[i][j].note_num.chord_degree[index],  -- TODO: this won't always be hill-active...track-active!!
     chord_target,

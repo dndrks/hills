@@ -240,11 +240,7 @@ function track_actions.init(target, hill_number, clear_reset)
     }
   }
   for i = 1,128 do
-    if target <= 7 then
-      track[target][hill_number].notes[i] = -1
-    else
-      track[target][hill_number].notes[i] = params:get('hill '..target..' base note')
-    end
+    track[target][hill_number].notes[i] = -1
     track[target][hill_number].seed_default_note[i] = true
     track[target][hill_number].chord_degrees[i] = 1
     track[target][hill_number].velocities[i] = 127
@@ -265,11 +261,7 @@ function track_actions.init(target, hill_number, clear_reset)
     track[target][hill_number].conditional.retrig_time[i] = track_retrig_lookup[track_paramset:get("track_retrig_time_"..target.."_"..hill_number..'_'..i)]
     track[target][hill_number].conditional.retrig_slope[i] = 0
     
-    if target <= 7 then
-      track[target][hill_number].fill.notes[i] = -1
-    else
-      track[target][hill_number].fill.notes[i] = params:get('hill '..target..' base note')
-    end
+    track[target][hill_number].fill.notes[i] = -1
     track[target][hill_number].fill.seed_default_note[i] = true
     track[target][hill_number].fill.chord_degrees[i] = 1
     track[target][hill_number].fill.velocities[i] = 127
@@ -302,13 +294,13 @@ function track_actions.init(target, hill_number, clear_reset)
   print('initializing track: '..target..', '..util.time())
 end
 
-function track_actions.add(target, value)
-  local _active = track[target][track[target].active_hill]
-  if _active.hold then
-    table.insert(_active.notes, value)
-    _active.end_point = #_active.notes
-  end
-end
+-- function track_actions.add(target, value)
+--   local _active = track[target][track[target].active_hill]
+--   if _active.hold then
+--     table.insert(_active.notes, value)
+--     _active.end_point = #_active.notes
+--   end
+-- end
 
 function track_actions.enable(target,state)
   track[target][track[target].active_hill].enabled = state
@@ -378,7 +370,7 @@ function track_actions.iterate(target)
   end
 end
 
-function track_actions.tick(target,source) -- FIXME: shouldn't just trigger all voices all the time...
+function track_actions.tick(target) -- FIXME: shouldn't just trigger all voices all the time...
   if song_atoms.transport_active then
     local _active = track[target][track[target].active_hill]
     local focused_set = _active.focus == "main" and _active or _active.fill
@@ -396,7 +388,7 @@ function track_actions.tick(target,source) -- FIXME: shouldn't just trigger all 
             track_actions.process(target)
           end)
         else
-          track_actions.process(target,source)
+          track_actions.process(target)
         end
         _active.playing = true
       end
@@ -447,51 +439,6 @@ function track_actions.retrig_fill(target,s_p,e_p,val,type)
     end
   end
 end
-
--- function track_actions.fill(target,s_p,e_p,style)
---   local _active = track[target][track[target].active_hill]
---   local focused_set = _active.focus == "main" and _active or _active.fill
---   local snakes = 
---   { 
---       [1] = { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16 }
---     , [2] = { 1,2,3,4,8,7,6,5,9,10,11,12,16,15,14,13 }
---     , [3] = { 1,5,9,13,2,6,10,14,3,7,11,15,4,8,12,16 }
---     , [4] = { 1,5,9,13,14,10,6,2,3,7,11,15,16,12,8,4 }
---     , [5] = { 1,2,3,4,8,12,16,15,14,13,9,5,6,7,11,10 }
---     , [6] = { 13,14,15,16,12,8,4,3,2,1,5,9,10,11,7,6 }
---     , [7] = { 1,2,5,9,6,3,4,7,10,13,14,11,8,12,15,16 }
---     , [8] = { 1,6,11,16,15,10,5,2,7,12,8,3,9,14,13,4 }
---   }
---   if style < 9 then
---     for i = s_p,e_p do
---       focused_set.notes[i] = snakes[style][wrap(i,1,16)]
---     end
---   elseif style == 9 then
---     for i = s_p,e_p do
---       focused_set.notes[i] = math.random(1,16)
---     end
---   elseif style == 10 then
---     for i = s_p,e_p do
---       if params:get("track_"..target.."_rand_prob") >= math.random(100) then
---         focused_set.notes[i] = math.random(1,16)
---       else
---         focused_set.notes[i] = nil
---       end
---     end
---   elseif style == 11 then -- alt layer
-
---   end
---   if not _active.playing
---   and not _active.pause
---   and not _active.enabled
---   then
---     track_actions.enable(target,true)
---     _active.pause = true
---     _active.hold = true
---     grid_dirty = true
---   end
---   screen_dirty = true
--- end
 
 function track_actions.copy(target)
   local _active = track[target][track[target].active_hill]
@@ -570,7 +517,7 @@ function track_actions.paste(target,style)
   end
 end
 
-function track_actions.process(target,source)
+function track_actions.process(target)
   local _active = track[target][track[target].active_hill]
   if _active.step == nil then
     print("how is track step nil???")
@@ -586,7 +533,7 @@ function track_actions.process(target,source)
     track_actions.random(target)
   end
   screen_dirty = true
-  track_actions.run(target,_active.step,source)
+  track_actions.run(target,_active.step)
 end
 
 function track_actions.forward(target)
@@ -670,7 +617,7 @@ function track_actions.check_prob(target,step)
   
 end
 
-function track_actions.run(target,step,source)
+function track_actions.run(target,step)
   local _active = track[target][track[target].active_hill]
   if (_active.focus == "main" and 
         (_active.trigs[step] == true or _active.lock_trigs[step] == true or _active.legato_trigs[step] == true))
@@ -693,27 +640,25 @@ function track_actions.run(target,step,source)
         if _active.conditional.cycle < A_step then
           _active.last_condition = false
         elseif _active.conditional.cycle == A_step then
-          track_actions.execute_step(target,step,source)
+          track_actions.execute_step(target,step)
         elseif _active.conditional.cycle > A_step then
           if _active.conditional.cycle <= (A_step + B_step) then
             if _active.conditional.cycle % (A_step + B_step) == 0 then
-              track_actions.execute_step(target,step,source)
+              track_actions.execute_step(target,step)
             else
               _active.last_condition = false
-              -- grid_actions.kill_note(target,_active.notes[wrap(step-1,_active.start_point,_active.end_point)])
             end
           else
             if (_active.conditional.cycle - A_step) % B_step == 0 then
-              track_actions.execute_step(target,step,source)
+              track_actions.execute_step(target,step)
             else
               _active.last_condition = false
-              -- grid_actions.kill_note(target,_active.notes[wrap(step-1,_active.start_point,_active.end_point)])
             end
           end
         end
       elseif _active.conditional.mode[step] == "PRE" then
         if _active.last_condition then
-          track_actions.execute_step(target,step,source)
+          track_actions.execute_step(target,step)
         else
           _active.last_condition = false
         end
@@ -721,12 +666,12 @@ function track_actions.run(target,step,source)
         if _active.last_condition then
           _active.last_condition = false
         else
-          track_actions.execute_step(target,step,source)
+          track_actions.execute_step(target,step)
         end
       elseif _active.conditional.mode[step] == "NEI" then
         local neighbors = {10,1,2,3,4,5,6,7,8,9}
         if track[neighbors[target]][track[target].active_hill].last_condition then
-          track_actions.execute_step(target,step,source)
+          track_actions.execute_step(target,step)
         else
           _active.last_condition = false
         end
@@ -735,7 +680,7 @@ function track_actions.run(target,step,source)
         if track[neighbors[target]][track[target].active_hill].last_condition then
           _active.last_condition = false
         else
-          track_actions.execute_step(target,step,source)
+          track_actions.execute_step(target,step)
         end
       end
 
@@ -757,20 +702,11 @@ function track_actions.check_gate_prob(target)
   end
 end
 
-function track_actions.execute_step(target,step,source)
-  local _active = track[target][track[target].active_hill]
-  local focused_set = {}
-  if _active.focus == "main" then
-    focused_set = _active.notes
-  else
-    focused_set = _active.fill.notes
-  end
-  local last_step = focused_set[wrap(step-1,_active.start_point,_active.end_point)]
-  -- print(target,last_step,wrap(step-1,_active.start_point,_active.end_point),step,focused_set[step])
-  track_actions.resolve_step(target, step, last_step)
-end
+-- function track_actions.execute_step(target,step)
+--   track_actions.resolve_step(target, step)
+-- end
 
-function track_actions.resolve_step(target, step, last_pad)
+function track_actions.execute_step(target, step)
   local _active = track[target][track[target].active_hill]
   local focused_trigs = {}
   local focused_notes = {}
