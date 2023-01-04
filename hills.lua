@@ -814,9 +814,9 @@ function play_chord(i,j,index)
   local base_note;
   if params:string('hill_'..i..'_mode') == 'highway' then
     if track[i][j].focus == 'main' then
-      base_note = track[i][j].notes[index]
+      base_note = track[i][j].base_note[index]
     else
-      base_note = track[i][j].fill.notes[index]
+      base_note = track[i][j].fill.base_note[index]
     end
     if base_note == -1 then
       base_note = params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
@@ -824,12 +824,10 @@ function play_chord(i,j,index)
   else
     base_note = params:get('hill '..i..' base note')
   end
-  print(index,base_note)
+  -- print(index,base_note)
   local shell_notes = mu.generate_chord_scale_degree(
-    -- played_note,
     base_note,
     params:string('hill '..i..' scale'),
-    -- hills[i][j].note_num.chord_degree[index],  -- TODO: this won't always be hill-active...track-active!!
     chord_target,
     true
   )
@@ -880,84 +878,35 @@ force_note = function(i,j,played_note)
     play_linked_sample(i, j, played_note, vel_target, retrig_index, true)
   end
 
-  -- manual_iter(i,j)
-  -- if params:string("hill "..i.." MIDI output") == "yes" then
-  --   local ch = params:get("hill "..i.." MIDI note channel")
-  --   local dev = params:get("hill "..i.." MIDI device")
-  --   if pre_note[i] ~= nil then
-  --     midi_device[dev]:note_off(pre_note[i],seg.note_velocity,ch)
-  --   end
-  --   midi_device[dev]:note_on(played_note,seg.note_velocity,ch)
-  -- end
-  -- if params:string("hill "..i.." crow output") == "yes" then
-  --   if params:string("hill "..i.." crow output style") == "osc" then
-  --     local out = params:get("hill "..i.." crow output id")
-  --     if hills[i].crow_change_queued then
-  --       crow.output[out].action = "oscillate( dyn{pitch="..mu.note_num_to_freq(played_note).."}, dyn{lev="..(params:get("hill "..i.." crow osc level")/100).."}:mul(dyn{dur="..(params:get("hill "..i.." crow osc decay")/100).."}), '"..params:string("hill "..i.." crow osc shape").."')"
-  --       crow.output[out]()
-  --       if params:string("hill "..i.." crow osc aliasing") == 'none' then
-  --         crow.output[out].scale('none')
-  --       elseif params:string("hill "..i.." crow osc aliasing") == 'soft' then
-  --         crow.output[out].scale({0,2,3,5,7,8,10})
-  --       elseif params:string("hill "..i.." crow osc aliasing") == 'harsh' then
-  --         crow.output[out].scale({0})
-  --       end
-  --       hills[i].crow_change_queued = false
-  --     else
-  --       if params:string("hill "..i.." crow osc aliasing") == 'none' then
-  --         crow.output[out].scale('none')
-  --       elseif params:string("hill "..i.." crow osc aliasing") == 'soft' then
-  --         crow.output[out].scale({0,2,3,5,7,8,10})
-  --       elseif params:string("hill "..i.." crow osc aliasing") == 'harsh' then
-  --         crow.output[out].scale({0})
-  --       end
-  --       crow.output[out].dyn.pitch = mu.note_num_to_freq(played_note)
-  --       crow.output[out].dyn.lev = params:get("hill "..i.." crow osc level")/100
-  --       crow.output[out].dyn.dur = params:get("hill "..i.." crow osc decay")/100
-  --     end
-  --   elseif params:string("hill "..i.." crow output style") == "v/8" then
-  --     local out = params:get("hill "..i.." crow output id")
-  --     crow.output[out].scale('none')
-  --     -- crow.output[out].volts = (played_note - params:get("hill "..i.." base note"))/12
-  --     crow.output[out].volts = (played_note - 60)/12
-  --   elseif params:string("hill "..i.." crow output style") == "v/8+pulse" then
-  --     local v8_out = params:get("hill "..i.." crow output id")
-  --     local pulse_out = params:get("hill "..i.." crow v/8 pulse output id")
-  --     crow.output[v8_out].scale('none')
-  --     crow.output[v8_out].volts = (played_note - 60)/12
-  --     norns.crow.send ("output["..pulse_out.."]( pulse(0.001) )")
-  --   elseif params:string("hill "..i.." crow output style") == "pulse" then
-  --     local out = params:get("hill "..i.." crow output id")
-  --     norns.crow.send ("output["..out.."]( pulse(0.001) )")
-  --   end
-  -- end
-  -- if params:string("hill "..i.." JF output") == "yes" then
-  --   local ch = params:get("hill "..i.." JF output id")
-  --   if pre_note[i] ~= nil then
-  --     if params:string("hill "..i.." JF output style") == "sound" then
-  --       crow.ii.jf.play_voice(ch,0)
-  --     elseif params:string("hill "..i.." JF output style") == "shape" then
-  --       crow.ii.jf.trigger(ch,0)
-  --     end
-  --   end
-  --   if params:string("hill "..i.." JF output style") == "sound" then
-  --     crow.ii.jf.play_voice(ch,(played_note - 60)/12,5)
-  --     -- print(ch,(played_note - 60)/12,5)
-  --   elseif params:string("hill "..i.." JF output style") == "shape" then
-  --     crow.ii.jf.trigger(ch,1)
-  --   end
-  -- end
   pre_note[i] = played_note
+end
+
+local function trigger_notes(i,j,index,velocity,retrigger_bool,played_note)
+  engine.trig(i,velocity,retrigger_bool)
+  if params:string("hill "..i.." kildare_notes") == "yes" then
+    send_note_data(i,j,index,played_note)
+  end
+  if hills[i].highway then
+    local focused_notes = track[i][j].focus == 'main' and track[i][j].base_note[index] or track[i][j].fill.base_note[index]
+    local focused_chords = track[i][j].focus == 'main' and track[i][j].chord_notes[index] or track[i][j].fill.chord_notes[index]
+    local note_check = params:string('voice_model_'..i) ~= 'sample' and params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+      or params:get('hill '..i..' base note')
+    for notes = 1,3 do
+      if focused_chords[notes] ~= 0 then
+        force_note(i,j,focused_notes == -1 and note_check+focused_chords[notes] or focused_notes+focused_chords[notes])
+      end
+    end
+  end
 end
 
 send_note_data = function(i,j,index,played_note)
   engine.set_voice_param(i,"carHz",midi_to_hz(played_note))
-  if params:string("hill "..i.." kildare_chords") == 'yes' then
-    play_chord(i,j,index)
-  else
-    engine.set_voice_param(i,"carHzThird",midi_to_hz(played_note))
-    engine.set_voice_param(i,"carHzSeventh",midi_to_hz(played_note))
-  end
+  -- if params:string("hill "..i.." kildare_chords") == 'yes' then
+  --   play_chord(i,j,index)
+  -- else
+  --   engine.set_voice_param(i,"carHzThird",midi_to_hz(played_note))
+  --   engine.set_voice_param(i,"carHzSeventh",midi_to_hz(played_note))
+  -- end
 end
 
 pass_note = function(i,j,seg,note_val,index,retrig_index)
@@ -1009,11 +958,6 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
                 local p_name = string.gsub(params:get_id(id),target_voice..'_'..target_drum..'_','')
                 prms.send_to_engine(target_voice,p_name,params:get(id))
                 print('reseeding non-adjusted value for voice', target_voice, j, index, id, p_name)
-              -- elseif is_drum_voice and i >= 8 then
-              --   local target_voice = 'sample'..(i-7)
-              --   local p_name = string.gsub(params:get_id(id),target_voice..'_','')
-              --   prms.send_to_engine(target_voice,p_name,params:get(id))
-              --   print('reseeding non-adjusted value for sample voice', target_voice, j, index, id, p_name, check_prm)
               else
                 local p_name = extract_voice_from_string(params:get_id(id))
                 local sc_target = string.gsub(params:get_id(id),p_name..'_','')
@@ -1049,20 +993,6 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
               end
               prms.send_to_engine(target_voice,p_name,fkmap(i,j,index,k))
             end
-          -- elseif is_drum_voice and type(drum_target) == 'string' then
-          --   if retrig_index == 0 then
-          --     local target_voice = drum_target
-          --     local p_name = string.gsub(params:get_id(k),target_voice..'_','')
-          --     -- TODO: how does this work??
-          --     -- FIXME: breaks if sending value for delay...
-          --     if target_voice ~= 'sample'..(i-7) then
-          --       if not tab.contains(track[target_voice].external_prm_change,k) then
-          --         track[target_voice].external_prm_change[#track[target_voice].external_prm_change+1] = k
-          --       end
-          --     end
-          --     prms.send_to_engine(target_voice,p_name,fkmap(i,j,index,k))
-          --     -- print('sending sample param')
-          --   end
           else
             local p_name = extract_voice_from_string(params:get_id(k))
             local sc_target = string.gsub(params:get_id(k),p_name..'_','')
@@ -1091,9 +1021,6 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
     -- // per-step params
     -- print('done with fkprm stuff')
     if params:string('voice_model_'..i) ~= 'sample' then
-      if params:string("hill "..i.." kildare_notes") == "yes" then
-        send_note_data(i,j,index,played_note)
-      end
       local accent_vel = tonumber(params:string("hill "..i.." accent mult"):sub(1,-2))
       local vel_target = hills[i].highway == false
         and hills[i][j].note_velocity[index]
@@ -1102,7 +1029,7 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
         local lock_trig = track[i][j].focus == 'main' and track[i][j].lock_trigs[index] or track[i][j].fill.lock_trigs[index]
         if focused_set.trigs[index] and not focused_set.muted_trigs[index] then
           if retrig_index == nil then
-            engine.trig(i,vel_target,'false')
+            trigger_notes(i,j,index,vel_target,'false',played_note)
           else
             local destination_vel = focused_set.velocities[index] * (focused_set.accented_trigs[index] and accent_vel or 1)
             local destination_count = focused_set.conditional.retrig_count[index]
@@ -1117,12 +1044,15 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
             else
               retrig_vel = destination_vel
             end
-            engine.trig(i,retrig_vel,'true')
+            trigger_notes(i,j,index,retrig_vel,'true',played_note)
           end
         end
       else
-        engine.trig(i,vel_target,'false')
+        trigger_notes(i,j,index,vel_target,'false',played_note)
       end
+      -- if params:string("hill "..i.." kildare_notes") == "yes" then
+      --   send_note_data(i,j,index,played_note)
+      -- end
       play_linked_sample(i, j, played_note, vel_target, retrig_index)
     else
       -- TRIGGER SAMPLE

@@ -997,7 +997,7 @@ function grid_lib.earthsea_press(x,y,z)
         focused_set.trigs[current_step] = true
         force_note(i,j,played_note)
       end
-      focused_set.notes[current_step] = played_note
+      focused_set.base_note[current_step] = played_note
       focused_set.velocities[current_step] = params:get('hill_'..i..'_iso_velocity')
     elseif track[i].manual_note_entry then
       if params:string('hill '..i..' kildare_notes') == 'no' then
@@ -1009,7 +1009,7 @@ function grid_lib.earthsea_press(x,y,z)
       else
         focused_set.trigs[pos] = true
       end
-      focused_set.notes[pos] = played_note
+      focused_set.base_note[pos] = played_note
       focused_set.velocities[pos] = params:get('hill_'..i..'_iso_velocity')
       track[i][j].ui_position = util.wrap(track[i][j].ui_position+1,track[i][j].start_point,track[i][j].end_point)
     else

@@ -28,7 +28,7 @@ m.track_transpose = function(i,j,pos,delta)
   local _active = track[i][j]
   local focused_set = {}
   if _active.focus == "main" then
-    focused_set = _active.notes
+    focused_set = _active.base_note
     if _active.trigs[pos] == false then
       if delta > 0 then
         _active.trigs[pos] = true
@@ -36,7 +36,7 @@ m.track_transpose = function(i,j,pos,delta)
       goto finished
     end
   else
-    focused_set = _active.fill.notes
+    focused_set = _active.fill.base_note
     if _active.fill.trigs[pos] == false then
       if delta > 0 then
         _active.fill.trigs[pos] = true
@@ -45,7 +45,7 @@ m.track_transpose = function(i,j,pos,delta)
     end
   end
   if focused_set[pos] == 0 and delta < 1 then
-    if focused_set == _active.notes then
+    if focused_set == _active.base_note then
       _active.trigs[pos] = false
     else
       _active.fill.trigs[pos] = false
@@ -128,7 +128,7 @@ m['rotate notes'] = function(i,j,start_point,end_point,focus,sc)
 end
 
 m['rotate track notes'] = function(i,j)
-  local target = track[i][j].focus == 'main' and track[i][j].notes or track[i][j].fill.notes
+  local target = track[i][j].focus == 'main' and track[i][j].base_note or track[i][j].fill.base_note
   local originals = {}
   local steps_with_trigs
   for k = track[i][j].start_point, track[i][j].end_point do

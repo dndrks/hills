@@ -120,9 +120,9 @@ function hway_ui.draw_menu()
         if ui.menu_focus ~= 3 then
           display_step_data = focused_set.trigs[i] == true and (focused_set.muted_trigs[i] and 'M' or '|') or '-'
         else
-          local note_index = focused_set.notes[i]
+          local note_index = focused_set.base_note[i]
           if focused_set.trigs[i] == true then
-            if focused_set.notes[i] == -1 then
+            if focused_set.base_note[i] == -1 then
               local note_check = params:string('voice_model_'..hf) ~= 'sample' and params:get(hf..'_'..params:string('voice_model_'..hf)..'_carHz')
                 or params:get('hill '..hf..' base note')
               display_step_data = note_check
@@ -153,7 +153,7 @@ function hway_ui.draw_menu()
           screen.text_center(display_step_data)
           local note_check = params:string('voice_model_'..hf) ~= 'sample' and params:get(hf..'_'..params:string('voice_model_'..hf)..'_carHz')
             or params:get('hill '..hf..' base note')
-          if focused_set.notes[i] == note_check then
+          if focused_set.base_note[i] == note_check then
             if e_pos == i then
               screen.level(15)
             else
@@ -222,7 +222,7 @@ function hway_ui.draw_menu()
           else
             local note_check = params:string('voice_model_'..hf) ~= 'sample' and params:get(hf..'_'..params:string('voice_model_'..hf)..'_carHz')
               or params:get('hill '..hf..' base note')
-            if focused_set.notes[pos] == note_check then
+            if focused_set.base_note[pos] == note_check then
               display_text = 'K3: clear to default'
             end
           end
@@ -830,7 +830,7 @@ function hway_ui.check_for_first_touch()
   local h = hills[hf]
   local _active = track[hf][h.screen_focus]
   local focused_set = _active.focus == "main" and track[_hui.sel] or _active.fill
-  if tab.count(focused_set.notes) == 1
+  if tab.count(focused_set.base_note) == 1
   and not _active.playing
   and not _active.pause
   and not _active.enabled
