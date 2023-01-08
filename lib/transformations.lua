@@ -15,30 +15,160 @@ local m = {}
 --   shape_data[i][j].notes[pos] = current_scale[current_note_pos]
 -- end
 
+m.adjust_velocity = function(i,j,pos,delta)
+  hills[i][j].note_velocity[pos] = util.clamp(hills[i][j].note_velocity[pos]+delta,0,127)
+end
+
 m.transpose = function(i,j,pos,delta)
   hills[i][j].note_num.pool[pos] = util.clamp(hills[i][j].note_num.pool[pos]+delta,1,hills[i][j].note_num.max)
+  hills[i][j].note_num.chord_degree[pos] = util.wrap(hills[i][j].note_num.pool[pos], 1, 7)
+end
+
+m.track_transpose = function(i,j,pos,delta)
+  local _active = track[i][j]
+  local focused_set = {}
+  if _active.focus == "main" then
+    focused_set = _active.base_note
+    if _active.trigs[pos] == false then
+      if delta > 0 then
+        _active.trigs[pos] = true
+      end
+      goto finished
+    end
+  else
+    focused_set = _active.fill.base_note
+    if _active.fill.trigs[pos] == false then
+      if delta > 0 then
+        _active.fill.trigs[pos] = true
+      end
+      goto finished
+    end
+  end
+  if focused_set[pos] == 0 and delta < 1 then
+    if focused_set == _active.base_note then
+      _active.trigs[pos] = false
+    else
+      _active.fill.trigs[pos] = false
+    end
+    local note_check = params:string('voice_model_'..i) ~= 'sample' and params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+      or params:get('hill '..i..' base note')
+    focused_set[pos] = note_check
+  else
+    if focused_set[pos] == -1 then
+      local note_check = params:string('voice_model_'..i) ~= 'sample' and params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+        or params:get('hill '..i..' base note')
+      focused_set[pos] = note_check + delta
+    else
+      focused_set[pos] = util.clamp(focused_set[pos] + delta, 0, 127)
+    end
+  end
+  ::finished::
+end
+
+m.sample_transpose = function(i,j,pos,delta)
+  hills[i][j].sample_controls.rate[pos] = util.clamp(hills[i][j].sample_controls.rate[pos]+delta,1,#sample_speedlist)
 end
 
 -- 2. REVERSAL
-m.reverse = function(i,j,start_point,end_point)
-	local rev = {}
-	for k = end_point, start_point, -1 do
-		rev[end_point - k + 1] = hills[i][j].note_num.pool[k]
-	end
+m['reverse notes'] = function(i,j,start_point,end_point,focus,sc)
+  local target = sc ~= nil and hills[i][j].sample_controls.rate or hills[i][j].note_num.pool
+  local rev = {}
+  for k = end_point, start_point, -1 do
+    rev[end_point - k + 1] = target[k]
+  end
   for k = start_point, end_point do
     local range = (end_point-start_point)+1
-    hills[i][j].note_num.pool[k] = rev[util.linlin(start_point,end_point,1,range,k)]
+    target[k] = rev[util.linlin(start_point,end_point,1,range,k)]
+    if target == hills[i][j].note_num.pool then
+      hills[i][j].note_num.chord_degree[k] = util.wrap(hills[i][j].note_num.pool[k], 1, 7)
+    end
+  end
+end
+
+m.reverse = function(i,j,start_point,end_point,focus,sc)
+  local target = sc ~= nil and hills[i][j].sample_controls.rate or hills[i][j].note_num.pool
+  local rev = {}
+  for k = end_point, start_point, -1 do
+    rev[end_point - k + 1] = target[k]
+  end
+  for k = start_point, end_point do
+    local range = (end_point-start_point)+1
+    target[k] = rev[util.linlin(start_point,end_point,1,range,k)]
+    if target == hills[i][j].note_num.pool then
+      hills[i][j].note_num.chord_degree[k] = util.wrap(hills[i][j].note_num.pool[k], 1, 7)
+    end
+  end
+end
+
+m['reverse vel'] = function(i,j,start_point,end_point,focus)
+  local target = hills[i][j].note_velocity
+  local rev = {}
+  for k = end_point, start_point, -1 do
+    rev[end_point - k + 1] = target[k]
+  end
+  for k = start_point, end_point do
+    local range = (end_point-start_point)+1
+    target[k] = rev[util.linlin(start_point,end_point,1,range,k)]
   end
 end
 
 -- 3. ROTATION
-m.rotate = function(i,j,start_point,end_point)
+m['rotate notes'] = function(i,j,start_point,end_point,focus,sc)
+  local target = sc ~= nil and hills[i][j].sample_controls.rate or hills[i][j].note_num.pool
   local originals = {}
   for k = start_point,end_point do
-    table.insert(originals,hills[i][j].note_num.pool[k])
+    table.insert(originals,target[k])
   end
   for k = 1,#originals do
-    hills[i][j].note_num.pool[util.wrap(start_point+k,start_point,end_point)] = originals[k]
+    target[util.wrap(start_point+k,start_point,end_point)] = originals[k]
+    if target == hills[i][j].note_num.pool then
+      hills[i][j].note_num.chord_degree[util.wrap(start_point+k,start_point,end_point)] = util.wrap(target[util.wrap(start_point+k,start_point,end_point)], 1, 7)
+    end
+  end
+end
+
+m['rotate track notes'] = function(i,j)
+  local target = track[i][j].focus == 'main' and track[i][j].base_note or track[i][j].fill.base_note
+  local originals = {}
+  local steps_with_trigs
+  for k = track[i][j].start_point, track[i][j].end_point do
+    if track[i][j].trigs[k] then
+      originals[k] = target[k]
+    else
+      originals[k] = 'none'
+    end
+  end
+  tab.print(originals)
+  for k = 1,#originals do
+    if originals[k] ~= 'none' then
+      print(util.wrap(track[i][j].start_point+k, track[i][j].start_point, track[i][j].end_point), originals[k])
+      target[util.wrap(track[i][j].start_point+k, track[i][j].start_point, track[i][j].end_point)] = originals[k]
+    end
+  end
+end
+
+m.rotate = function(i,j,start_point,end_point,focus,sc)
+  local target = sc ~= nil and hills[i][j].sample_controls.rate or hills[i][j].note_num.pool
+  local originals = {}
+  for k = start_point,end_point do
+    table.insert(originals,target[k])
+  end
+  for k = 1,#originals do
+    target[util.wrap(start_point+k,start_point,end_point)] = originals[k]
+    if target == hills[i][j].note_num.pool then
+      hills[i][j].note_num.chord_degree[util.wrap(start_point+k,start_point,end_point)] = util.wrap(target[util.wrap(start_point+k,start_point,end_point)], 1, 7)
+    end
+  end
+end
+
+m['rotate vel'] = function(i,j,start_point,end_point,focus)
+  local target = hills[i][j].note_velocity
+  local originals = {}
+  for k = start_point,end_point do
+    table.insert(originals,target[k])
+  end
+  for k = 1,#originals do
+    target[util.wrap(start_point+k,start_point,end_point)] = originals[k]
   end
 end
 
@@ -97,26 +227,84 @@ m.random_window = function(i,j)
 end
 
 -- 9. SUBSTITUTION -- this should commit!
-m.shuffle = function(i,j,lo,hi)
+m['shuffle notes'] = function(i,j,lo,hi,focus,sc)
+  local target = sc ~= nil and hills[i][j].sample_controls.rate or hills[i][j].note_num.pool
   local shuffled = {}
   for m = lo,hi do
     local pos = math.random(1, #shuffled+1)
-	  table.insert(shuffled, pos, hills[i][j].note_num.pool[m])
+	  table.insert(shuffled, pos, target[m])
   end
   for k,v in pairs(shuffled) do
     -- print(k,v)
-    hills[i][j].note_num.pool[lo-1+k] = v
+    target[lo-1+k] = v
+    if target == hills[i][j].note_num.pool then
+      hills[i][j].note_num.chord_degree[lo-1+k] = util.wrap(target[lo-1+k], 1, 7)
+    end
   end
 end
 
-m["rand fill"] = function(i,j,start_point,end_point)
+m['shuffle vel'] = function(i,j,lo,hi,focus)
+  local target = hills[i][j].note_velocity
+  local shuffled = {}
+  for m = lo,hi do
+    local pos = math.random(1, #shuffled+1)
+	  table.insert(shuffled, pos, target[m])
+  end
+  for k,v in pairs(shuffled) do
+    -- print(k,v)
+    target[lo-1+k] = v
+  end
+end
+
+m["rand fill notes"] = function(i,j,start_point,end_point,focus,sc)
+  if sc == nil then
+    for m = start_point,end_point do
+      hills[i][j].note_num.pool[m] = math.random(1,hills[i][j].note_num.max)
+      hills[i][j].note_num.chord_degree[m] = util.wrap(hills[i][j].note_num.pool[m], 1, 7)
+    end
+  else
+    for m = start_point,end_point do
+      hills[i][j].sample_controls.rate[m] = math.random(1,#sample_speedlist)
+    end
+  end
+end
+
+m["rand vel"] = function(i,j,start_point,end_point,focus)
   for m = start_point,end_point do
-    hills[i][j].note_num.pool[m] = math.random(1,hills[i][j].note_num.max)
+    hills[i][j].note_velocity[m] = math.random(0,127)
   end
 end
 
-m.mute = function(i,j,pos)
+m["rand rate"] = function(i,j,start_point,end_point,focus,sc)
+  if sc == nil then
+    for m = start_point,end_point do
+      hills[i][j].note_num.pool[m] = math.random(1,hills[i][j].note_num.max)
+      hills[i][j].note_num.chord_degree[m] = util.wrap(hills[i][j].note_num.pool[m], 1, 7)
+    end
+  else
+    for m = start_point,end_point do
+      hills[i][j].sample_controls.rate[m] = math.random(1,#sample_speedlist)
+    end
+  end
+end
+
+m["rand loop"] = function(i,j,start_point,end_point,focus,sc)
+  for m = start_point,end_point do
+    local state = math.random(0,1)
+    if state == 1 then
+      hills[i][j].sample_controls.loop[m] = true
+    else
+      hills[i][j].sample_controls.loop[m] = false
+    end
+  end
+end
+
+m['mute step'] = function(i,j,pos)
   hills[i][j].note_num.active[pos] = not hills[i][j].note_num.active[pos]
+end
+
+m.toggle_loop = function(i,j,pos)
+  hills[i][j].sample_controls.loop[pos] = not hills[i][j].sample_controls.loop[pos]
 end
 
 m.offset_timestart = function(i,j,target,delta)
@@ -175,6 +363,64 @@ m.static = function(i,j,start_point,end_point,pos)
   if start_point ~= end_point then
     for k = start_point,e_p do
       hills[i][j].note_num.pool[k] = hills[i][j].note_num.pool[pos]
+      hills[i][j].note_num.chord_degree[k] = util.wrap(hills[i][j].note_num.pool[k], 1, 7)
+    end
+  else
+    print("this is the last note, can't change any more!")
+  end
+end
+
+m['static notes'] = function(i,j,start_point,end_point,pos)
+  local e_p = end_point
+  if e_p == nil then
+    e_p = hills[i][j].high_bound.note
+  end
+  if start_point ~= end_point then
+    for k = start_point,e_p do
+      hills[i][j].note_num.pool[k] = hills[i][j].note_num.pool[pos]
+      hills[i][j].note_num.chord_degree[k] = util.wrap(hills[i][j].note_num.pool[k], 1, 7)
+    end
+  else
+    print("this is the last note, can't change any more!")
+  end
+end
+
+m["static vel"] = function(i,j,start_point,end_point,pos)
+  local e_p = end_point
+  if e_p == nil then
+    e_p = hills[i][j].high_bound.note
+  end
+  if start_point ~= end_point then
+    for k = start_point,e_p do
+      hills[i][j].note_velocity[k] = hills[i][j].note_velocity[pos]
+    end
+  else
+    print("this is the last note, can't change any more!")
+  end
+end
+
+m["static rate"] = function(i,j,start_point,end_point,pos,sc)
+  local e_p = end_point
+  if e_p == nil then
+    e_p = hills[i][j].high_bound.note
+  end
+  if start_point ~= end_point then
+    for k = start_point,e_p do
+      hills[i][j].sample_controls.rate[k] = hills[i][j].sample_controls.rate[pos]
+    end
+  else
+    print("this is the last note, can't change any more!")
+  end
+end
+
+m["static loop"] = function(i,j,start_point,end_point,pos,sc)
+  local e_p = end_point
+  if e_p == nil then
+    e_p = hills[i][j].high_bound.note
+  end
+  if start_point ~= end_point then
+    for k = start_point,e_p do
+      hills[i][j].sample_controls.loop[k] = hills[i][j].sample_controls.loop[pos]
     end
   else
     print("this is the last note, can't change any more!")
@@ -220,46 +466,6 @@ m.quantize = function(i,j,smallest,start_point,end_point)
   end
   m.adjust_timestamps(i,j)
 end
-
--- m.quantize = function(i,j,smallest,start_point,end_point)
---   local s_p = start_point
---   local e_p = end_point
---   if s_p == nil then
---     s_p = hills[i][j].low_bound.note
---   end
---   if e_p == nil then
---     e_p = hills[i][j].high_bound.note
---   end
---   local notes_to_durs =
---   {
---     ["1/4"] = 1
---   , ["1/4d"] = 2/3
---   , ["1/4t"] = 3/2
---   , ["1/8"] = 2
---   , ["1/8d"] = 4/3
---   , ["1/8t"] = 3
---   , ["1/16"] = 4
---   , ["1/16d"] = 8/3
---   , ["1/16t"] = 6
---   , ["1/32"] = 8
---   , ["1/32d"] = 16/3
---   , ["1/32t"] = 12
---   }
---   local quant_val = clock.get_beat_sec()/notes_to_durs[smallest]
---   for k = s_p,e_p do
---     hills[i][j].note_timedelta[k] = util.round(hills[i][j].note_timedelta[k]/quant_val) * quant_val
---   end
---   for k = e_p,s_p,-1 do
---     if hills[i][j].note_timedelta[k] == 0 then
---       print(k)
---       hills[i][j].note_timedelta[k] = quant_val
---     end
---   end
---   if hills[i][j].high_bound.note > #hills[i][j].note_timedelta then
---     hills[i][j].high_bound.note = #hills[i][j].note_timedelta
---   end
---   m.adjust_timestamps(i,j)
--- end
 
 m.clamp_to_steps = function(i,j,count)
   hills[i][j].high_bound.note = hills[i][j].low_bound.note + (count-1)
@@ -334,7 +540,8 @@ m.reseed = function(i,j)
     ["min"] = 1, -- defines the lowest note degree
     ["max"] = 15, -- defines the highest note degree
     ["pool"] = {}, -- gets filled with the constructed hill's notes
-    ["active"] = {} -- tracks whether the note should play
+    ["active"] = {}, -- tracks whether the note should play
+    ["chord_degree"] = {}, -- defines the shell voicing chord degree
   }
   construct(i,j)
 end

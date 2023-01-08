@@ -1,6 +1,5 @@
 local parameters = {}
-
-_mx.dests ={"none","none","none"}
+local frm = require 'formatters'
 
 local vports = {}
 
@@ -10,42 +9,80 @@ local function refresh_params_vports()
   end
 end
 
-local hill_names = {"A","B","C","D","E","F","G","H"}
+local function round_form(param,quant,form)
+  return(util.round(param,quant)..form)
+end
+
+-- local hill_names = {"A","B","C","D","E","F","G","H"}
+-- local hill_names = {
+--   "[1] (bd)",
+--   "[2] (sd)",
+--   "[3] (tm)",
+--   "[4] (cp)",
+--   "[5] (rs)",
+--   "[6] (cb)",
+--   "[7] (hh)",
+--   "[8] (s-1)",
+--   "[9] (s-2)",
+--   "[10] (s-3)"
+-- }
+
+function parameters.change_UI_name(id, new_name)
+  -- print(id,new_name)
+  params.params[params.lookup[id]].name = new_name
+end
+
+function parameters.send_to_engine(voice,param,value)
+  if param == 'carHz' then
+    engine.set_voice_param(voice, param, mu.note_num_to_freq(value))
+    engine.set_voice_param(voice,"carHzThird", mu.note_num_to_freq(value))
+    engine.set_voice_param(voice,"carHzSeventh", mu.note_num_to_freq(value))
+  elseif param == 'poly' then
+    engine.set_voice_param(voice, param, value == 1 and 0 or 1)
+  else
+    engine.set_voice_param(voice, param, value)
+  end
+end
 
 function parameters.init()
-  table.insert(_mx.instrument_list,1,"none")
   refresh_params_vports()
 
-  params:add_separator("hills")
-  params:add_option("global engine","global engine",engine_options,1)
-  params:add_trigger("reload engine","reload engine")
-  params:set_action("reload engine",
-    function()
-      parameters.reload_engine(params:string("global engine"))
-    end
-  )
-  for i = 1,8 do
-    params:add_group(hill_names[i],79)
+  params:add_separator('hills_main_header', 'hills + highways')
+  for i = 1,number_of_hills do
+    params:add_group('hill_'..i..'_group', hill_names[i], 72)
 
-    params:add_separator("note management ["..hill_names[i].."]")
+    params:add_separator('hill_'..i..'_highway_header', 'mode')
+    params:add_option('hill_'..i..'_mode', 'mode', {'hill','highway'}, 1)
+    params:set_action('hill_'..i..'_mode', function(x)
+      if x == 1 then
+        hills[i].highway = false
+      else
+        hills[i].highway = true
+      end
+      screen_dirty = true
+    end)
+    params:add_separator('hill_'..i..'_note_header', "note management "..hill_names[i])
     params:add_option("hill "..i.." scale","scale",scale_names,1)
     params:set_action("hill "..i.." scale",
     function(x)
-      for j = 1,8 do
-        hills[i][j].note_ocean = mu.generate_scale_of_length(params:get("hill "..i.." base note"),x,127)
+      hills[i].note_ocean = mu.generate_scale_of_length(params:get("hill "..i.." base note"),x,127)
+      hills[i].note_intervals = tab.invert(mu.SCALES[x].intervals)
+      track[i].scale.source = mu.generate_scale_of_length(0,x,127)
+      if track[i].scale.index > #track[i].scale.source then
+        track[i].scale.index = 1
       end
     end)
     params:add_number("hill "..i.." base note","base note",0,127,60)
     params:set_action("hill "..i.." base note",
     function(x)
+      hills[i].note_ocean = mu.generate_scale_of_length(x,params:get("hill "..i.." scale"),127)
       for j = 1,8 do
-        hills[i][j].note_ocean = mu.generate_scale_of_length(x,params:get("hill "..i.." scale"),127)
-        if params:get("hill "..i.." span") > #hills[i][j].note_ocean then
-          params:set("hill "..i.." span",#hills[i][j].note_ocean)
+        if params:get("hill "..i.." span") > #hills[i].note_ocean then
+          params:set("hill "..i.." span",#hills[i].note_ocean)
         end
         for k = 1,#hills[i][j].note_num.pool do
-          if hills[i][j].note_num.pool[k] > #hills[i][j].note_ocean then
-            hills[i][j].note_num.pool[k] = #hills[i][j].note_ocean
+          if hills[i][j].note_num.pool[k] > #hills[i].note_ocean then
+            hills[i][j].note_num.pool[k] = #hills[i].note_ocean
           end
         end
       end
@@ -54,10 +91,10 @@ function parameters.init()
     params:set_action("hill "..i.." span",
     function(x)
       for j = 1,8 do
-        if x > #hills[i][j].note_ocean then
-          params:set("hill "..i.." span",#hills[i][j].note_ocean)
+        if x > #hills[i].note_ocean then
+          params:set("hill "..i.." span",#hills[i].note_ocean)
         else
-          hills[i][j].note_num.max = util.clamp(x+1,1,#hills[i][j].note_ocean)
+          hills[i][j].note_num.max = util.clamp(x+1,1,#hills[i].note_ocean)
         end
         for k = 1,#hills[i][j].note_num.pool do
           if hills[i][j].note_num.pool[k] > x+1 then
@@ -86,106 +123,109 @@ function parameters.init()
     )
     params:add_option("hill "..i.." random offset style", "random offset style", {"+ oct","- oct","+/- oct"},1)
     params:add_number("hill "..i.." random offset probability","random offset probability",0,100,0)
+    params:add_option("hill "..i.." accent mult", 'accent multiplier', {'0.125x','0.25x','0.33x','0.5x','0.75x','1.5x','2x','3x','4x','5x','6x','7x','8x','9x','10x'},7)
     params:add_option("hill "..i.." quant value","quant value",{"1/4", "1/4d", "1/4t", "1/8", "1/8d", "1/8t", "1/16", "1/16d", "1/16t", "1/32", "1/32d", "1/32t"},7)
+    params:add_option('hill '..i..' reset at stop', 'reset index @ stop?', {'no','yes'}, 2)
 
-    params:add_separator("PolyPerc management ["..hill_names[i].."]")
-    params:add_text("hill "..i.." pp_state","not selected, no params")
-    params:hide("hill "..i.." pp_state")
-    params:add{type="control",id="hill "..i.." pp_amp",name="amp",controlspec=controlspec.new(0,1,'lin',0,0.25,'')}
-    params:add{type="control",id="hill "..i.." pp_pw",name="pw",controlspec=controlspec.new(0,100,'lin',0,50,'%')}
-    params:add{type="control",id="hill "..i.." pp_release",name="release",controlspec=controlspec.new(0.1,3.2,'lin',0,1.2,'s')}
-    params:add{type="control",id="hill "..i.." pp_cut",name="cutoff",controlspec=controlspec.new(50,12000,'exp',0,800,'hz')}
+    params:add_separator('hill_'..i..'_iso_header', 'isometric keys management')
+    params:add_number('hill_'..i..'_iso_velocity', 'fixed velocity', 0, 127, 70)
+    params:add_number('hill_'..i..'_iso_octave', 'octave', -4, 4, 0)
+    params:add_option('hill_'..i..'_iso_quantize', 'quantize to scale?', {'no','yes'}, 1)
 
-    params:add_separator("MxSamples management ["..hill_names[i].."]")
-    params:add_text("hill "..i.." mx_state","not selected, no params")
-    params:add_option("hill "..i.." mx_voice", "mx.voice",_mx.instrument_list,1)
-    params:set_action("hill "..i.." mx_voice",function(x)
-      _mx.dests[i] = _mx.instrument_list[x]
+    params:add_separator('hill_'..i..'_kildare_header', "Kildare management "..hill_names[i])
+    params:add_option("hill "..i.." kildare_notes","send pitches?",{"no","yes"},params:string('hill_'..i..'_mode') == 'hill' and 2 or 1)
+    params:set_action("hill "..i.." kildare_notes",
+      function(x)
+        if x == 1 then
+          local note_check = params:string('voice_model_'..i) ~= 'sample' and params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+            or params:get('hill '..i..' base note')
+          local note_to_send = mu.note_num_to_freq(note_check)
+          engine.set_voice_param(i,"carHz", note_to_send)
+          engine.set_voice_param(i,"carHzThird", note_to_send)
+          engine.set_voice_param(i,"carHzSeventh", note_to_send)
+          params:hide("hill "..i.." kildare_chords")
+          params:set("hill "..i.." kildare_chords",1)
+        elseif x == 2 then
+          params:show("hill "..i.." kildare_chords")
+        end
+        _menu.rebuild_params()
+      end
+    )
+    params:add_option("hill "..i.." kildare_chords","send chords?",{"no","yes"},1)
+    params:set_action("hill "..i.." kildare_chords",
+      function(x)
+        if x == 1 then
+          local note_check = params:string('voice_model_'..i) ~= 'sample' and params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+            or params:get('hill '..i..' base note')
+          local return_to = mu.note_num_to_freq(note_check)
+          engine.set_voice_param(i,"carHzThird", return_to)
+          engine.set_voice_param(i,"carHzSeventh", return_to)
+        end
+      end
+    )
+
+    params:add_separator('hill_'..i..'_sample_header', "sample management "..hill_names[i])
+    params:add_option("hill "..i.." sample output","sample output?",{"no","yes"},1)
+    params:set_action("hill "..i.." sample output",
+      function(x)
+        if x == 1 then
+          params:hide("hill "..i.." sample slot")
+          params:hide("hill "..i.." sample slice count")
+          params:hide("hill "..i.." sample distribution")
+          params:hide("hill "..i.." sample probability")
+          params:hide("hill "..i.." sample repitch")
+          params:hide("hill "..i.." sample momentary")
+          _menu.rebuild_params()
+        elseif x == 2 then
+          if i <= 7 then
+            params:show("hill "..i.." sample slot")
+          end
+          -- if params:string('sample'..params:string('hill '..i..' sample slot')..'_sampleMode') == 'distribute' then
+          --   params:show("hill "..i.." sample distribution")
+          --   params:hide("hill "..i.." sample slice count")
+          -- elseif params:string('sample'..params:string('hill '..i..' sample slot')..'_sampleMode') == 'chop' then
+          --   params:hide("hill "..i.." sample distribution")
+          --   params:show("hill "..i.." sample slice count")
+          -- else
+          --   params:hide("hill "..i.." sample distribution")
+          --   params:hide("hill "..i.." sample slice count")
+          -- end
+          params:show("hill "..i.." sample probability")
+          params:show("hill "..i.." sample repitch")
+          params:show("hill "..i.." sample momentary")
+          _menu.rebuild_params()
+        end
+      end
+    )
+    params:add_number("hill "..i.." sample slot", "sample slot",1,3,1)
+    params:set_action("hill "..i.." sample slot", function(x)
+      -- if params:string('sample'..x..'_sampleMode') == 'distribute' then
+      --   params:show("hill "..i.." sample distribution")
+      --   params:hide("hill "..i.." sample slice count")
+      -- elseif params:string('sample'..x..'_sampleMode') == 'chop' then
+      --   params:hide("hill "..i.." sample distribution")
+      --   params:show("hill "..i.." sample slice count")
+      -- else
+      --   params:hide("hill "..i.." sample distribution")
+      --   params:hide("hill "..i.." sample slice count")
+      -- end
+      _menu.rebuild_params() 
     end)
-    params:add{type="number",id="hill "..i.." mx_velocity",name="mx.velocity",min=0,max=127,default=80}
-    params:add{type='control',id="hill "..i.." mx_amp",name="mx.amp",controlspec=controlspec.new(0,2,'lin',0.01,0.5,'amp',0.01/2)}
-    params:add{type="control",id="hill "..i.." mx_pan",name="mx.pan",controlspec=controlspec.new(-1,1,'lin',0,0)}
-    params:add{type='control',id="hill "..i.." mx_attack",name="mx.attack",controlspec=controlspec.new(0,10,'lin',0,0,'s')}
-    params:add{type='control',id="hill "..i.." mx_release",name="mx.release",controlspec=controlspec.new(0,10,'lin',0,2,'s')}
-    params:hide("hill "..i.." mx_voice")
-    params:hide("hill "..i.." mx_velocity")
-    params:hide("hill "..i.." mx_amp")
-    params:hide("hill "..i.." mx_pan")
-    params:hide("hill "..i.." mx_attack")
-    params:hide("hill "..i.." mx_release")
+    if i > 7 then
+      params:hide("hill "..i.." sample slot")
+      _menu.rebuild_params() 
+    end
+    params:add_number("hill "..i.." sample slice count", "slice count",2,48,16)
+    params:add_number("hill "..i.." sample distribution", "total distribution",0,100,100, 
+      function(param)
+        return(util.round(sample_info['sample'..params:get('hill '..i..' sample slot')].sample_count * (param:get()/100))..'/'..sample_info['sample'..params:get('hill '..i..' sample slot')].sample_count)
+      end
+    )   
+    params:add_number("hill "..i.." sample probability", "playback probability",0,100,100, function(param) return(param:get().."%") end)
+    params:add_option("hill "..i.." sample repitch", "send pitches?",{"no","yes"},1)
+    params:add_option("hill "..i.." sample momentary", "stop when released?", {"no","yes"},1)
 
-    params:add_separator("Thebangs management ["..hill_names[i].."]")
-    params:add_text("hill "..i.." thebangs_state","not selected, no params")
-    params:add{type="option",id="hill "..i.." thebangs_algo",name="algo",options={"square", "square_mod1", "square_mod2","sinfmlp", "sinfb","reznoise"},1}
-    params:set_action("hill "..i.." thebangs_algo",
-      function(x)
-        if engine.name == "Thebangs" then
-          engine.algoIndex(x)
-        end
-      end
-    )
-    params:add{type="control",id="hill "..i.." thebangs_pw",name="pw",controlspec=controlspec.new(0,100,'lin',0,50,'%')}
-    params:set_action("hill "..i.." thebangs_pw",
-      function(x)
-        if engine.name == "Thebangs" then
-          engine.pw(x/100)
-        end
-      end
-    )
-    params:add{type="control",id="hill "..i.." thebangs_attack",name="attack",controlspec=controlspec.new(0.0001, 1, 'exp', 0, 0.01, '')}
-    params:set_action("hill "..i.." thebangs_attack",
-      function(x)
-        if engine.name == "Thebangs" then
-          engine.attack(x)
-        end
-      end
-    )
-    params:add{type="control",id="hill "..i.." thebangs_release",name="release",controlspec=controlspec.new(0.1,3.2,'lin',0,1.2,'s')}
-    params:set_action("hill "..i.." thebangs_release",
-      function(x)
-        if engine.name == "Thebangs" then
-          engine.release(x)
-        end
-      end
-    )
-    params:add{type="control",id="hill "..i.." thebangs_cut",name="cutoff",controlspec=controlspec.new(50,19000,'exp',0,12000,'hz')}
-    params:set_action("hill "..i.." thebangs_cut",
-      function(x)
-        if engine.name == "Thebangs" then
-          engine.cutoff(x)
-        end
-      end
-    )
-    params:add{type="control",id="hill "..i.." thebangs_amp",name="amp",controlspec=controlspec.new(0,1,'lin',0,0.25,'')}
-    params:set_action("hill "..i.." thebangs_amp",
-      function(x)
-        if engine.name == "Thebangs" then
-          engine.amp(x)
-        end
-      end
-    )
-    params:add{type="control",id="hill "..i.." thebangs_pan",name="pan",controlspec=controlspec.new(-1,1,'lin',0,0,'')}
-    params:set_action("hill "..i.." thebangs_pan",
-      function(x)
-        if engine.name == "Thebangs" then
-          engine.pan(x)
-        end
-      end
-    )
-    params:hide("hill "..i.." thebangs_algo")
-    params:hide("hill "..i.." thebangs_pw")
-    params:hide("hill "..i.." thebangs_attack")
-    params:hide("hill "..i.." thebangs_release")
-    params:hide("hill "..i.." thebangs_cut")
-    params:hide("hill "..i.." thebangs_amp")
-    params:hide("hill "..i.." thebangs_pan")
-
-    params:add_separator("Kildare management ["..hill_names[i].."]")
-    params:add_text("hill "..i.." kildare_state","not selected, no params")
-    params:add_option("hill "..i.." kildare_notes","send MIDI pitches?",{"no","yes"},1)
-    params:hide("hill "..i.." kildare_notes")
-
-    params:add_separator("MIDI management ["..hill_names[i].."]")
+    params:add_separator('hill_'..i..'_MIDI_header', "MIDI management "..hill_names[i])
     params:add_option("hill "..i.." MIDI output", "MIDI output?",{"no","yes"},1)
     params:set_action("hill "..i.." MIDI output",
       function(x)
@@ -238,7 +278,7 @@ function parameters.init()
       params:hide("hill ["..i.."]["..j.."] population")
     end
 
-    params:add_separator("crow management ["..hill_names[i].."]")
+    params:add_separator('hill_'..i..'_crow_header', "crow management "..hill_names[i])
     params:add_option("hill "..i.." crow output", "crow output?",{"no","yes"},1)
     params:set_action("hill "..i.." crow output",
       function(x)
@@ -317,7 +357,7 @@ function parameters.init()
     params:hide("hill "..i.." crow osc level")
     params:hide("hill "..i.." crow osc decay")
 
-    params:add_separator("JF management ["..hill_names[i].."]")
+    params:add_separator('hill_'..i..'_JF_header', "JF management "..hill_names[i])
     params:add_option("hill "..i.." JF output", "JF output?",{"no","yes"},1)
     params:set_action("hill "..i.." JF output",
       function(x)
@@ -337,206 +377,218 @@ function parameters.init()
     params:hide("hill "..i.." JF output style")
     params:hide("hill "..i.." JF output id")
   end
-  params:add_group("MULTI",25)
-  params:add_separator("note management")
-  params:add_option("multi scale","scale",scale_names,1)
-  params:add_number("multi base note","base note",0,127,60)
-  params:add_number("multi span","note degree span",1,127,14)
-  params:add_trigger("multi octave up","base octave up")
-  params:set_action("multi octave up",
-    function()
-      local current_note = params:get("multi base note")
-      if current_note + 12 <= 127 then
-        params:set("multi base note", current_note + 12)
-      end
+
+  params:add_separator('hills_pattern_header', 'pattern + snapshot settings')
+  
+  params:add_group('global_pattern_group', 'global', 25)
+  params:add_separator('global_transport_settings','transport')
+  params:add_option('global_transport_mode', 'start mode', {'highways','song'}, 1)
+  params:add_separator('global_pattern_settings','patterns')
+  params:add_option('global_pattern_start_rec_at', 'start rec at', {'first event','when engaged'}, 1)
+  params:set_action('global_pattern_start_rec_at', function(x)
+    for i = 1,16 do
+      params:set('pattern_'..i..'_start_rec_at',x)
     end
-  )
-  params:add_trigger("multi octave down","base octave down")
-  params:set_action("multi octave down",
-    function()
-      local current_note = params:get("multi base note")
-      if current_note - 12 >= 0 then
-        params:set("multi base note", current_note - 12)
-      end
+  end)
+  params:add_option('global_pattern_snapshot_mod_capture', 'capture snapshot mods', {'no','yes'}, 1)
+  params:set_action('global_pattern_snapshot_mod_capture', function(x)
+    for i = 1,16 do
+      params:set('pattern_'..i..'_snapshot_mod_restore',x)
     end
-  )
-  params:add_option("multi random offset style", "random offset style", {"+ oct","- oct","+/- oct"},1)
-  params:add_number("multi random offset probability","random offset probability",0,100,0)
-  params:add_option("multi quant value","quant value",{"1/4", "1/4d", "1/4t", "1/8", "1/8d", "1/8t", "1/16", "1/16d", "1/16t", "1/32", "1/32d", "1/32t"},7)
-  params:add_trigger("send multi note management","send to multiple (see below)")
-  params:set_action("send multi note management",
-    function()
-      for i = 1,8 do
-        if params:string("send to "..i) == "yes" then
-          params:set("hill "..i.." scale",params:get("multi scale"))
-          params:set("hill "..i.." base note",params:get("multi base note"))
-          params:set("hill "..i.." span",params:get("multi span"))
-          params:set("hill "..i.." random offset style",params:get("multi random offset style"))
-          params:set("hill "..i.." random offset probability",params:get("multi random offset probability"))
-          params:set("hill "..i.." quant value",params:get("multi quant value"))
-        end
-      end
+  end)
+  params:add_option('global_pattern_parameter_change_capture', 'capture param changes', {'no','yes'}, 1)
+  params:set_action('global_pattern_parameter_change_capture', function(x)
+    for i = 1,16 do
+      params:set('pattern_'..i..'_parameter_change_restore',x)
     end
-  )
-  params:add_separator("MIDI management")
-  params:add_option("multi MIDI output", "MIDI output?",{"no","yes"},1)
-  params:set_action("multi MIDI output",
-    function(x)
+  end)
+
+  params:add_separator('global_snapshot_settings','snapshot mods')
+  local default_times = {0.1,0.5,1.2,2.0,4.5,10}
+  for i = 1,6 do
+    params:add_option('global_snapshot_mod_mode_'..i, i..': mode', {'free','clocked'})
+    params:set_action('global_snapshot_mod_mode_'..i, function(x)
       if x == 1 then
-        params:hide("multi MIDI device")
-        params:hide("multi MIDI note channel")
-        params:hide("multi MIDI device")
-        params:hide("multi velocity")
-        _menu.rebuild_params()
-      elseif x == 2 then
-        params:show("multi MIDI device")
-        params:show("multi MIDI note channel")
-        params:show("multi MIDI device")
-        params:show("multi velocity")
-        _menu.rebuild_params()
+        params:show('global_snapshot_mod_time_'..i)
+        params:hide('global_snapshot_mod_beats_'..i)
+      else
+        params:hide('global_snapshot_mod_time_'..i)
+        params:show('global_snapshot_mod_beats_'..i)
       end
-    end
-  )
-  params:add_option("multi MIDI device", "device",vports,1)
-  params:add_number("multi MIDI note channel","note channel",1,16,1)
-  params:add_number("multi velocity","velocity",0,127,60)
-  params:add_trigger("send multi MIDI management","send to multiple (see below)")
-  params:set_action("send multi MIDI management",
-    function()
-      for i = 1,8 do
-        if params:string("send to "..i) == "yes" then
-          params:set("hill "..i.." MIDI output",params:get("multi MIDI output"))
-          params:set("hill "..i.." MIDI device",params:get("multi MIDI device"))
-          params:set("hill "..i.." MIDI note channel",params:get("multi MIDI note channel"))
-          params:set("hill "..i.." velocity",params:get("multi velocity"))
-        end
-      end
-    end
-  )
-  params:add_separator("send to...")
-  for i = 1,8 do
-    params:add_option("send to "..i,hill_names[i],{"no","yes"},1)
-  end
-  _menu.rebuild_params()
-  clock.run(function() clock.sleep(1) params:bang() end)
-end
-
-function parameters.reload_engine(id,silent)
-  if id ~= "PolyPerc" then
-    for i = 1,8 do
-      params:hide("hill "..i.." pp_amp")
-      params:hide("hill "..i.." pp_pw")
-      params:hide("hill "..i.." pp_release")
-      params:hide("hill "..i.." pp_cut")
-      params:show("hill "..i.." pp_state")
-    end
-  end
-  if id == "PolyPerc" then
-    for i = 1,8 do
-      params:show("hill "..i.." pp_amp")
-      params:show("hill "..i.." pp_pw")
-      params:show("hill "..i.." pp_release")
-      params:show("hill "..i.." pp_cut")
-      params:hide("hill "..i.." pp_state")
-    end
-  end
-  if id ~= "MxSamples" then
-    for i = 1,8 do
-      params:hide("hill "..i.." mx_voice")
-      params:hide("hill "..i.." mx_velocity")
-      params:hide("hill "..i.." mx_amp")
-      params:hide("hill "..i.." mx_pan")
-      params:hide("hill "..i.." mx_attack")
-      params:hide("hill "..i.." mx_release")
-      params:show("hill "..i.." mx_state")
-    end
-  end
-  if id == "MxSamples" then
-    for i = 1,8 do
-      params:show("hill "..i.." mx_voice")
-      params:show("hill "..i.." mx_velocity")
-      params:show("hill "..i.." mx_amp")
-      params:show("hill "..i.." mx_pan")
-      params:show("hill "..i.." mx_attack")
-      params:show("hill "..i.." mx_release")
-      params:hide("hill "..i.." mx_state")
-    end
-  end
-  if id ~= "Thebangs" then
-    for i = 1,8 do
-      params:hide("hill "..i.." thebangs_algo")
-      params:hide("hill "..i.." thebangs_pw")
-      params:hide("hill "..i.." thebangs_attack")
-      params:hide("hill "..i.." thebangs_release")
-      params:hide("hill "..i.." thebangs_cut")
-      params:hide("hill "..i.." thebangs_amp")
-      params:hide("hill "..i.." thebangs_pan")
-      params:show("hill "..i.." thebangs_state")
-    end
-  end
-  if id == "Thebangs" then
-    for i = 1,8 do
-      params:show("hill "..i.." thebangs_algo")
-      params:show("hill "..i.." thebangs_pw")
-      params:show("hill "..i.." thebangs_attack")
-      params:show("hill "..i.." thebangs_release")
-      params:show("hill "..i.." thebangs_cut")
-      params:show("hill "..i.." thebangs_amp")
-      params:show("hill "..i.." thebangs_pan")
-      params:hide("hill "..i.." thebangs_state")
-    end
-  end
-
-  if id ~= "Kildare" then
-    if kildare and kildare_loaded then
-      local drums = {"bd","sd","tm","cp","rs","cb","hh"}
-      for j = 1,#drums do
-        local k = drums[j]
-        params:hide(k)
-      end
-      for i = 1,8 do
-        params:show("hill "..i.." kildare_state")
-        params:hide("hill "..i.." kildare_notes")
-      end
-      params:hide("lfos")
-    end
-  elseif id == "Kildare" then
-    params:hide("no_kildare")
-    local drums = {"bd","sd","tm","cp","rs","cb","hh"}
-    for j = 1,#drums do
-      local k = drums[j]
-      params:show(k)
-    end
-    for i = 1,8 do
-      params:hide("hill "..i.." kildare_state")
-      params:show("hill "..i.." kildare_notes")
-    end
-    params:show("lfos")
-  end
-
-  print("selected engine: "..id)
-
-  if not silent then
-    local was_playing = {0,0,0,0,0,0,0,0}
-    clock.run(
-      function()
-        for i = 1,8 do
-          if hills[i].active then
-            stop(i,true)
-            was_playing[i] = hills[i].segment
-          end
-        end
-        clock.sleep(0.25)
-        engine.load(params:string("global engine"))
-        clock.sleep(1)
-        for i = 1,8 do
-          if was_playing[i]~= 0 then
-            _a.start(i,was_playing[i],true)
-          end
-        end
-      end
+      _menu.rebuild_params()
+    end)
+    params:add_control(
+      'global_snapshot_mod_time_'..i,
+      '  duration',
+      controlspec.new(0.1,300,'exp',0.01,default_times[i],'sec',0.01)
+    )
+    params:add_number(
+      'global_snapshot_mod_beats_'..i,
+      '  duration',
+      1,
+      64,
+      i,
+      function(param) return (param:get().." beats") end
     )
   end
+
+  params:add_group('snapshot_crossfade_settings', 'snapshot crossfaders', (4*number_of_hills) + (14*number_of_hills))
+
+  local function spec_format(param, value, units)
+    return value.." "..(units or param.controlspec.units or "")
+  end
+
+  function crossfade_widget(param)
+    local dots_per_side = 8
+    local widget
+    local function add_dots(num_dots)
+      for i=1,num_dots do widget = (widget or "").."." end
+    end
+    local function add_bar()
+      widget = (widget or "").."|"
+    end
+  
+    local value = param:get()
+    local pan_side = math.abs(value)
+    local pan_side_percentage = util.round(pan_side*100)
+    local descr
+    local dots_left
+    local dots_right
+  
+    if value > 0 then
+      dots_left = dots_per_side+util.round(pan_side*dots_per_side)
+      dots_right = util.round((1-pan_side)*dots_per_side)
+      if pan_side_percentage >= 1 then
+        descr = "R"..pan_side_percentage
+      end
+    elseif value < 0 then
+      dots_left = util.round((1-pan_side)*dots_per_side)
+      dots_right = dots_per_side+util.round(pan_side*dots_per_side)
+      if pan_side_percentage >= 1 then
+       descr = "L"..pan_side_percentage
+      end
+    else
+      dots_left = dots_per_side
+      dots_right = dots_per_side
+    end
+  
+    if descr == nil then
+      descr = "C"
+    end
+  
+    add_bar()
+    add_dots(dots_left)
+    add_bar()
+    add_dots(dots_right)
+    add_bar()
+  
+    return spec_format(param, descr.." "..widget, "")
+  end
+
+  local function lfo_params_visibility(state, i)
+    params[state](params, "lfo_baseline_"..i)
+    params[state](params, "lfo_offset_"..i)
+    params[state](params, "lfo_depth_"..i)
+    params:hide("lfo_scaled_"..i)
+    params:hide("lfo_raw_"..i)
+    params[state](params, "lfo_mode_"..i)
+    if state == "show" then
+      if params:get("lfo_mode_"..i) == 1 then
+        params:hide("lfo_free_"..i)
+        params:show("lfo_clocked_"..i)
+      elseif params:get("lfo_mode_"..i) == 2 then
+        params:hide("lfo_clocked_"..i)
+        params:show("lfo_free_"..i)
+      end
+    else
+      params:hide("lfo_clocked_"..i)
+      params:hide("lfo_free_"..i)
+    end
+    params[state](params, "lfo_shape_"..i)
+    params[state](params, "lfo_min_"..i)
+    params[state](params, "lfo_max_"..i)
+    params[state](params, "lfo_reset_"..i)
+    params[state](params, "lfo_reset_target_"..i)
+    _menu.rebuild_params()
+  end
+
+  local function lfo_bang(i)
+    local function lb(prm)
+      params:lookup_param("lfo_"..prm.."_"..i):bang()
+    end
+    lb('depth')
+    lb('min')
+    lb('max')
+    lb('baseline')
+    lb('offset')
+    lb('mode')
+    lb('clocked')
+    lb('free')
+    lb('shape')
+    lb('reset')
+    lb('reset_target')
+  end
+
+  for i = 1,number_of_hills do
+    params:add_separator('snapshot_crossfade_header_'..i, 'crossfader '..hill_names[i])
+    params:add_number('snapshot_crossfade_left_'..i, 'left snapshot',1,16,1)
+    params:add_number('snapshot_crossfade_right_'..i, 'right snapshot',1,16,1)
+    params:add_control('snapshot_crossfade_value_'..i, 'crossfade', controlspec.PAN, crossfade_widget)
+    params:set('snapshot_crossfade_value_'..i,-1)
+    params:set_action('snapshot_crossfade_value_'..i,function(x)
+      _snapshots.crossfade(i,params:get('snapshot_crossfade_left_'..i), params:get('snapshot_crossfade_right_'..i), x)
+    end)
+    snapshot_lfos[i] = _lfo:add{
+      min = -1,
+      max = 1,
+      action = function(s,r) params:set('snapshot_crossfade_value_'..i,s) end,
+      ppqn = 32
+    }
+
+    snapshot_lfos[i]:add_params('snapshot_'..i)
+    parameters.change_UI_name('lfo_snapshot_'..i,'lfo')
+    params.params[params.lookup['lfo_min_snapshot_'..i]].formatter = crossfade_widget
+    params.params[params.lookup['lfo_max_snapshot_'..i]].formatter = crossfade_widget
+    params:set_action("lfo_snapshot_"..i,function(x)
+      if x == 1 then
+        lfo_params_visibility("hide", 'snapshot_'..i)
+        params:set("lfo_scaled_snapshot_"..i,"")
+        params:set("lfo_raw_snapshot_"..i,"")
+        snapshot_lfos[i]:stop()
+      elseif x == 2 then
+        lfo_params_visibility("show", 'snapshot_'..i)
+        snapshot_lfos[i]:start()
+      end
+      snapshot_lfos[i]:set('enabled',x-1)
+      lfo_bang('snapshot_'..i)
+    end)
+    
+  end
+
+  for i = 1,16 do
+    params:add_group('pattern_group_'..i, 'pattern '..i, (1 + 15) + (1 + 3))
+    params:add_separator('pattern_'..i..'_options', 'general')
+    params:add_option('pattern_'..i..'_start_rec_at', 'start rec at', {'first event','when engaged'}, 1)
+    params:add_option('pattern_'..i..'_snapshot_mod_restore', 'capture snapshot mods', {'no','yes'}, 1)
+    params:add_option('pattern_'..i..'_parameter_change_restore', 'capture param changes', {'no','yes'}, 1)
+    params:add_separator('pattern_'..i..'_links_header', 'links')
+    for j = 1,16 do
+      if i ~= j then
+        params:add_option('pattern_'..i..'_link_'..j, i..' -> '..j,{'no','yes'},1)
+        params:set_action('pattern_'..i..'_link_'..j, function(x)
+          if x == 1 then
+            pattern_links[i][j] = false
+          else
+            pattern_links[i][j] = true
+          end
+          grid_dirty = true
+        end)
+      end
+    end
+  end
+
+  _menu.rebuild_params()
+  clock.run(function() clock.sleep(1) params:bang() all_loaded = true end)
 end
 
 return parameters
