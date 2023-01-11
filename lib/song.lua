@@ -66,7 +66,7 @@ song.check_step = function(i)
             track[k].active_hill = shot - 16
             _htracks.start_playback(k)
             if k == 1 then
-              print(clock.get_beats())
+              print('check step: '..clock.get_beats())
             end
           end
         end

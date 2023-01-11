@@ -3,6 +3,8 @@ local key_actions = {}
 function key_actions.parse(n,z)
   if ui.control_set == 'step parameters' then
     _fkprm.key(n,z)
+  elseif ui.control_set == 'poly parameters' then
+    _polyparams.key(n,z)
   else
     if z == 1 then
       local s_c = ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]

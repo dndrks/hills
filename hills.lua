@@ -35,7 +35,7 @@ pre_step_page = 'play'
 aubiodone=function(args)
   local id=tonumber(args[1])
   local data_s=args[2]
-  print(id,data_s)
+  print('aubiodone',id,data_s)
 end
 
 osc_fun={
@@ -75,7 +75,7 @@ osc.event=function(path,args,from)
   if string.sub(path,1,1)=="/" then
     path=string.sub(path,2)
   end
-  print(path)
+  print('osc path: '..path)
   if osc_fun[path]~= 'progressbar' or 'aubiodone' then
     osc_fun[path](args)
   end
@@ -95,6 +95,7 @@ _song = include 'lib/song'
 _ca = include 'lib/clip'
 _snapshots = include 'lib/snapshot'
 _fkprm = include 'lib/fkprm'
+_polyparams = include 'lib/polyparams'
 _hsteps = include 'lib/highway_steps'
 _htracks = include 'lib/highway_tracks'
 mu = require 'musicutil'
@@ -193,6 +194,7 @@ function init()
   
   prms.init()
   _fkprm.init()
+  _polyparams.init()
   -- prms.reload_engine(params:string("global engine"),true)
   
   for i = 1,number_of_hills do
@@ -320,11 +322,12 @@ function init()
 
   params.action_read = function(filename,name,number)
     print("loading hills data for PSET: "..number)
+    local this_filepath = _path.data..'hills/'..number..'/'
     for i = 1,number_of_hills do
       if hills[i].active then
         stop(i,true)
       end
-      hills[i] = tab.load(_path.data.."hills/"..number.."/data/"..i..".txt")
+      hills[i] = tab.load(this_filepath.."data/"..i..".txt")
       -- // TODO: this is temporary for luck dragon performance loading...
       -- shouldn't be needed for release.
       if hills[i].iter_pulses == nil then
@@ -353,22 +356,28 @@ function init()
       if grid_pattern[j].play == 1 then
         _g.stop_pattern_playback(j)
       end
-      local to_inherit = tab.load(_path.data.."hills/"..number.."/patterns/"..j..".txt")
+      local to_inherit = tab.load(this_filepath.."patterns/"..j..".txt")
       local inheritances = {'end_point', 'count', 'event', 'loop'}
       for adj = 1, #inheritances do
         grid_pattern[j][inheritances[adj]] = to_inherit[inheritances[adj]]
       end
     end
     for j = 1,#song_atoms do
-      song_atoms[j] = tab.load(_path.data.."hills/"..number.."/song/"..j..".txt")
+      song_atoms[j] = tab.load(this_filepath.."song/"..j..".txt")
     end
-    snapshots = tab.load(_path.data.."hills/"..number.."/snapshots/all.txt")
-    snapshot_overwrite = tab.load(_path.data.."hills/"..number.."/snapshots/overwrite_state.txt")
-    if util.file_exists(_path.data.."hills/"..number.."/per-step/_fkprm.txt") then
-      _fkprm.adjusted_params = tab.load(_path.data.."hills/"..number.."/per-step/_fkprm.txt")
+    snapshots = tab.load(this_filepath.."snapshots/all.txt")
+    snapshot_overwrite = tab.load(this_filepath.."snapshots/overwrite_state.txt")
+    if util.file_exists(this_filepath.."per-step/_fkprm.txt") then
+      _fkprm.adjusted_params = tab.load(this_filepath.."per-step/_fkprm.txt")
     end
     -- params:bang() -- TODO VERIFY IF THIS IS OKAY TO LEAVE OUT
     grid_dirty = true
+    print('loading pset!'..this_filepath)
+    if util.file_exists(this_filepath.."poly-params.txt") then
+      print('loading poly params!')
+      kildare.queued_read_file = this_filepath.."poly-params.txt"
+      engine.load_poly_params(this_filepath.."poly-params.txt")
+    end
   end
 
   local function params_write_silent(filename,name)
@@ -409,6 +418,8 @@ function init()
     tab.save(snapshot_overwrite, _path.data.."hills/"..number.."/snapshots/overwrite_state.txt")
     tab.save(_fkprm.adjusted_params, _path.data.."hills/"..number.."/per-step/_fkprm.txt")
     params_write_silent(filename,name)
+    os.execute('touch '.._path.data..'hills/'..number..'/poly-params.txt')
+    engine.save_poly_params(_path.data..'hills/'..number..'/poly-params.txt')
   end
 
   params.action_delete = function(filename, name, pset_number)
@@ -488,8 +499,13 @@ function init()
   print('wrapped with startup: '..util.time())
   clock.run(
     function()
-      clock.sleep(0.5)
+      clock.sleep(1)
       development_state()
+      if kildare.queued_read_file ~= nil then
+        print('queud read')
+        engine.load_poly_params(kildare.queued_read_file)
+        kildare.queued_read_file = nil
+      end
       print('dev state: '..util.time())
     end
   )
@@ -542,7 +558,7 @@ reconstruct = function(i,j,new_shape)
   local change = endVal - beginVal
   local duration = endVal - beginVal
   for k = seg.low_bound.note,seg.high_bound.note do
-    print(curves[new_shape](seg.note_timestamp[k],beginVal,change,duration))
+    print('reconstructing curves '..curves[new_shape](seg.note_timestamp[k],beginVal,change,duration))
     local new_timestamp = curves[new_shape](seg.note_timestamp[k],beginVal,change,duration)
     seg.note_timestamp[k] = new_timestamp
   end
@@ -867,12 +883,10 @@ end
 force_note = function(i,j,played_note)
   local vel_target = params:get('hill_'..i..'_iso_velocity')
   local retrig_index = 0
-
+  kildare.allocVoice[i] = util.wrap(kildare.allocVoice[i]+1, 1, params:get(i..'_poly_voice_count'))
   if params:string('voice_model_'..i) ~= 'sample' then
-    engine.trig(i,vel_target,'false')
+    engine.trig(i,vel_target,'false',kildare.allocVoice[i])
     engine.set_voice_param(i,"carHz",midi_to_hz(played_note))
-    engine.set_voice_param(i,"carHzThird",midi_to_hz(played_note))
-    engine.set_voice_param(i,"carHzSeventh",midi_to_hz(played_note))
     -- play_linked_sample(i, j, played_note, vel_target, retrig_index)
   else
     play_linked_sample(i, j, played_note, vel_target, retrig_index, true)

@@ -5,12 +5,20 @@ local m = {
   groupid = 0,
   alt = false,
   voice_focus = 1,
-  hill_focus = 1,
-  step_focus = 1,
+  allocVoice = 1,
   alt_menu_focus = 1,
 }
 
 local page
+
+local function build_sub(sub)
+  page = {}
+  for i = 1,params:get(sub) do
+    if params:visible(i + sub) then
+      page[#page+1] = i+sub
+    end
+  end
+end
 
 -- called from menu on script reset
 m.reset = function()
@@ -22,21 +30,19 @@ end
 m.flip_to_fkprm = function(prev_page, locked_entry)
   if ui.menu_focus == 1 or ui.menu_focus == 3 then
     m.voice_focus = ui.hill_focus
-    m.hill_focus = hills[ui.hill_focus].screen_focus
-    if hills[ui.hill_focus].highway then
-      if not locked_entry then
-        m.step_focus = track[m.voice_focus][m.hill_focus].ui_position
-      end
-    else
-      m.step_focus = ui.screen_controls[m.voice_focus][m.hill_focus][ui.menu_focus == 1 and 'hills' or 'notes'].focus
-    end
   end
   pre_step_page = prev_page
-  ui.control_set = 'step parameters'
+  ui.control_set = 'poly parameters'
+  build_sub(params.lookup['kildare_'..m.voice_focus..'_group'])
+  m.group = true
+  m.groupid = params.lookup['kildare_'..m.voice_focus..'_group']
+  m.groupname = params:string(params.lookup['kildare_'..m.voice_focus..'_group'])
+  m.oldpos = m.pos
+  m.pos = 0
 end
 
 m.flip_from_fkprm = function()
-  if pre_step_page ~= 'step parameters' then
+  if pre_step_page ~= 'poly parameters' then
     ui.control_set = pre_step_page
   else
     ui.control_set = 'edit'
@@ -61,15 +67,6 @@ local function build_page()
   until i == params.lookup['hills_main_header']
 end
 
-local function build_sub(sub)
-  page = {}
-  for i = 1,params:get(sub) do
-    if params:visible(i + sub) then
-      page[#page+1] = i+sub
-    end
-  end
-end
-
 m.key = function(n,z)
   if n==1 and z==1 then
     key1_hold = true
@@ -90,7 +87,7 @@ m.key = function(n,z)
       key2_hold = false
     end
   elseif n==3 and z==1 and key1_hold then
-    m:force(page[m.pos+1], m.voice_focus, m.hill_focus, m.step_focus)
+    m:force(page[m.pos+1], m.voice_focus, m.allocVoice)
   elseif n==3 and z==1 then
     if t == params.tGROUP then
       build_sub(i)
@@ -129,20 +126,16 @@ m.enc = function(n,d)
       if params:lookup_param(page[m.pos+1]).t == 3 then
         local dx = m.fine and (d/20) or d
         if grid_data_entry then
-          m:delta_many(page[m.pos+1], dx, m.voice_focus, m.hill_focus)
+          m:delta_many(page[m.pos+1], dx, m.voice_focus, m.allocVoice)
         else
-          m:delta(page[m.pos+1], dx, m.voice_focus, m.hill_focus, m.step_focus)
+          m:delta(page[m.pos+1], dx, m.voice_focus, m.allocVoice)
         end
         m.redraw()
       end
     elseif n == 1 then
       local i = m.voice_focus
       local j = m.hill_focus
-      if hills[i].highway then
-        m.step_focus = util.clamp(m.step_focus+d,1,128)
-      else
-        m.step_focus = util.clamp(m.step_focus+d,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
-      end
+      m.allocVoice = util.clamp(m.allocVoice+d,1,params:get(i..'_poly_voice_count'))
     end
   else
     if n == 2 then
@@ -181,102 +174,57 @@ m.enc = function(n,d)
   end
 end
 
-local function build_check(target_trig,voice,hill,step)
+local function build_check(target_trig,voice,alloc)
   if target_trig[voice] == nil then
     target_trig[voice] = {
-      [hill] = {
-        [step] = {
-          ['params'] = {},
-          ['ids_idx'] = {},
-        }
+      [alloc] = {
+        ['params'] = {}
       }
     }
-  elseif target_trig[voice][hill] == nil then
-    target_trig[voice][hill] = {
-      
-      [step] = {
-        ['params'] = {},
-        ['ids_idx'] = {},
-      }
-    }
-  elseif target_trig[voice][hill][step] == nil then
-    target_trig[voice][hill][step] = {
+  elseif target_trig[voice][alloc] == nil then
+    target_trig[voice][alloc] = {
       ['params'] = {},
-      ['ids_idx'] = {},
     }
   end
 end
 
-local function get_focus(voice,hill,step)
-  if hills[voice].highway == true then
-    if track[voice][hill].trigs[step] then
-      return m.adjusted_params
-    else
-      return m.adjusted_params_lock_trigs
-    end
+function m:force(index, voice, alloc)
+  local target_trig = m.adjusted_params
+  build_check(target_trig, voice, alloc)
+  print('forcing',voice,alloc,step,index)
+  if target_trig[voice][alloc].params[index] ~= params:lookup_param(index).raw then
+    target_trig[voice][alloc].params[index] = params:lookup_param(index).raw
   else
-    return m.adjusted_params
+    target_trig[voice][alloc].params[index] = nil
   end
 end
 
-function m:force(index, voice, hill, step)
-  local target_trig = get_focus(voice,hill,step)
-  build_check(target_trig, voice, hill, step)
-  print('forcing',voice,hill,step,index)
-  if target_trig[voice][hill][step].params[index] ~= params:lookup_param(index).raw then
-    target_trig[voice][hill][step].params[index] = params:lookup_param(index).raw
-    -- target_trig[voice][hill][step].lock_trigs[index] = true
-    track[voice][hill].lock_trigs[step] = true
-  else
-    target_trig[voice][hill][step].params[index] = nil
-    -- target_trig[voice][hill][step].lock_trigs[index] = false
-    if tab.count(target_trig[voice][hill][step].params) == 0 then
-      track[voice][hill].lock_trigs[step] = false
-    end
-  end
-end
-
-function m:delta(index, d, voice, hill, step)
-  local target_trig = get_focus(voice,hill,step)
-  build_check(target_trig, voice, hill, step)
+function m:delta(index, d, voice, alloc)
+  build_check(m.adjusted_params, voice, alloc)
   local val;
-  if target_trig[voice][hill][step].params[index] == nil then
+  if m.adjusted_params[voice][alloc].params[index] == nil then
     -- write index and value
     val = params:lookup_param(index).raw
   else
     -- adjust value at index
-    val = target_trig[voice][hill][step].params[index]
+    val = m.adjusted_params[voice][alloc].params[index]
   end
   local delta_val = params:lookup_param(index).controlspec.quantum
-  target_trig[voice][hill][step].params[index] = util.clamp(val + d * delta_val,0,1)
-  if util.round(target_trig[voice][hill][step].params[index],0.001) == util.round(params:get_raw(index),0.001) then
-    target_trig[voice][hill][step].params[index] = nil
-    if tab.count(target_trig[voice][hill][step].params) == 0 then
-      track[voice][hill].lock_trigs[step] = false
-    end
-  elseif target_trig == m.adjusted_params_lock_trigs then
-    track[voice][hill].lock_trigs[step] = true
+  m.adjusted_params[voice][alloc].params[index] = util.clamp(val + d * delta_val,0,1)
+  if util.round(m.adjusted_params[voice][alloc].params[index],0.001) == util.round(params:get_raw(index),0.001) then
+    m.adjusted_params[voice][alloc].params[index] = nil
   end
 end
 
-function m:delta_many(index, d, voice, hill)
+function m:delta_many(index, d, voice, alloc)
   for i = 1,#data_entry_steps.focus[voice] do
-    m:delta(index, d, voice, hill, data_entry_steps.focus[voice][i])
+    m:delta(index, d, voice, alloc)
   end
 end
 
 function m:map(p)
-  local target_trig;
-  if hills[self.voice_focus].highway == true then
-    if track[self.voice_focus][self.hill_focus].trigs[self.step_focus] then
-      target_trig = self.adjusted_params
-    else
-      target_trig = self.adjusted_params_lock_trigs
-    end
-  else
-    target_trig = self.adjusted_params
-  end
-  local value = target_trig[self.voice_focus][self.hill_focus][self.step_focus].params[p]
+  local target_trig = self.adjusted_params
+  local value = target_trig[self.voice_focus][self.allocVoice].params[p]
   local clamped = util.clamp(value, 0, 1)
   local cs = params:lookup_param(p).controlspec
   local rounded = util.round(cs.warp.map(cs, clamped), cs.step)
@@ -287,17 +235,8 @@ function m:string(p)
   if params:lookup_param(p).formatter then
     return params:lookup_param(p).formatter(self:map(p))
   else
-    local target_trig;
-    if hills[self.voice_focus].highway == true then
-      if track[self.voice_focus][self.hill_focus].trigs[self.step_focus] then
-        target_trig = self.adjusted_params
-      else
-        target_trig = self.adjusted_params_lock_trigs
-      end
-    else
-      target_trig = self.adjusted_params
-    end
-    local value = target_trig[self.voice_focus][self.hill_focus][self.step_focus].params[p]
+    local target_trig = self.adjusted_params
+    local value = target_trig[self.voice_focus][self.allocVoice].params[p]
     local a = util.round(value, 0.01)
     return a.." "..params:lookup_param(p).controlspec.units
   end
@@ -314,24 +253,22 @@ local function prm_lookup(t, ...)
 end
 
 local function check_subtables(p)
-  local target_trig = get_focus(m.voice_focus,m.hill_focus,m.step_focus)
-  return prm_lookup(target_trig, m.voice_focus,m.hill_focus,m.step_focus,'params',p)
+  local target_trig = m.adjusted_params
+  return prm_lookup(target_trig, m.voice_focus,m.allocVoice,'params',p)
 end
 
 m.redraw = function()
   -- print(m.pos, 2 - m.pos, #page - m.pos + 3)
   screen.clear()
   screen.font_size(8)
-  local trig_type = track[m.voice_focus][m.hill_focus].trigs[m.step_focus] and '' or ' (parameter lock)'
-  local n = m.voice_focus..' / hill: '..m.hill_focus..trig_type
+  local n = m.voice_focus.." / " .. m.groupname
   screen.level(4)
   screen.move(0,10)
   screen.text(n)
-  n = "STEP "..m.step_focus.." PARAMS"
-  if m.group then n = n .. " / " .. m.groupname end
-  screen.move(0,20)
-  screen.text(n)
-  for i=3,6 do
+  n = 'POLY VOICE: '..m.allocVoice
+  screen.move(128,10)
+  screen.text_right(n)
+  for i=2,6 do
     if (i > 2 - m.pos) and (i < #page - m.pos + 3) then
       local highlight = {[0] = true, [3] = true, [7] = true}
       if i==3 then
@@ -396,7 +333,7 @@ m.init = function()
   key1_hold = false
   m.fine = false
   m.adjusted_params = {}
-  m.adjusted_params_lock_trigs = {}
+  print('poly!!')
 end
 
 return m

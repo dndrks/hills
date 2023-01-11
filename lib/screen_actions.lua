@@ -54,7 +54,7 @@ function screen_actions.draw()
   screen.fill()
   screen.aa(0)
   if ui.control_set ~= "seq" then
-    if ui.control_set ~= 'step parameters' then
+    if ui.control_set ~= 'step parameters' and ui.control_set ~= 'poly parameters' then
       local focus = h.screen_focus
       local seg = h[focus]
       local peak_pitch = util.clamp(seg.note_num.max,1,#h.note_ocean)
@@ -251,8 +251,10 @@ function screen_actions.draw()
           screen.text_right("K3: PER-STEP PARAMS")
         end
       end
-    else
+    elseif ui.control_set == 'step parameters' then
       _fkprm.redraw()
+    elseif ui.control_set == 'poly parameters' then
+      _polyparams.redraw()
     end
   elseif ui.control_set == 'seq' then
     local menus = {"step","rec","tport"}

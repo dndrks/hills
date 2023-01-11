@@ -141,7 +141,7 @@ m['rotate track notes'] = function(i,j)
   tab.print(originals)
   for k = 1,#originals do
     if originals[k] ~= 'none' then
-      print(util.wrap(track[i][j].start_point+k, track[i][j].start_point, track[i][j].end_point), originals[k])
+      print('rotate track notes: '..util.wrap(track[i][j].start_point+k, track[i][j].start_point, track[i][j].end_point), originals[k])
       target[util.wrap(track[i][j].start_point+k, track[i][j].start_point, track[i][j].end_point)] = originals[k]
     end
   end
@@ -457,7 +457,7 @@ m.quantize = function(i,j,smallest,start_point,end_point)
   end
   for k = e_p,s_p,-1 do
     if hills[i][j].note_timedelta[k] == 0 then
-      print(k)
+      print('note_timedelta',k)
       hills[i][j].note_timedelta[k] = quant_val
     end
   end

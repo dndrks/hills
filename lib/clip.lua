@@ -220,7 +220,7 @@ end
 function ca.play_through(target,velocity,i,j, played_note, retrig_index)
   engine.set_voice_param(target,'sampleStart',0)
   engine.set_voice_param(target,'sampleEnd',1)
-  if params:string(target..'_loop') == 'off' then
+  if params:string(target..'_sample_loop') == 'off' then
     engine.set_voice_param(target,'loop',hills[i][j].sample_controls.loop[hills[i][j].index] and 1 or 0)
   else
     engine.set_voice_param(target,'loop',1)
@@ -243,7 +243,7 @@ function ca.play_index(target,index,velocity,i,j, played_note, retrig_index)
   engine.change_sample(target,index)
   engine.set_voice_param(target,'sampleStart',0)
   engine.set_voice_param(target,'sampleEnd',1)
-  if params:string(target..'_loop') == 'off' then
+  if params:string(target..'_sample_loop') == 'off' then
     engine.set_voice_param(target,'loop',hills[i][j].sample_controls.loop[hills[i][j].index] and 1 or 0)
   else
     engine.set_voice_param(target,'loop',1)

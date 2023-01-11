@@ -45,7 +45,7 @@ function hway_ui.draw_menu()
   screen.fill()
   screen.aa(0)
   if ui.control_set ~= "seq" then
-    if ui.control_set ~= 'step parameters' then
+    if ui.control_set ~= 'step parameters' and ui.control_set ~= 'poly parameters' then
       local focus = h.screen_focus
       local seg = h[focus]
       screen.level(1)
@@ -524,8 +524,10 @@ function hway_ui.draw_menu()
         end
       end
 
-    else
+    elseif ui.control_set == 'step parameters' then
       _fkprm.redraw()
+    elseif ui.control_set == 'poly parameters' then
+      _polyparams.redraw()
     end
   end
 end

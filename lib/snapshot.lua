@@ -74,7 +74,7 @@ function snapshot.seed_restore_state_to_all(voice,coll,_p)
 end
 
 function snapshot.unpack(voice, coll)
-  print(voice,coll)
+  print('snapshot unpack', voice,coll)
   if type(voice) == "number" and voice <= 10 then
     
     if hills[voice].snapshot.partial_restore then
