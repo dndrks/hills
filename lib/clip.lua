@@ -161,6 +161,7 @@ end
 
 function ca.play_slice(target,slice,velocity,i,j, played_note, retrig_index)
   if params:get(target..'_sample_sampleFile') ~= _path.audio then
+    engine.trig(target,0,'false',kildare.allocVoice[i])
     local length = sample_info[target].sample_lengths[1]
     local slice_count = params:get('hill '..i..' sample slice count')
     local synced_length = util.round_up((length) - (length * ((slice_count-1)/slice_count)), clock.get_beat_sec())
@@ -180,9 +181,9 @@ function ca.play_slice(target,slice,velocity,i,j, played_note, retrig_index)
     end
     engine.set_voice_param(target, 'rate', rate)
     if retrig_index == 0 then
-      engine.trig(target,velocity,'false')
+      engine.trig(target,velocity,'false',kildare.allocVoice[i])
     else
-      engine.trig(target,velocity,'true')
+      engine.trig(target,velocity,'true',kildare.allocVoice[i])
     end
     -- print('> playing slice: '..target,slice,velocity,i,j, played_note, retrig_index)
   end
@@ -210,9 +211,9 @@ function ca.play_transient(target,slice,velocity,i,j, played_note, retrig_index)
     end
     engine.set_voice_param(target, 'rate', rate)
     if retrig_index == 0 then
-      engine.trig(target,velocity,'false')
+      engine.trig(target,velocity,'false',kildare.allocVoice[i])
     else
-      engine.trig(target,velocity,'true')
+      engine.trig(target,velocity,'true',kildare.allocVoice[i])
     end
   end
 end
@@ -233,9 +234,9 @@ function ca.play_through(target,velocity,i,j, played_note, retrig_index)
   end
   engine.set_voice_param(target, 'rate', rate)
   if retrig_index == 0 then
-    engine.trig(target,velocity,'false')
+    engine.trig(target,velocity,'false',kildare.allocVoice[i])
   else
-    engine.trig(target,velocity,'true')
+    engine.trig(target,velocity,'true',kildare.allocVoice[i])
   end
 end
 
@@ -256,9 +257,9 @@ function ca.play_index(target,index,velocity,i,j, played_note, retrig_index)
   end
   engine.set_voice_param(target, 'rate', rate)
   if retrig_index == 0 then
-    engine.trig(target,velocity,'false')
+    engine.trig(target,velocity,'false',kildare.allocVoice[i])
   else
-    engine.trig(target,velocity,'true')
+    engine.trig(target,velocity,'true',kildare.allocVoice[i])
   end
 end
 

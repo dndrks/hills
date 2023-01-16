@@ -955,7 +955,7 @@ function grid_lib.highway_press(x,y,z)
     grid_trigger = z == 1 and true or false
     if z == 1 then
       if not grid_mute then
-        engine.trig(i,track[i][j].velocities[track[i][j].ui_position],'false')
+        engine.trig(i,track[i][j].velocities[track[i][j].ui_position],'false',kildare.allocVoice[i])
       end
       if track[i].rec then
         local current_step = track[i][j].step
