@@ -161,7 +161,7 @@ end
 
 function ca.play_slice(target,slice,velocity,i,j, played_note, retrig_index)
   if params:get(target..'_sample_sampleFile') ~= _path.audio then
-    engine.trig(target,0,'false',kildare.allocVoice[i])
+    -- engine.trig(target,0,'false',kildare.allocVoice[i])
     local length = sample_info[target].sample_lengths[1]
     local slice_count = params:get('hill '..i..' sample slice count')
     local synced_length = util.round_up((length) - (length * ((slice_count-1)/slice_count)), clock.get_beat_sec())
