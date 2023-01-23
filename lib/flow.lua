@@ -251,9 +251,11 @@ function f_m.process_key(n,z)
           if clock.threads[track_clock[i]] then
             clock.cancel(track_clock[i])
           end
-          track[i][track[i].active_hill].micro[0] = track[i][track[i].active_hill].micro[1]
-          _htracks.start_playback(i)
-          track_clock[i] = clock.run(_htracks.iterate,i)
+          if params:string('hill_'..i..'_iterator') == 'norns' then
+            track[i][track[i].active_hill].micro[0] = track[i][track[i].active_hill].micro[1]
+            _htracks.start_playback(i)
+            track_clock[i] = clock.run(_htracks.iterate,i)
+          end
         end
       end
     end
