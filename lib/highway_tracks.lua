@@ -176,7 +176,7 @@ function track_actions.init(target, hill_number, clear_reset)
     track[target].rec = false
     track[target].rec_note_entry = false
     track[target].manual_note_entry = false
-    build_clock = true
+    -- build_clock = true
   end
 
   track[target][hill_number] = {}
@@ -209,7 +209,7 @@ function track_actions.init(target, hill_number, clear_reset)
   track[target][hill_number].er = {pulses = 0, steps = 16, shift = 0}
   track[target][hill_number].last_condition = false
   track[target][hill_number].conditional = {}
-  track[target][hill_number].conditional.cycle = 0
+  track[target][hill_number].conditional.cycle = 1
   track[target][hill_number].conditional.A = {}
   track[target][hill_number].conditional.B = {}
   track[target][hill_number].conditional.mode = {}
@@ -356,8 +356,16 @@ function track_actions.stop_playback(i)
   local j = track[i].active_hill
   track[i][j].pause = true
   track[i][j].playing = false
-  track[i][j].step = track[i][j].start_point
-  track[i][j].conditional.cycle = 0
+  -- track[i][j].step = track[i][j].start_point
+  track[i][j].conditional.cycle = 1
+  local track_start =
+  {
+    ["fwd"] = track[i][j].start_point - 1
+  , ["bkwd"] = track[i][j].end_point + 1
+  , ["pend"] = track[i][j].start_point
+  , ["rnd"] = track[i][j].start_point - 1
+  }
+  track[i][j].step = track_start[track[i][j].mode]
   -- grid_dirty = true
 end
 
@@ -375,11 +383,11 @@ function track_actions.iterate(target)
 end
 
 function track_actions.tick(target) -- FIXME: shouldn't just trigger all voices all the time...
-  if song_atoms.transport_active then
+  if song_atoms.transport_active or params:string('hill_'..target..'_iterator') ~= 'norns' then
     local _active = track[target][track[target].active_hill]
     local focused_set = _active.focus == "main" and _active or _active.fill
     -- if tab.count(_active.notes) > 0 then
-    if _active.pause == false then
+    if _active.pause == false or params:string('hill_'..target..'_iterator') ~= 'norns' then
       -- print(_active.step, clock.get_beats(),track[1].notes[1])
       if _active.step == _active.end_point and not _active.loop then
         track_actions.stop_playback(target)
@@ -638,7 +646,6 @@ function track_actions.run(target,step)
         A_step = _active.fill.conditional.A[step]
         B_step = _active.fill.conditional.B[step]
       end
-      -- print("should happen")
 
       if _active.conditional.mode[step] == "A:B" then
         if _active.conditional.cycle < A_step then

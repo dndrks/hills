@@ -247,6 +247,14 @@ function f_m.process_key(n,z)
           clock.internal.start(-0.1)
         end
         clock.transport.start()
+        for i = 1,number_of_hills do
+          if clock.threads[track_clock[i]] then
+            clock.cancel(track_clock[i])
+          end
+          track[i][track[i].active_hill].micro[0] = track[i][track[i].active_hill].micro[1]
+          _htracks.start_playback(i)
+          track_clock[i] = clock.run(_htracks.iterate,i)
+        end
       end
     end
   elseif n == 2 and z == 1 then

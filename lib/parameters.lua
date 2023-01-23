@@ -32,6 +32,14 @@ function parameters.change_UI_name(id, new_name)
   params.params[params.lookup[id]].name = new_name
 end
 
+local function populate_midi_devices()
+  local connected_midi_devices = {}
+  for i = 1,16 do
+    table.insert(connected_midi_devices,midi.vports[i].name)
+  end
+  return connected_midi_devices
+end
+
 function parameters.send_to_engine(voice,param,value)
   if param == 'carHz' then
     engine.set_voice_param(voice, param, mu.note_num_to_freq(value))
@@ -49,7 +57,7 @@ function parameters.init()
 
   params:add_separator('hills_main_header', 'hills + highways')
   for i = 1,number_of_hills do
-    params:add_group('hill_'..i..'_group', hill_names[i], 72)
+    params:add_group('hill_'..i..'_group', hill_names[i], 75)
 
     params:add_separator('hill_'..i..'_highway_header', 'mode')
     params:add_option('hill_'..i..'_mode', 'mode', {'hill','highway'}, 1)
@@ -61,6 +69,42 @@ function parameters.init()
       end
       screen_dirty = true
     end)
+    params:add_option('hill_'..i..'_iterator', 'iterator', {'norns','external MIDI'}, 1)
+    params:set_action('hill_'..i..'_iterator', function(x)
+      if x == 1 then
+        if hills[i].highway then
+          if not clock.threads[track_clock[i]] then
+            track[i][track[i].active_hill].micro[0] = track[i][track[i].active_hill].micro[1]
+            _htracks.start_playback(i)
+            track_clock[i] = clock.run(_htracks.iterate,i)
+          end
+        end
+        params:hide('hill_'..i..'_iterator_midi_device')
+        params:hide('hill_'..i..'_iterator_midi_note')
+        params:hide('hill_'..i..'_iterator_midi_record')
+        menu_rebuild_queued = true
+      elseif x == 2 then
+        if clock.threads[track_clock[i]] then
+          clock.cancel(track_clock[i])
+          _htracks.stop_playback(i)
+        end
+        params:show('hill_'..i..'_iterator_midi_device')
+        params:show('hill_'..i..'_iterator_midi_note')
+        params:show('hill_'..i..'_iterator_midi_record')
+        menu_rebuild_queued = true
+      end
+    end)
+    local all_midi = _midi.populate_midi_devices()
+    for j = 1,16 do
+      all_midi[j] = j..': '..all_midi[j]
+    end
+    params:add_option('hill_'..i..'_iterator_midi_device', 'midi device', all_midi, 1)
+    params:add_number('hill_'..i..'_iterator_midi_note', 'trigger via note_on', 0,128, 59+i)
+    params:set_action('hill_'..i..'_iterator_midi_note', function(x)
+      _midi.iterator.note[i] = x
+    end)
+    -- params:add_binary('hill_'..i..'_iterator_portamento')
+    params:add_option('hill_'..i..'_iterator_midi_record','record triggers?', {'no','yes'}, 1)
     params:add_separator('hill_'..i..'_note_header', "note management "..hill_names[i])
     params:add_option("hill "..i.." scale","scale",scale_names,1)
     params:set_action("hill "..i.." scale",
@@ -148,7 +192,8 @@ function parameters.init()
         elseif x == 2 then
           params:show("hill "..i.." kildare_chords")
         end
-        _menu.rebuild_params()
+        menu_rebuild_queued = true
+        -- _menu.rebuild_params()
       end
     )
     params:add_option("hill "..i.." kildare_chords","send chords?",{"no","yes"},1)
@@ -175,7 +220,8 @@ function parameters.init()
           params:hide("hill "..i.." sample probability")
           params:hide("hill "..i.." sample repitch")
           params:hide("hill "..i.." sample momentary")
-          _menu.rebuild_params()
+          menu_rebuild_queued = true
+          -- _menu.rebuild_params()
         elseif x == 2 then
           if i <= 7 then
             params:show("hill "..i.." sample slot")
@@ -193,7 +239,8 @@ function parameters.init()
           params:show("hill "..i.." sample probability")
           params:show("hill "..i.." sample repitch")
           params:show("hill "..i.." sample momentary")
-          _menu.rebuild_params()
+          menu_rebuild_queued = true
+          -- _menu.rebuild_params()
         end
       end
     )
@@ -209,11 +256,13 @@ function parameters.init()
       --   params:hide("hill "..i.." sample distribution")
       --   params:hide("hill "..i.." sample slice count")
       -- end
-      _menu.rebuild_params() 
+      menu_rebuild_queued = true
+      -- _menu.rebuild_params() 
     end)
     if i > 7 then
       params:hide("hill "..i.." sample slot")
-      _menu.rebuild_params() 
+      menu_rebuild_queued = true
+      -- _menu.rebuild_params() 
     end
     params:add_number("hill "..i.." sample slice count", "slice count",2,48,16)
     params:add_number("hill "..i.." sample distribution", "total distribution",0,100,100, 
@@ -238,7 +287,8 @@ function parameters.init()
             params:hide("hill "..i.." cc_"..j)
             params:hide("hill "..i.." cc_"..j.."_ch")
           end
-          _menu.rebuild_params()
+          menu_rebuild_queued = true
+          -- _menu.rebuild_params()
         elseif x == 2 then
           params:show("hill "..i.." MIDI device")
           params:show("hill "..i.." MIDI note channel")
@@ -248,7 +298,8 @@ function parameters.init()
           --   params:show("hill "..i.." cc_"..j)
           --   params:show("hill "..i.." cc_"..j.."_ch")
           -- end
-          _menu.rebuild_params()
+          menu_rebuild_queued = true
+          -- _menu.rebuild_params()
         end
       end
     )
@@ -293,7 +344,8 @@ function parameters.init()
           params:show("hill "..i.." crow output style")
           params:show("hill "..i.." crow output id")
         end
-        _menu.rebuild_params()
+        menu_rebuild_queued = true
+        -- _menu.rebuild_params()
       end
     )
     params:add_option("hill "..i.." crow output style", "output style",{"v/8","v/8+pulse","pulse","osc"},1)
@@ -317,7 +369,8 @@ function parameters.init()
             params:show("hill "..i.." crow osc level")
             params:show("hill "..i.." crow osc decay")
           end
-          _menu.rebuild_params()
+          menu_rebuild_queued = true
+          -- _menu.rebuild_params()
           hills[i].crow_change_queued = true
         end
       end
@@ -364,11 +417,13 @@ function parameters.init()
         if x == 1 then
           params:hide("hill "..i.." JF output style")
           params:hide("hill "..i.." JF output id")
-          _menu.rebuild_params()
+          menu_rebuild_queued = true
+          -- _menu.rebuild_params()
         else
           params:show("hill "..i.." JF output style")
           params:show("hill "..i.." JF output id")
-          _menu.rebuild_params()
+          menu_rebuild_queued = true
+          -- _menu.rebuild_params()
         end
       end
     )
@@ -415,7 +470,8 @@ function parameters.init()
         params:hide('global_snapshot_mod_time_'..i)
         params:show('global_snapshot_mod_beats_'..i)
       end
-      _menu.rebuild_params()
+      menu_rebuild_queued = true
+      -- _menu.rebuild_params()
     end)
     params:add_control(
       'global_snapshot_mod_time_'..i,
@@ -509,7 +565,8 @@ function parameters.init()
     params[state](params, "lfo_max_"..i)
     params[state](params, "lfo_reset_"..i)
     params[state](params, "lfo_reset_target_"..i)
-    _menu.rebuild_params()
+    menu_rebuild_queued = true
+    -- _menu.rebuild_params()
   end
 
   local function lfo_bang(i)
@@ -587,7 +644,8 @@ function parameters.init()
     end
   end
 
-  _menu.rebuild_params()
+  menu_rebuild_queued = true
+  -- _menu.rebuild_params()
   clock.run(function() clock.sleep(1) params:bang() all_loaded = true end)
 end
 

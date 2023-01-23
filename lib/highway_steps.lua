@@ -163,6 +163,53 @@ function hway_ui.draw_menu()
             screen.line_rel(9,0)
             screen.stroke()
           end
+          if focused_set.prob[i] ~= 100 then
+            if focused_set.prob[i] <= 20 then
+              for pix = 33,34 do
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+              end
+            elseif focused_set.prob[i] <= 40 then
+              for pix = 33,34 do
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+              end
+            elseif focused_set.prob[i] <= 60 then
+              for pix = 33,34 do
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,10+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+              end
+            elseif focused_set.prob[i] <= 80 then
+              for pix = 33,34 do
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,9+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,10+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+              end
+            elseif focused_set.prob[i] < 100 then
+              for pix = 33,34 do
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,8+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,9+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,10+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+              end
+            end
+            screen.fill()
+          end
+          if focused_set.conditional.A[i] ~= 1 or focused_set.conditional.B[i] ~= 1 then
+            screen.pixel(40+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,7+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+            screen.pixel(42+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,7+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+            screen.fill()
+          end
+          if focused_set.conditional.retrig_count[i] > 0 then
+            screen.pixel(41+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,10+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+            screen.pixel(42+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+            screen.pixel(41+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+            screen.pixel(40+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+            screen.pixel(41+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+            screen.fill()
+          end
         end
       end
       screen.font_face(1)

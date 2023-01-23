@@ -90,6 +90,8 @@ function grid_lib.pattern_execute(data)
     local j = data.hill_j
     local focused_set = data.track_focus == "main" and track[i][j] or track[i][j].fill
     focused_set.trigs[data.step] = data.state
+  elseif data.event == "midi_trig" then
+    _htracks.tick(data.hill)
   else
     if data.voice ~= nil then
       if params:string('voice_model_'..data.voice) == data.model then
@@ -313,7 +315,7 @@ local function exit_mod(target)
   end
 end
 
-local function write_pattern_data(i,data_table,from_current)
+function write_pattern_data(i,data_table,from_current)
   if grid_pattern[i].rec == 1 and grid_pattern[i].step == 0 then
     grid_pattern[i]:rec_start()
     if not grid_pattern[i].event[1] then

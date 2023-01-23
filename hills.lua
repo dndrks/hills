@@ -1,4 +1,5 @@
 -- hills
+
 --
 -- __/\______/\\___
 -- ____/\\\\\___/\_
@@ -83,6 +84,7 @@ end
 
 pt = include 'lib/hills_new_pt'
 curves = include 'lib/easing'
+_midi = include 'lib/midi'
 prms = include 'lib/parameters'
 _t = include 'lib/transformations'
 _a = include 'lib/actions'
@@ -106,10 +108,10 @@ r = function()
 end
 
 development_state = function()
-  song_atoms.transport_active = true
-  for i = 1,number_of_hills do
-    params:set('hill_'..i..'_mode', 2)
-  end
+  -- song_atoms.transport_active = true
+  -- for i = 1,number_of_hills do
+  --   params:set('hill_'..i..'_mode', 2)
+  -- end
   _htracks.sync_playheads()
   screen_dirty = true
 end
@@ -183,6 +185,39 @@ function init()
 
   for i = 1,#midi.vports do -- query all ports
     midi_device[i] = midi.connect(i) -- connect each device
+    midi_device[i].event = function(data)
+      local d = midi.to_msg(data)
+      if d.type == 'note_on' then
+        for j = 1,number_of_hills do
+          if d.note == params:get('hill_'..j..'_iterator_midi_note')
+          and params:string('hill_'..j..'_iterator') == 'external MIDI'
+          and params:get('hill_'..j..'_iterator_midi_device') == i
+          then
+            if hills[j].highway then
+              _htracks.tick(j)
+            else
+              local k = hills[j].segment
+              if hills[j][k].note_num.pool[hills[j][k].index] ~= nil then
+                pass_note(j,k,hills[j][k],hills[j][k].note_num.pool[hills[j][k].index],hills[j][k].index)
+              end
+              hills[j][k].index = util.wrap(hills[j][k].index + 1, hills[j][k].low_bound.note,hills[j][k].high_bound.note)
+            end
+            if params:string('hill_'..j..'_iterator_midi_record') == 'yes' then
+              for k = 1,16 do
+                local table_to_record =
+                  {
+                    ["event"] = "midi_trig",
+                    ["id"] = k,
+                    ["hill"] = j
+                    -- ["legato"] = es[i].legato
+                  }
+                write_pattern_data(k,table_to_record,false)
+              end
+            end
+          end
+        end
+      end
+    end
   end
 
   scale_names = {}
@@ -195,6 +230,7 @@ function init()
   prms.init()
   _fkprm.init()
   _polyparams.init()
+  _midi.init()
   -- prms.reload_engine(params:string("global engine"),true)
   
   for i = 1,number_of_hills do
@@ -308,11 +344,25 @@ function init()
     hills[i].counter = clock.run(function() _G[hills[i].mode](i) end)
 
     hills[i].screen_focus = 1
+
+    startup_animation = clock.run(
+      function()
+        while true do
+          clock.sleep(1/15)
+          redraw()
+        end
+      end
+    )
+
     clock.run(function()
       while true do
         clock.sleep(1/15)
         if screen_dirty then
           redraw()
+        end
+        if menu_rebuild_queued then
+          _menu.rebuild_params()
+          menu_rebuild_queued = false
         end
       end
     end)
@@ -370,6 +420,9 @@ function init()
     if util.file_exists(this_filepath.."per-step/_fkprm.txt") then
       _fkprm.adjusted_params = tab.load(this_filepath.."per-step/_fkprm.txt")
     end
+    for j = 1,number_of_hills do
+      track[j] = tab.load(this_filepath.."track/"..j..".txt")
+    end
     -- params:bang() -- TODO VERIFY IF THIS IS OKAY TO LEAVE OUT
     grid_dirty = true
     print('loading pset!'..this_filepath)
@@ -404,9 +457,11 @@ function init()
     util.make_dir(_path.data.."hills/"..number.."/patterns")
     util.make_dir(_path.data.."hills/"..number.."/song")
     util.make_dir(_path.data.."hills/"..number.."/snapshots")
+    util.make_dir(_path.data.."hills/"..number.."/track")
     util.make_dir(_path.data.."hills/"..number.."/per-step")
     for i = 1,number_of_hills do
       tab.save(hills[i],_path.data.."hills/"..number.."/data/"..i..".txt")
+      tab.save(track[i],_path.data.."hills/"..number.."/track/"..i..".txt")
     end
     for i = 1,16 do
       tab.save(grid_pattern[i],_path.data.."hills/"..number.."/patterns/"..i..".txt")
@@ -506,7 +561,9 @@ function init()
         engine.load_poly_params(kildare.queued_read_file)
         kildare.queued_read_file = nil
       end
-      print('dev state: '..util.time())
+      -- print('dev state: '..util.time())
+      -- print('starting from toggle')
+      clock.run(function() clock.sleep(1) loading_done = true clock.cancel(startup_animation) end)
     end
   )
 
@@ -853,9 +910,10 @@ end
 
 local function play_linked_sample(i, j, played_note, vel_target, retrig_index, force)
   if params:string("hill "..i.." sample output") == "yes" then
-    if params:get("hill "..i.." sample probability") >= math.random(100) then
+    if params:get("hill "..i.." sample probability") >= math.random(100) then      
       local should_play;
       if hills[i].highway then
+        local index = track[i][j].step
         if track[i][j].trigs[index] or force then
           should_play = true
         end
@@ -896,7 +954,8 @@ force_note = function(i,j,played_note)
 end
 
 local function trigger_notes(i,j,index,velocity,retrigger_bool,played_note)
-  engine.trig(i,velocity,retrigger_bool)
+  kildare.allocVoice[i] = util.wrap(kildare.allocVoice[i]+1, 1, params:get(i..'_poly_voice_count'))
+  engine.trig(i,velocity,retrigger_bool,kildare.allocVoice[i])
   if params:string("hill "..i.." kildare_notes") == "yes" then
     send_note_data(i,j,index,played_note)
   end
@@ -1188,24 +1247,83 @@ end
 
 redraw = function()
   screen.clear()
-  if key2_hold and (ui.control_set == 'play' or ui.control_set == 'song') then
-    _flow.draw_transport_menu()
-  else
-    if ui.control_set ~= "song" and hills[ui.hill_focus].highway == false then
-      _s.draw()
-    elseif ui.control_set ~= "song" and hills[ui.hill_focus].highway then
-      _hsteps.draw_menu()
+  if loading_done then
+    screen.font_size(8)
+    if key2_hold and (ui.control_set == 'play' or ui.control_set == 'song') then
+      _flow.draw_transport_menu()
     else
-      if not key2_hold then
-        _flow.draw_song_menu()
+      if ui.control_set ~= "song" and hills[ui.hill_focus].highway == false then
+        _s.draw()
+      elseif ui.control_set ~= "song" and hills[ui.hill_focus].highway then
+        _hsteps.draw_menu()
       else
-        _flow.draw_transport_menu()
+        if not key2_hold then
+          _flow.draw_song_menu()
+        else
+          _flow.draw_transport_menu()
+        end
       end
     end
-  end
-  screen.update()
-  screen_dirty = false
-  if key2_hold then
+    screen.update()
+    screen_dirty = false
+    if key2_hold then
+      screen_dirty = true
+    end
+  else
+    if frames == nil then
+      frames = 0
+    else
+      frames = frames + 1
+    end
+    -- if frames <= 10 then
+    --   screen.move(64,32)
+    --   screen.font_size(8)
+    --   screen.level(15)
+    --   screen.text_center('hills')
+    --   screen.level(math.random(3,15))
+    --   screen.move(math.random(0,128),math.random(0,64))
+    --   screen.font_size(math.random(8,30))
+    --   screen.text_center('/')
+    --   screen.level(math.random(3,15))
+    --   screen.move(math.random(0,128),math.random(0,64))
+    --   screen.font_size(math.random(8,30))
+    --   screen.text_center('_ _ _')
+    --   screen.level(math.random(3,15))
+    --   screen.move(math.random(0,128),math.random(0,64))
+    --   screen.font_size(math.random(8,30))
+    --   screen.text_center('\\ \\ \\')
+    --   screen.level(math.random(3,15))
+    --   screen.move(math.random(0,128),math.random(0,64))
+    --   screen.font_size(math.random(8,30))
+    --   screen.text_center('/ /  \\ / \\/ / /')
+    -- else
+    --   screen.move(54,32)
+    --   screen.font_size(8)
+    --   -- screen.text_center('hills')
+    --   screen.level(math.random(3,15))
+    --   screen.text_center('__/\\______/\\\\___')
+    --   screen.move(64,32)
+    --   screen.level(math.random(3,15))
+    --   screen.text_center('____/\\\\\\\\\\___/\\_')
+    --   screen.move(74,32)
+    --   screen.level(math.random(3,15))
+    --   screen.text_center('/\\///_____/\\\\\\__')
+    -- end
+    screen.move(64,22)
+    screen.level(15)
+    -- screen.text_center('hills')
+    screen.move(54,32)
+    screen.font_size(8)
+    -- screen.text_center('hills')
+    screen.level(math.random(3,15))
+    screen.text_center('__/\\______/\\\\___')
+    screen.move(64,32)
+    screen.level(math.random(3,15))
+    screen.text_center('____/\\\\\\\\\\___/\\_')
+    screen.move(74,32)
+    screen.level(math.random(3,15))
+    screen.text_center('/\\///_____/\\\\\\__')
+    screen.update()
     screen_dirty = true
   end
 end
