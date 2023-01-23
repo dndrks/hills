@@ -57,7 +57,7 @@ function parameters.init()
 
   params:add_separator('hills_main_header', 'hills + highways')
   for i = 1,number_of_hills do
-    params:add_group('hill_'..i..'_group', hill_names[i], 75)
+    params:add_group('hill_'..i..'_group', hill_names[i], 76)
 
     params:add_separator('hill_'..i..'_highway_header', 'mode')
     params:add_option('hill_'..i..'_mode', 'mode', {'hill','highway'}, 1)
@@ -106,6 +106,27 @@ function parameters.init()
     -- params:add_binary('hill_'..i..'_iterator_portamento')
     params:add_option('hill_'..i..'_iterator_midi_record','record triggers?', {'no','yes'}, 1)
     params:add_separator('hill_'..i..'_note_header', "note management "..hill_names[i])
+    params:add_binary('hill_'..i..'_flatten', 'flatten to carrier freq', 'toggle', 0)
+    params:set_action('hill_'..i..'_flatten', function(x)
+      if x == 1 then
+        params:hide("hill "..i.." scale")
+        params:hide("hill "..i.." base note")
+        params:hide("hill "..i.." span")
+        params:hide("hill "..i.." octave up")
+        params:hide("hill "..i.." octave down")
+        params:hide("hill "..i.." random offset style")
+        params:hide("hill "..i.." random offset probability")
+      else
+        params:hide("hill "..i.." scale")
+        params:show("hill "..i.." base note")
+        params:show("hill "..i.." span")
+        params:show("hill "..i.." octave up")
+        params:show("hill "..i.." octave down")
+        params:show("hill "..i.." random offset style")
+        params:show("hill "..i.." random offset probability")
+      end
+      menu_rebuild_queued = true
+    end)
     params:add_option("hill "..i.." scale","scale",scale_names,1)
     params:set_action("hill "..i.." scale",
     function(x)

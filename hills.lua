@@ -956,17 +956,21 @@ end
 local function trigger_notes(i,j,index,velocity,retrigger_bool,played_note)
   kildare.allocVoice[i] = util.wrap(kildare.allocVoice[i]+1, 1, params:get(i..'_poly_voice_count'))
   engine.trig(i,velocity,retrigger_bool,kildare.allocVoice[i])
-  if params:string("hill "..i.." kildare_notes") == "yes" then
-    send_note_data(i,j,index,played_note)
-  end
-  if hills[i].highway then
-    local focused_notes = track[i][j].focus == 'main' and track[i][j].base_note[index] or track[i][j].fill.base_note[index]
-    local focused_chords = track[i][j].focus == 'main' and track[i][j].chord_notes[index] or track[i][j].fill.chord_notes[index]
-    local note_check = params:string('voice_model_'..i) ~= 'sample' and params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
-      or params:get('hill '..i..' base note')
-    for notes = 1,3 do
-      if focused_chords[notes] ~= 0 then
-        force_note(i,j,focused_notes == -1 and note_check+focused_chords[notes] or focused_notes+focused_chords[notes])
+  if params:get('hill_'..i..'_flatten') == 1 then
+    send_note_data(i,j,index,params:get(i..'_'..params:string('voice_model_'..i)..'_carHz'))
+  else
+    if params:string("hill "..i.." kildare_notes") == "yes" then
+      send_note_data(i,j,index,played_note)
+    end
+    if hills[i].highway then
+      local focused_notes = track[i][j].focus == 'main' and track[i][j].base_note[index] or track[i][j].fill.base_note[index]
+      local focused_chords = track[i][j].focus == 'main' and track[i][j].chord_notes[index] or track[i][j].fill.chord_notes[index]
+      local note_check = params:string('voice_model_'..i) ~= 'sample' and params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+        or params:get('hill '..i..' base note')
+      for notes = 1,3 do
+        if focused_chords[notes] ~= 0 then
+          force_note(i,j,focused_notes == -1 and note_check+focused_chords[notes] or focused_notes+focused_chords[notes])
+        end
       end
     end
   end

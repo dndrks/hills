@@ -171,16 +171,16 @@ function screen_actions.draw()
             local target_sample_string = "";
             if params:string('hill '..hf..' sample output') == "yes" then
               target_sample_voice = params:get('hill '..hf..' sample slot')
-              if params:string('sample'..target_sample_voice..'_sampleMode') == 'distribute' then
-                if sample_info['sample'..target_sample_voice].sample_count == nil then
-                  target_sample_string = ""
-                else
-                  local scaled_idx = util.round(sample_info['sample'..target_sample_voice].sample_count * (params:get('hill '..hf..' sample distribution')/100))
-                  target_sample_string = ' | sample: '..(util.wrap(note_number - params:get("hill "..hf.." base note"),0,scaled_idx-1) + 1)
-                end
-              elseif params:string('sample'..target_sample_voice..'_sampleMode') == 'chop' then
-                target_sample_string = ' | slice: '..(util.wrap(note_number - params:get("hill "..hf.." base note"),0,params:get('hill '..hf..' sample slice count') - 1) + 1)
-              end
+              -- if params:string('sample'..target_sample_voice..'_sampleMode') == 'distribute' then
+              --   if sample_info['sample'..target_sample_voice].sample_count == nil then
+              --     target_sample_string = ""
+              --   else
+              --     local scaled_idx = util.round(sample_info['sample'..target_sample_voice].sample_count * (params:get('hill '..hf..' sample distribution')/100))
+              --     target_sample_string = ' | sample: '..(util.wrap(note_number - params:get("hill "..hf.." base note"),0,scaled_idx-1) + 1)
+              --   end
+              -- elseif params:string('sample'..target_sample_voice..'_sampleMode') == 'chop' then
+              --   target_sample_string = ' | slice: '..(util.wrap(note_number - params:get("hill "..hf.." base note"),0,params:get('hill '..hf..' sample slice count') - 1) + 1)
+              -- end
             end
             screen.text(
               note_number.."/"..mu.note_num_to_name(note_number)..
