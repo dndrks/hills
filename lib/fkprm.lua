@@ -129,9 +129,11 @@ m.enc = function(n,d)
       if params:lookup_param(page[m.pos+1]).t == 3 then
         local dx = m.fine and (d/20) or d
         if grid_data_entry then
-          m:delta_many(page[m.pos+1], dx, m.voice_focus, m.hill_focus)
+          -- m:delta_many(page[m.pos+1], dx, m.voice_focus, m.hill_focus)
+          m:delta_many(params:lookup_param(page[m.pos+1]).id, dx, m.voice_focus, m.hill_focus)
         else
-          m:delta(page[m.pos+1], dx, m.voice_focus, m.hill_focus, m.step_focus)
+          -- m:delta(page[m.pos+1], dx, m.voice_focus, m.hill_focus, m.step_focus)
+          m:delta(params:lookup_param(page[m.pos+1]).id, dx, m.voice_focus, m.hill_focus, m.step_focus)
         end
         m.redraw()
       end
@@ -276,7 +278,8 @@ function m:map(p)
   else
     target_trig = self.adjusted_params
   end
-  local value = target_trig[self.voice_focus][self.hill_focus][self.step_focus].params[p]
+  -- local value = target_trig[self.voice_focus][self.hill_focus][self.step_focus].params[p]
+  local value = target_trig[self.voice_focus][self.hill_focus][self.step_focus].params[params:lookup_param(p).id]
   local clamped = util.clamp(value, 0, 1)
   local cs = params:lookup_param(p).controlspec
   local rounded = util.round(cs.warp.map(cs, clamped), cs.step)
@@ -315,7 +318,8 @@ end
 
 local function check_subtables(p)
   local target_trig = get_focus(m.voice_focus,m.hill_focus,m.step_focus)
-  return prm_lookup(target_trig, m.voice_focus,m.hill_focus,m.step_focus,'params',p)
+  -- return prm_lookup(target_trig, m.voice_focus,m.hill_focus,m.step_focus,'params',p)
+  return prm_lookup(target_trig, m.voice_focus,m.hill_focus,m.step_focus,'params',params:lookup_param(p).id)
 end
 
 m.redraw = function()

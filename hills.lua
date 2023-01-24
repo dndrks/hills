@@ -109,9 +109,9 @@ end
 
 development_state = function()
   -- song_atoms.transport_active = true
-  -- for i = 1,number_of_hills do
-  --   params:set('hill_'..i..'_mode', 2)
-  -- end
+  for i = 1,number_of_hills do
+    params:set('hill_'..i..'_mode', 2)
+  end
   _htracks.sync_playheads()
   screen_dirty = true
 end
@@ -860,14 +860,14 @@ local function extract_voice_from_string(s)
 end
 
 local function process_params_per_step(parent,i,j,k,index)
-  local is_drum_voice = parent[k] <= params.lookup[number_of_hills..'_sample_feedbackSend']
-  local id = parent[k]
+  local is_drum_voice = params.lookup[parent[k]] <= params.lookup[number_of_hills..'_sample_feedbackSend']
+  local id = params.lookup[parent[k]]
   local drum_target = params:get_id(id):match('(.+)_(.+)_(.+)')
   drum_target = tonumber(drum_target)
 
   if is_drum_voice and type(drum_target) == 'number' and drum_target == i then
     local p_name = string.gsub(params:get_id(id),drum_target..'_'..params:string('voice_model_'..drum_target)..'_','')
-    print('reseeding default value for voice', drum_target, j, index, id)
+    print('reseeding default value for voice', drum_target, p_name, params:get(id))
     prms.send_to_engine(drum_target,p_name,params:get(id))
   elseif is_drum_voice and type(drum_target) == 'string' then
     local target_voice = drum_target
@@ -1022,7 +1022,7 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
         if target_trig == _fkprm.adjusted_params then
           for k = 1,#per_step_params_adjusted[i].param do
             local check_prm = per_step_params_adjusted[i].param[k]
-            -- print(check_prm)
+            print('>S>S>S'..check_prm)
             if _fkprm.adjusted_params[i][j][index].params[check_prm] == nil then
               local lock_trig = track[i][j].focus == 'main' and track[i][j].lock_trigs[index] or track[i][j].fill.lock_trigs[index]
               local is_drum_voice = check_prm <= params.lookup[number_of_hills..'_sample_feedbackSend']
@@ -1050,11 +1050,13 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
         -- for k,v in next,_fkprm.adjusted_params[i][j][index].params do
         for k,v in next,target_trig[i][j][index].params do
 
+          -- local is_drum_voice = k <= params.lookup[number_of_hills..'_sample_feedbackSend']
+          local param_id = k
+          k = params.lookup[k]
           local is_drum_voice = k <= params.lookup[number_of_hills..'_sample_feedbackSend']
           local id = k
           local drum_target = params:get_id(id):match('(.+)_(.+)_(.+)')
           drum_target = tonumber(drum_target)
-
           if is_drum_voice and type(drum_target) == 'number' and drum_target <= number_of_hills then
             if retrig_index == 0 then
               local target_voice = drum_target
@@ -1062,22 +1064,21 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
               target_drum = string.gsub(target_drum, target_voice..'_', '')
               target_drum = string.gsub(target_drum, '_', '')
               local p_name = string.gsub(params:get_id(k),target_voice..'_'..target_drum..'_','')
-              print('sending voice param',target_voice,p_name,fkmap(i,j,index,k))
+              print('sending voice param',target_voice,p_name,fkmap(i,j,index,param_id))
               if target_voice ~= i then
-                if not tab.contains(track[target_voice].external_prm_change,k) then
-                  track[target_voice].external_prm_change[#track[target_voice].external_prm_change+1] = k
+                if not tab.contains(track[target_voice].external_prm_change,param_id) then
+                  track[target_voice].external_prm_change[#track[target_voice].external_prm_change+1] = param_id
                 end
               end
-              prms.send_to_engine(target_voice,p_name,fkmap(i,j,index,k))
+              prms.send_to_engine(target_voice,p_name,fkmap(i,j,index,param_id))
             end
           else
             local p_name = extract_voice_from_string(params:get_id(k))
             local sc_target = string.gsub(params:get_id(k),p_name..'_','')
             -- print('sending step param to fx', i, j, index, k)
-            engine['set_'..p_name..'_param'](sc_target,fkmap(i,j,index,k))
+            engine['set_'..p_name..'_param'](sc_target,fkmap(i,j,index,param_id))
           end
-          
-          per_step_params_adjusted[i].param[#per_step_params_adjusted[i].param+1] = k
+          per_step_params_adjusted[i].param[#per_step_params_adjusted[i].param+1] = param_id
           per_step_params_adjusted[i].value[#per_step_params_adjusted[i].value+1] = v
         
         end
