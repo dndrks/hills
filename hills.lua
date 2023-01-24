@@ -569,6 +569,8 @@ function init()
 
   print('done: '..util.time())
 
+  last_voice_param = params.lookup[number_of_hills..'_sample_feedbackSend']
+
 end
 
 local function pass_data_into_storage(i,j,index,data)
@@ -860,25 +862,28 @@ local function extract_voice_from_string(s)
 end
 
 local function process_params_per_step(parent,i,j,k,index)
-  local is_drum_voice = params.lookup[parent[k]] <= params.lookup[number_of_hills..'_sample_feedbackSend']
   local id = params.lookup[parent[k]]
+  local is_drum_voice = id <= last_voice_param
   local drum_target = params:get_id(id):match('(.+)_(.+)_(.+)')
   drum_target = tonumber(drum_target)
 
+  local value = params:get(id)
+
   if is_drum_voice and type(drum_target) == 'number' and drum_target == i then
     local p_name = string.gsub(params:get_id(id),drum_target..'_'..params:string('voice_model_'..drum_target)..'_','')
-    print('reseeding default value for voice', drum_target, p_name, params:get(id))
-    prms.send_to_engine(drum_target,p_name,params:get(id))
+    -- print('reseeding default value for voice', drum_target, p_name, value)
+    prms.send_to_engine(drum_target,p_name,value)
   elseif is_drum_voice and type(drum_target) == 'string' then
-    local target_voice = drum_target
-    local p_name = string.gsub(params:get_id(id),target_voice..'_','')
-    prms.send_to_engine(target_voice,p_name,params:get(id))
+    -- local target_voice = drum_target
+    -- local p_name = string.gsub(params:get_id(id),target_voice..'_','')
+    -- prms.send_to_engine(target_voice,p_name,value)
     -- print('reseeding default value for sample voice', i, j, index, id)
+    print("this shouldn't be happening: 879")
   elseif drum_target == i then
     local p_name = extract_voice_from_string(params:get_id(id))
     local sc_target = string.gsub(params:get_id(id),p_name..'_','')
     -- print('reseeding default value to fx', i, j, index, id)
-    engine['set_'..p_name..'_param'](sc_target,params:get(id))
+    engine['set_'..p_name..'_param'](sc_target,value)
   end
 end
 
@@ -1025,7 +1030,7 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
             print('>S>S>S'..check_prm)
             if _fkprm.adjusted_params[i][j][index].params[check_prm] == nil then
               local lock_trig = track[i][j].focus == 'main' and track[i][j].lock_trigs[index] or track[i][j].fill.lock_trigs[index]
-              local is_drum_voice = check_prm <= params.lookup[number_of_hills..'_sample_feedbackSend']
+              local is_drum_voice = check_prm <= last_voice_param
               local id = check_prm
               if is_drum_voice and i <= number_of_hills then
                 local target_voice = string.match(params:get_id(id),"%d+")
@@ -1050,10 +1055,10 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
         -- for k,v in next,_fkprm.adjusted_params[i][j][index].params do
         for k,v in next,target_trig[i][j][index].params do
 
-          -- local is_drum_voice = k <= params.lookup[number_of_hills..'_sample_feedbackSend']
+          -- local is_drum_voice = k <= last_voice_param
           local param_id = k
           k = params.lookup[k]
-          local is_drum_voice = k <= params.lookup[number_of_hills..'_sample_feedbackSend']
+          local is_drum_voice = k <= last_voice_param
           local id = k
           local drum_target = params:get_id(id):match('(.+)_(.+)_(.+)')
           drum_target = tonumber(drum_target)
@@ -1314,22 +1319,24 @@ redraw = function()
     --   screen.level(math.random(3,15))
     --   screen.text_center('/\\///_____/\\\\\\__')
     -- end
-    screen.move(64,22)
-    screen.level(15)
-    -- screen.text_center('hills')
-    screen.move(54,32)
-    screen.font_size(8)
-    -- screen.text_center('hills')
-    screen.level(math.random(3,15))
-    screen.text_center('__/\\______/\\\\___')
-    screen.move(64,32)
-    screen.level(math.random(3,15))
-    screen.text_center('____/\\\\\\\\\\___/\\_')
-    screen.move(74,32)
-    screen.level(math.random(3,15))
-    screen.text_center('/\\///_____/\\\\\\__')
-    screen.update()
-    screen_dirty = true
+    if frames > 94 then
+      screen.move(64,22)
+      screen.level(15)
+      -- screen.text_center('hills')
+      screen.move(54,32)
+      screen.font_size(8)
+      -- screen.text_center('hills')
+      screen.level(math.random(3,15))
+      screen.text_center('__/\\______/\\\\___')
+      screen.move(64,32)
+      screen.level(math.random(3,15))
+      screen.text_center('____/\\\\\\\\\\___/\\_')
+      screen.move(74,32)
+      screen.level(math.random(3,15))
+      screen.text_center('/\\///_____/\\\\\\__')
+      screen.update()
+      screen_dirty = true
+    end
   end
 end
 

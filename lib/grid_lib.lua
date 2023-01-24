@@ -257,6 +257,8 @@ function grid_lib.stop_pattern_playback(i)
   grid_dirty = true
 end
 
+hill_fade = 0
+
 function grid_lib.init()
   reset_state.loop_modifier()
   clock.run(function()
@@ -264,15 +266,46 @@ function grid_lib.init()
       clock.sleep(1/30)
       grid_data_blink = util.wrap(grid_data_blink + 1,1,15)
       grid_loop_point_blink = util.wrap(grid_loop_point_blink + 3,1,15)
-      if grid_dirty or overdubbing_pattern then
-        grid_redraw()
-        grid_dirty = false
-        for i = 1,number_of_hills do
-          for j = 1,8 do
-            if hills[i][j].perf_led then
-              hills[i][j].perf_led = false
+      if loading_done then
+        if grid_dirty or overdubbing_pattern then
+          grid_redraw()
+          grid_dirty = false
+          for i = 1,number_of_hills do
+            for j = 1,8 do
+              if hills[i][j].perf_led then
+                hills[i][j].perf_led = false
+              end
             end
           end
+        end
+      else
+        if frames > 94 then
+          g:all(0)
+          for i = 1,4 do
+            g:led(i,3,math.random(5))
+            g:led(i+12,3,math.random(5))
+            g:led(i,4,math.random(5))
+            g:led(i+12,4,math.random(5))
+            g:led(i,5,math.random(5))
+            g:led(i+12,5,math.random(5))
+            g:led(i,6,math.random(5))
+            g:led(i+12,6,math.random(5))
+          end
+          hill_fade = util.wrap(hill_fade+1,0,15)
+          for i = 5,12 do
+            if i ~=8 and i~=9 then
+              g:led(i,3,math.random(5,12))
+              g:led(i,4,math.random(5,12))
+              g:led(i,5,math.random(5,12))
+              g:led(i,6,math.random(5,12))
+            else
+              g:led(i,3,hill_fade)
+              g:led(i,4,hill_fade)
+              g:led(i,5,hill_fade)
+              g:led(i,6,hill_fade)
+            end
+          end
+          g:refresh()
         end
       end
     end
