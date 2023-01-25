@@ -185,6 +185,11 @@ function ca.play_slice(target,slice,velocity,i,j, played_note, retrig_index)
     if clock.threads[sample_loop_info[target].clocks[kildare.allocVoice[i]]] then
       clock.cancel(sample_loop_info[target].clocks[kildare.allocVoice[i]])
     end
+    if params:string(i..'_sample_poly') == 'poly'
+    and _polyparams.adjusted_params[target][kildare.allocVoice[i]].params[target..'_sample_loop'] == 1
+    then
+      _polyparams.queued_loop[i][kildare.allocVoice[i]] = true
+    end
     -- engine.trig(target,0,'false',kildare.allocVoice[i])
     local length = sample_info[target].sample_lengths[1]
     local slice_count = params:get('hill '..i..' sample slice count')
@@ -218,15 +223,36 @@ function ca.play_slice(target,slice,velocity,i,j, played_note, retrig_index)
     else
       engine.trig(target,velocity,'true',kildare.allocVoice[i])
     end
-    if params:string(i..'_sample_loop') == "on" then
+    if params:string(i..'_sample_poly') == 'mono' then
+      if params:string(i..'_sample_loop') == "on" then
+        local loop_voice = kildare.allocVoice[i]
+        sample_loop_info[target].clocks[loop_voice] = clock.run(
+          function()
+            while true do
+              clock.sleep(window)
+              engine.trig(target,velocity,'false',loop_voice)
+            end
+          end)
+      end
+    else
       local loop_voice = kildare.allocVoice[i]
-      sample_loop_info[target].clocks[loop_voice] = clock.run(
-        function()
-          while true do
-            clock.sleep(window)
-            engine.trig(target,velocity,'false',loop_voice)
+      if _polyparams.queued_loop[i][loop_voice] then
+        local loop_voice = kildare.allocVoice[i]
+        sample_loop_info[target].clocks[loop_voice] = clock.run( -- TODO: 'target' is just 'i'...
+          function()
+            while true do
+              clock.sleep(window) -- does 'window' need to be a var?
+              engine.trig(target,velocity,'false',loop_voice)
+            end
           end
-        end)
+        )
+        _polyparams.queued_loop[i][loop_voice] = false
+      elseif _polyparams.queued_unloop[i][loop_voice] then
+        if clock.threads[sample_loop_info[target].clocks[loop_voice]] then
+          clock.cancel(sample_loop_info[target].clocks[loop_voice])
+        end
+        _polyparams.queued_unloop[i][loop_voice] = false
+      end
     end
     -- print('> playing slice: '..target,slice,velocity,i,j, played_note, retrig_index)
   end

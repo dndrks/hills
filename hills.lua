@@ -951,8 +951,8 @@ end
 force_note = function(i,j,played_note)
   local vel_target = params:get('hill_'..i..'_iso_velocity')
   local retrig_index = 0
-  kildare.allocVoice[i] = util.wrap(kildare.allocVoice[i]+1, 1, params:get(i..'_poly_voice_count'))
   if params:string('voice_model_'..i) ~= 'sample' then
+    kildare.allocVoice[i] = util.wrap(kildare.allocVoice[i]+1, 1, params:get(i..'_poly_voice_count'))
     engine.trig(i,vel_target,'false',kildare.allocVoice[i])
     engine.set_voice_param(i,"carHz",midi_to_hz(played_note))
     -- play_linked_sample(i, j, played_note, vel_target, retrig_index)

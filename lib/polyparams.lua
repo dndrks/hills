@@ -219,8 +219,16 @@ function m:delta(index, d, voice, alloc)
       ""
     )
     paramValue = params:lookup_param(index):map_value(paramValue)
-    -- print(voice, alloc, paramKey, paramValue)
-    engine.set_poly_voice_param(voice, alloc, paramKey, paramValue)
+    if paramKey == 'loop' then
+      if paramValue == 1 then
+        m.queued_loop[voice][alloc] = true
+      elseif paramValue == 0 then
+        m.queued_unloop[voice][alloc] = true
+      end
+    else
+      -- print(voice, alloc, paramKey, paramValue)
+      engine.set_poly_voice_param(voice, alloc, paramKey, paramValue)
+    end
     
     if util.round(m.adjusted_params[voice][alloc].params[index],0.001) == util.round(params:get_raw(index),0.001) then
       m.adjusted_params[voice][alloc].params[index] = nil
@@ -350,6 +358,18 @@ m.init = function()
   key1_hold = false
   m.fine = false
   m.adjusted_params = {}
+  for i = 1,number_of_hills do
+    m.adjusted_params[i] = {}
+    for j = 1,8 do
+      m.adjusted_params[i][j] = {params = {}}
+    end
+  end
+  m.queued_loop = {}
+  m.queued_unloop = {}
+  for i = 1,number_of_hills do
+    m.queued_loop[i] = {}
+    m.queued_unloop[i] = {}
+  end
   print('poly!!')
 end
 
