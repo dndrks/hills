@@ -417,8 +417,10 @@ function init()
     end
     snapshots = tab.load(this_filepath.."snapshots/all.txt")
     snapshot_overwrite = tab.load(this_filepath.."snapshots/overwrite_state.txt")
-    if util.file_exists(this_filepath.."per-step/_fkprm.txt") then
-      _fkprm.adjusted_params = tab.load(this_filepath.."per-step/_fkprm.txt")
+    _fkprm.adjusted_params = tab.load(this_filepath.."per-step/_fkprm.txt")
+    -- _fkprm.adjusted_params_lock_trigs = tab.load(this_filepath.."per-step/_fkprm-lock_trigs.txt")
+    if util.file_exists(this_filepath.."per-voice/_polyparams.txt") then
+      _polyparams.adjusted_params = tab.load(this_filepath.."per-voice/_polyparams.txt")
     end
     for j = 1,number_of_hills do
       track[j] = tab.load(this_filepath.."track/"..j..".txt")
@@ -459,6 +461,7 @@ function init()
     util.make_dir(_path.data.."hills/"..number.."/snapshots")
     util.make_dir(_path.data.."hills/"..number.."/track")
     util.make_dir(_path.data.."hills/"..number.."/per-step")
+    util.make_dir(_path.data.."hills/"..number.."/per-voice")
     for i = 1,number_of_hills do
       tab.save(hills[i],_path.data.."hills/"..number.."/data/"..i..".txt")
       tab.save(track[i],_path.data.."hills/"..number.."/track/"..i..".txt")
@@ -472,6 +475,8 @@ function init()
     tab.save(snapshots,_path.data.."hills/"..number.."/snapshots/all.txt")
     tab.save(snapshot_overwrite, _path.data.."hills/"..number.."/snapshots/overwrite_state.txt")
     tab.save(_fkprm.adjusted_params, _path.data.."hills/"..number.."/per-step/_fkprm.txt")
+    -- tab.save(_fkprm.adjusted_params_lock_trigs, _path.data.."hills/"..number.."/per-step/_fkprm-lock_trigs.txt")
+    tab.save(_polyparams.adjusted_params, _path.data.."hills/"..number.."/per-voice/_polyparams.txt")
     params_write_silent(filename,name)
     os.execute('touch '.._path.data..'hills/'..number..'/poly-params.txt')
     engine.save_poly_params(_path.data..'hills/'..number..'/poly-params.txt')

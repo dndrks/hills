@@ -126,9 +126,9 @@ m.enc = function(n,d)
       if params:lookup_param(page[m.pos+1]).t == 3 then
         local dx = m.fine and (d/20) or d
         if grid_data_entry then
-          m:delta_many(page[m.pos+1], dx, m.voice_focus, m.allocVoice)
+          m:delta_many(params:lookup_param(page[m.pos+1]).id, dx, m.voice_focus, m.allocVoice)
         else
-          m:delta(page[m.pos+1], dx, m.voice_focus, m.allocVoice)
+          m:delta(params:lookup_param(page[m.pos+1]).id, dx, m.voice_focus, m.allocVoice)
         end
         m.redraw()
       end
@@ -200,7 +200,7 @@ function m:force(index, voice, alloc)
 end
 
 function m:delta(index, d, voice, alloc)
-  if not string.find(params:lookup_param(index).id, 'poly') then
+  if not string.find(index, 'poly') then
     build_check(m.adjusted_params, voice, alloc)
     local val;
     if m.adjusted_params[voice][alloc].params[index] == nil then
@@ -214,7 +214,7 @@ function m:delta(index, d, voice, alloc)
     m.adjusted_params[voice][alloc].params[index] = util.clamp(val + d * delta_val,0,1)
     local paramValue = m.adjusted_params[voice][alloc].params[index]
     local paramKey = string.gsub(
-      params:lookup_param(index).id,
+      index,
       voice..'_'..params:string('voice_model_'..voice)..'_',
       ""
     )
@@ -237,7 +237,7 @@ end
 
 function m:map(p)
   local target_trig = self.adjusted_params
-  local value = target_trig[self.voice_focus][self.allocVoice].params[p]
+  local value = target_trig[self.voice_focus][self.allocVoice].params[params:lookup_param(p).id]
   local clamped = util.clamp(value, 0, 1)
   local cs = params:lookup_param(p).controlspec
   local rounded = util.round(cs.warp.map(cs, clamped), cs.step)
@@ -267,7 +267,7 @@ end
 
 local function check_subtables(p)
   local target_trig = m.adjusted_params
-  return prm_lookup(target_trig, m.voice_focus,m.allocVoice,'params',p)
+  return prm_lookup(target_trig, m.voice_focus,m.allocVoice,'params',params:lookup_param(p).id)
 end
 
 m.redraw = function()

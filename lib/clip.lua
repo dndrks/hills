@@ -5,7 +5,10 @@ function ca.init()
 
   sample_info = {}
 
-  sample_loop_clock = {}
+  sample_loop_info = {}
+  for i = 1,number_of_hills do
+    sample_loop_info[i] = {clocks = {}, count = 0}
+  end
 
   function kildare.folder_callback(voice,folder)
     sample_info[voice] = {}
@@ -61,11 +64,17 @@ function ca.init()
   end
 
   function kildare.clear_callback(voice)
+    print(voice)
     sample_info[voice] = {}
     sample_info[voice].sample_rates = {}
     sample_info[voice].sample_lengths = {}
     sample_info[voice].sample_frames = {}
     sample_info[voice].sample_count = 0
+    for i = 1,sample_loop_info[voice].count do
+      if clock.threads[sample_loop_info[voice].clocks[i]] then
+        clock.cancel(sample_loop_info[voice].clocks[i])
+      end
+    end
     local num = string.gsub(voice,'sample','')
     for i = 1,number_of_hills do
       if params:get('hill '..i..' sample slot') == tonumber(num) then
@@ -73,9 +82,6 @@ function ca.init()
         params:hide('hill '..i..' sample slice count')
         menu_rebuild_queued = true
         -- _menu.rebuild_params()
-      end
-      if clock.threads[sample_loop_clock[i]] then
-        clock.cancel(sample_loop_clock[target])
       end
     end
   end
@@ -174,10 +180,11 @@ end
 
 function ca.play_slice(target,slice,velocity,i,j, played_note, retrig_index)
   if params:get(target..'_sample_sampleFile') ~= _path.audio then
-    if clock.threads[sample_loop_clock[target]] then
-      clock.cancel(sample_loop_clock[target])
-    end
     kildare.allocVoice[i] = util.wrap(kildare.allocVoice[i]+1, 1, params:get(i..'_poly_voice_count'))
+    print(target,kildare.allocVoice[i],sample_loop_info[target].clocks[kildare.allocVoice[i]])
+    if clock.threads[sample_loop_info[target].clocks[kildare.allocVoice[i]]] then
+      clock.cancel(sample_loop_info[target].clocks[kildare.allocVoice[i]])
+    end
     -- engine.trig(target,0,'false',kildare.allocVoice[i])
     local length = sample_info[target].sample_lengths[1]
     local slice_count = params:get('hill '..i..' sample slice count')
@@ -213,7 +220,7 @@ function ca.play_slice(target,slice,velocity,i,j, played_note, retrig_index)
     end
     if params:string(i..'_sample_loop') == "on" then
       local loop_voice = kildare.allocVoice[i]
-      sample_loop_clock[target] = clock.run(
+      sample_loop_info[target].clocks[loop_voice] = clock.run(
         function()
           while true do
             clock.sleep(window)
