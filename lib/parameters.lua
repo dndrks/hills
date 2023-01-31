@@ -45,8 +45,6 @@ function parameters.send_to_engine(voice,param,value)
     engine.set_voice_param(voice, param, mu.note_num_to_freq(value))
     engine.set_voice_param(voice,"carHzThird", mu.note_num_to_freq(value))
     engine.set_voice_param(voice,"carHzSeventh", mu.note_num_to_freq(value))
-  elseif param == 'poly' then
-    engine.set_voice_param(voice, param, value == 1 and 0 or 1)
   else
     engine.set_voice_param(voice, param, value)
   end

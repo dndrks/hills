@@ -200,40 +200,37 @@ function m:force(index, voice, alloc)
 end
 
 function m:delta(index, d, voice, alloc)
-  if not string.find(index, 'poly') then
-    build_check(m.adjusted_params, voice, alloc)
-    local val;
-    if m.adjusted_params[voice][alloc].params[index] == nil then
-      -- write index and value
-      val = params:lookup_param(index).raw
-    else
-      -- adjust value at index
-      val = m.adjusted_params[voice][alloc].params[index]
+  build_check(m.adjusted_params, voice, alloc)
+  local val;
+  if m.adjusted_params[voice][alloc].params[index] == nil then
+    -- write index and value
+    val = params:lookup_param(index).raw
+  else
+    -- adjust value at index
+    val = m.adjusted_params[voice][alloc].params[index]
+  end
+  local delta_val = params:lookup_param(index).controlspec.quantum
+  m.adjusted_params[voice][alloc].params[index] = util.clamp(val + d * delta_val,0,1)
+  local paramValue = m.adjusted_params[voice][alloc].params[index]
+  local paramKey = string.gsub(
+    index,
+    voice..'_'..params:string('voice_model_'..voice)..'_',
+    ""
+  )
+  paramValue = params:lookup_param(index):map_value(paramValue)
+  if paramKey == 'loop' then
+    if paramValue == 1 then
+      m.queued_loop[voice][alloc] = true
+    elseif paramValue == 0 then
+      m.queued_unloop[voice][alloc] = true
     end
-    local delta_val = params:lookup_param(index).controlspec.quantum
-    m.adjusted_params[voice][alloc].params[index] = util.clamp(val + d * delta_val,0,1)
-    local paramValue = m.adjusted_params[voice][alloc].params[index]
-    local paramKey = string.gsub(
-      index,
-      voice..'_'..params:string('voice_model_'..voice)..'_',
-      ""
-    )
-    paramValue = params:lookup_param(index):map_value(paramValue)
-    if paramKey == 'loop' then
-      if paramValue == 1 then
-        m.queued_loop[voice][alloc] = true
-      elseif paramValue == 0 then
-        m.queued_unloop[voice][alloc] = true
-      end
-    else
-      -- print(voice, alloc, paramKey, paramValue)
-      engine.set_poly_voice_param(voice, alloc, paramKey, paramValue)
-    end
-    
-    if util.round(m.adjusted_params[voice][alloc].params[index],0.001) == util.round(params:get_raw(index),0.001) then
-      m.adjusted_params[voice][alloc].params[index] = nil
-    end
-
+  else
+    -- print(voice, alloc, paramKey, paramValue)
+    engine.set_poly_voice_param(voice, alloc, paramKey, paramValue)
+  end
+  
+  if util.round(m.adjusted_params[voice][alloc].params[index],0.001) == util.round(params:get_raw(index),0.001) then
+    m.adjusted_params[voice][alloc].params[index] = nil
   end
 end
 
@@ -287,7 +284,7 @@ m.redraw = function()
   screen.move(0,10)
   screen.text(n)
   local appended = ''
-  if params:string(m.voice_focus..'_'..params:string('voice_model_'..m.voice_focus)..'_poly') == 'poly' then
+  if params:get(m.voice_focus..'_poly_voice_count') > 1 then
     appended = ' | ('..kildare.allocVoice[m.voice_focus]..')'
   end
   n = 'POLY VOICE: '..m.allocVoice..appended

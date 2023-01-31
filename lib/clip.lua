@@ -185,7 +185,7 @@ function ca.play_slice(target,slice,velocity,i,j, played_note, retrig_index)
     if clock.threads[sample_loop_info[target].clocks[kildare.allocVoice[i]]] then
       clock.cancel(sample_loop_info[target].clocks[kildare.allocVoice[i]])
     end
-    if params:string(i..'_sample_poly') == 'poly'
+    if params:get(i..'_poly_voice_count') > 1
     and _polyparams.adjusted_params[target][kildare.allocVoice[i]].params[target..'_sample_loop'] == 1
     then
       _polyparams.queued_loop[i][kildare.allocVoice[i]] = true
@@ -218,7 +218,7 @@ function ca.play_slice(target,slice,velocity,i,j, played_note, retrig_index)
     else
       engine.trig(target,velocity,'true',kildare.allocVoice[i])
     end
-    if params:string(i..'_sample_poly') == 'mono' then
+    if params:get(i..'_poly_voice_count') == 1 then
       if params:string(i..'_sample_loop') == "on" then
         local loop_voice = kildare.allocVoice[i]
         sample_loop_info[target].clocks[loop_voice] = clock.run(
