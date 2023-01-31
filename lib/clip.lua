@@ -190,13 +190,8 @@ function ca.play_slice(target,slice,velocity,i,j, played_note, retrig_index)
     then
       _polyparams.queued_loop[i][kildare.allocVoice[i]] = true
     end
-    -- engine.trig(target,0,'false',kildare.allocVoice[i])
     local length = sample_info[target].sample_lengths[1]
     local slice_count = params:get('hill '..i..' sample slice count')
-    -- local synced_length = util.round_up((length) - (length * ((slice_count-1)/slice_count)), clock.get_beat_sec())
-    -- synced_length = util.clamp((synced_length + (length * ((slice-1)/slice_count)))/length,0,1)
-    -- engine.set_voice_param(target,'sampleStart',(slice-1)/slice_count)
-    -- engine.set_voice_param(target,'sampleEnd',synced_length)
     local frames = sample_info[target].sample_frames[1]
     local sampleEnd = (slice)/slice_count
     local sampleStart = (slice-1)/slice_count
