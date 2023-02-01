@@ -198,9 +198,11 @@ function ca.play_slice(target,slice,velocity,i,j, played_note, retrig_index)
     local rate = params:string(i..'_sample_playbackRateBase'):gsub('x','')
     rate = math.abs(tonumber(rate))
     local window = frames*(sampleEnd-sampleStart)/rate/sample_info[target].sample_rates[1]
-    engine.set_voice_param(target,'sampleStart',(slice-1)/slice_count)
-    engine.set_voice_param(target,'sampleEnd',(slice)/slice_count)
-
+    -- engine.set_voice_param(target,'sampleStart',(slice-1)/slice_count)
+    -- engine.set_voice_param(target,'sampleEnd',(slice)/slice_count)
+    engine.set_sample_bounds(target,'sampleStart',(slice-1)/slice_count, kildare.allocVoice[i])
+    engine.set_sample_bounds(target,'sampleEnd',(slice)/slice_count, kildare.allocVoice[i])
+    print('sample points: '..(slice-1)/slice_count,(slice)/slice_count)
     if params:string(target..'_sample_loop') == 'off' then
       engine.set_voice_param(target,'loop',hills[i][j].sample_controls.loop[hills[i][j].index] and 1 or 0)
     else
@@ -215,8 +217,10 @@ function ca.play_slice(target,slice,velocity,i,j, played_note, retrig_index)
     engine.set_voice_param(target, 'rate', rate)
     if retrig_index == 0 then
       engine.trig(target,velocity,'false',kildare.allocVoice[i])
+      print('no trig '..kildare.allocVoice[i])
     else
       engine.trig(target,velocity,'true',kildare.allocVoice[i])
+      print('yes trig '..kildare.allocVoice[i])
     end
     if params:get(i..'_poly_voice_count') == 1 then
       if params:string(i..'_sample_loop') == "on" then
