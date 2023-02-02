@@ -64,7 +64,7 @@ function ca.init()
   end
 
   function kildare.clear_callback(voice)
-    print(voice)
+    print(voice ..' getting a sample cleared')
     sample_info[voice] = {}
     sample_info[voice].sample_rates = {}
     sample_info[voice].sample_lengths = {}
@@ -251,6 +251,12 @@ function ca.play_slice(target,slice,velocity,i,j, played_note, retrig_index)
           clock.cancel(sample_loop_info[target].clocks[loop_voice])
         end
         _polyparams.queued_unloop[i][loop_voice] = false
+      end
+      local check_rate_change = _polyparams.adjusted_params[i][loop_voice].params[i..'_sample_playbackRateBase']
+      if check_rate_change ~= nil then
+        local rate = params:lookup_param(i..'_sample_playbackRateBase'):map_value(check_rate_change)
+        rate = sample_speedlist[rate]
+        engine.set_poly_voice_param(i, loop_voice, 'rate', rate)
       end
     end
     -- print('> playing slice: '..target,slice,velocity,i,j, played_note, retrig_index)

@@ -13,20 +13,6 @@ local function round_form(param,quant,form)
   return(util.round(param,quant)..form)
 end
 
--- local hill_names = {"A","B","C","D","E","F","G","H"}
--- local hill_names = {
---   "[1] (bd)",
---   "[2] (sd)",
---   "[3] (tm)",
---   "[4] (cp)",
---   "[5] (rs)",
---   "[6] (cb)",
---   "[7] (hh)",
---   "[8] (s-1)",
---   "[9] (s-2)",
---   "[10] (s-3)"
--- }
-
 function parameters.change_UI_name(id, new_name)
   -- print(id,new_name)
   params.params[params.lookup[id]].name = new_name

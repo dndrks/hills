@@ -224,6 +224,8 @@ function m:delta(index, d, voice, alloc)
     elseif paramValue == 0 then
       m.queued_unloop[voice][alloc] = true
     end
+  elseif paramKey == 'playbackRateBase' then
+    m.queued_rate_change[voice][alloc] = paramValue
   else
     -- print(voice, alloc, paramKey, paramValue)
     engine.set_poly_voice_param(voice, alloc, paramKey, paramValue)
@@ -363,9 +365,11 @@ m.init = function()
   end
   m.queued_loop = {}
   m.queued_unloop = {}
+  m.queued_rate_change = {}
   for i = 1,number_of_hills do
     m.queued_loop[i] = {}
     m.queued_unloop[i] = {}
+    m.queued_rate_change[i] = {}
   end
   print('poly!!')
 end

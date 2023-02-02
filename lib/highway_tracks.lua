@@ -4,8 +4,6 @@ track = {}
 
 track_clock = {}
 
-local fast_option = include 'lib/fast_option'
-
 track_paste_style = 1
 
 local function wrap(n, min, max)
@@ -112,7 +110,6 @@ local function build_params(target, hill_number, i)
     track[target][hill_number].conditional.retrig_time[i] = track_retrig_lookup[x]
   end)
 
-  -- track_paramset:add { param=fast_option.new("track_fill_retrig_time_"..target.."_"..hill_number..'_'..i,"",
   track_paramset:add_option("track_fill_retrig_time_"..target.."_"..hill_number..'_'..i,"",
   {
     '1/64',

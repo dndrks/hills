@@ -371,6 +371,7 @@ function init()
   print('built hills: '..util.time())
 
   params.action_read = function(filename,name,number)
+    readingPSET = true
     print("loading hills data for PSET: "..number)
     local this_filepath = _path.data..'hills/'..number..'/'
     for i = 1,number_of_hills do
@@ -433,6 +434,7 @@ function init()
       kildare.queued_read_file = this_filepath.."poly-params.txt"
       engine.load_poly_params(this_filepath.."poly-params.txt")
     end
+    clock.run(function() clock.sleep(0.3) readingPSET = false end)
   end
 
   local function params_write_silent(filename,name)
@@ -484,7 +486,13 @@ function init()
 
   params.action_delete = function(filename, name, pset_number)
     local delete_this_folder = _path.audio..'kildare/'..pset_number..'/'
-    os.execute('rm -r '..delete_this_folder)
+    if util.file_exists(delete_this_folder) then
+      os.execute('rm -r '..delete_this_folder)
+    end
+    delete_this_folder = _path.data..'hills/'..pset_number..'/'
+    if util.file_exists(delete_this_folder) then
+      os.execute('rm -r '..delete_this_folder)
+    end
   end
 
   function kildare.voice_param_callback(voice, param, val)
@@ -1239,25 +1247,29 @@ function manual_iter(i,j)
 end
 
 function enc(n,d)
-  if ui.control_set ~= "song" then
-    _e.parse(n,d)
-  else
-    _flow.process_encoder(n,d)
+  if loading_done then
+    if ui.control_set ~= "song" then
+      _e.parse(n,d)
+    else
+      _flow.process_encoder(n,d)
+    end
+    screen_dirty = true
   end
-  screen_dirty = true
 end
 
 function key(n,z)
-  if key2_hold and (ui.control_set == 'play' or ui.control_set == 'song') then
-    _flow.process_key(n,z)
-  else
-    if ui.control_set ~= "song" then
-      _k.parse(n,z)
-    else
+  if loading_done then
+    if key2_hold and (ui.control_set == 'play' or ui.control_set == 'song') then
       _flow.process_key(n,z)
+    else
+      if ui.control_set ~= "song" then
+        _k.parse(n,z)
+      else
+        _flow.process_key(n,z)
+      end
     end
+    screen_dirty = true
   end
-  screen_dirty = true
 end
 
 redraw = function()
