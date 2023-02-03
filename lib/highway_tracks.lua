@@ -318,6 +318,7 @@ end
 
 function track_actions.start_playback(i)
   local j = track[i].active_hill
+  track[i][j].micro[0] = track[i][j].micro[1]
   local track_start =
   {
     ["fwd"] = track[i][j].start_point - 1

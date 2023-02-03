@@ -225,7 +225,8 @@ function m:delta(index, d, voice, alloc)
       m.queued_unloop[voice][alloc] = true
     end
   elseif paramKey == 'playbackRateBase' then
-    m.queued_rate_change[voice][alloc] = paramValue
+    -- m.queued_rate_change[voice][alloc] = paramValue
+    -- do nothing, because it just needs to end up handled by the clip actions...
   else
     -- print(voice, alloc, paramKey, paramValue)
     engine.set_poly_voice_param(voice, alloc, paramKey, paramValue)

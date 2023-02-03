@@ -41,7 +41,7 @@ function parameters.init()
 
   params:add_separator('hills_main_header', 'hills + highways')
   for i = 1,number_of_hills do
-    params:add_group('hill_'..i..'_group', hill_names[i], 76)
+    params:add_group('hill_'..i..'_group', hill_names[i], 77)
 
     params:add_separator('hill_'..i..'_highway_header', 'mode')
     params:add_option('hill_'..i..'_mode', 'mode', {'hill','highway'}, 1)
@@ -172,6 +172,7 @@ function parameters.init()
     )
     params:add_option("hill "..i.." random offset style", "random offset style", {"+ oct","- oct","+/- oct"},1)
     params:add_number("hill "..i.." random offset probability","random offset probability",0,100,0)
+    params:add_binary('hill_'..i..'_legato','legato', 'momentary', 0)
     params:add_option("hill "..i.." accent mult", 'accent multiplier', {'0.125x','0.25x','0.33x','0.5x','0.75x','1.5x','2x','3x','4x','5x','6x','7x','8x','9x','10x'},7)
     params:add_option("hill "..i.." quant value","quant value",{"1/4", "1/4d", "1/4t", "1/8", "1/8d", "1/8t", "1/16", "1/16d", "1/16t", "1/32", "1/32d", "1/32t"},7)
     params:add_option('hill '..i..' reset at stop', 'reset index @ stop?', {'no','yes'}, 2)

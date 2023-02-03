@@ -960,9 +960,12 @@ force_note = function(i,j,played_note)
   local vel_target = params:get('hill_'..i..'_iso_velocity')
   local retrig_index = 0
   if params:string('voice_model_'..i) ~= 'sample' then
-    kildare.allocVoice[i] = util.wrap(kildare.allocVoice[i]+1, 1, params:get(i..'_poly_voice_count'))
-    engine.trig(i,vel_target,'false',kildare.allocVoice[i])
-    engine.set_voice_param(i,"carHz",midi_to_hz(played_note))
+    if params:get('hill_'..i..'_legato') == 0 then
+      kildare.allocVoice[i] = util.wrap(kildare.allocVoice[i]+1, 1, params:get(i..'_poly_voice_count'))
+      engine.trig(i,vel_target,'false',kildare.allocVoice[i])
+    end
+    send_note_data(i,j,index,played_note)
+    -- engine.set_voice_param(i,"carHz",midi_to_hz(played_note))
     -- play_linked_sample(i, j, played_note, vel_target, retrig_index)
   else
     play_linked_sample(i, j, played_note, vel_target, retrig_index, true)
@@ -972,8 +975,10 @@ force_note = function(i,j,played_note)
 end
 
 local function trigger_notes(i,j,index,velocity,retrigger_bool,played_note)
-  kildare.allocVoice[i] = util.wrap(kildare.allocVoice[i]+1, 1, params:get(i..'_poly_voice_count'))
-  engine.trig(i,velocity,retrigger_bool,kildare.allocVoice[i])
+  if params:get('hill_'..i..'_legato') == 0 then
+    kildare.allocVoice[i] = util.wrap(kildare.allocVoice[i]+1, 1, params:get(i..'_poly_voice_count'))
+    engine.trig(i,velocity,retrigger_bool,kildare.allocVoice[i])
+  end
   if params:get('hill_'..i..'_flatten') == 1 then
     send_note_data(i,j,index,params:get(i..'_'..params:string('voice_model_'..i)..'_carHz'))
   else
@@ -996,12 +1001,6 @@ end
 
 send_note_data = function(i,j,index,played_note)
   engine.set_voice_param(i,"carHz",midi_to_hz(played_note))
-  -- if params:string("hill "..i.." kildare_chords") == 'yes' then
-  --   play_chord(i,j,index)
-  -- else
-  --   engine.set_voice_param(i,"carHzThird",midi_to_hz(played_note))
-  --   engine.set_voice_param(i,"carHzSeventh",midi_to_hz(played_note))
-  -- end
 end
 
 pass_note = function(i,j,seg,note_val,index,retrig_index)

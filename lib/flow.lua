@@ -252,7 +252,6 @@ function f_m.process_key(n,z)
             clock.cancel(track_clock[i])
           end
           if params:string('hill_'..i..'_iterator') == 'norns' then
-            track[i][track[i].active_hill].micro[0] = track[i][track[i].active_hill].micro[1]
             _htracks.start_playback(i)
             track_clock[i] = clock.run(_htracks.iterate,i)
           end

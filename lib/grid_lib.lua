@@ -497,17 +497,25 @@ function g.key(x,y,z)
   if x > 1 and x <= number_of_hills+1 and not mod_held then
     if z == 1 then
       if hills[x-1].highway == false then
-        _a.start(x-1,y,true)
+        if params:string('hill_'..(x-1)..'_iterator') == 'norns' then
+          _a.start(x-1,y,true)
+        else
+          hills[i].segment = y
+        end
+        hills[x-1].screen_focus = y
       else
-        _htracks.stop_playback(x-1)
-        track[x-1].active_hill = y
-        _htracks.start_playback(x-1)
-        print('start and stop')
+        if params:string('hill_'..(x-1)..'_iterator') == 'norns' and #track[x-1] >= y then
+          _htracks.stop_playback(x-1)
+          track[x-1].active_hill = y
+          _htracks.start_playback(x-1)
+          print('start and stop')
+          hills[x-1].screen_focus = y
+        elseif #track[x-1] >= y then
+          track[x-1].active_hill = y
+          hills[x-1].screen_focus = y
+        end
       end
-      hills[x-1].screen_focus = y
-      screen_dirty = true
       hills[x-1][y].perf_led = true
-      grid_dirty = true
       for i = 1,16 do
         local table_to_record =
         {
@@ -520,17 +528,18 @@ function g.key(x,y,z)
       end
     end
     if z == 0 then
-      if hills[x-1][y].playmode == "momentary" and hills[x-1].segment == y then
-        if hills[x-1].highway == false then
+      if hills[x-1].highway == false and hills[x-1][y].playmode == "momentary" and hills[x-1].segment == y then
+        if params:string('hill_'..(x-1)..'_iterator') == 'norns' then
           stop(x-1,true)
-        else
-          _htracks.stop_playback(x-1)
         end
-        screen_dirty = true
-        -- hills[x-1][y].perf_led = true
-        hills[x-1][y].perf_led = false
-        grid_dirty = true
+      elseif hills[x-1].highway and hills[x-1][y].playmode == "momentary" then
+        -- TODO: add this in later
+        -- print(x-1,y,#track[x-1] >= y)
+        -- if params:string('hill_'..(x-1)..'_iterator') == 'norns' and #track[x-1] >= y  then
+        --   _htracks.stop_playback(x-1)
+        -- end
       end
+      hills[x-1][y].perf_led = false
       if params:string("hill "..(x-1).." sample momentary") == "yes" then
         _ca.stop_sample('sample'..params:get("hill "..(x-1).." sample slot"))
       end
@@ -547,26 +556,30 @@ function g.key(x,y,z)
     end
   elseif x > 1 and x <= number_of_hills+1 and mod_held then
     if mods["alt"] and z == 1 and not mods.snapshots and not mods.playmode and not mods.hill then
-      if hills[x-1][y].playmode == 'latch' then
-        stop(x-1,true)
-      elseif params:string('hill '..(x-1)..' reset at stop') == 'no' then
-        hills[x-1][y].index = hills[x-1][y].low_bound.note
-        hills[x-1][y].step = hills[x-1][y].note_timestamp[hills[x-1][y].index] -- reset
-        _a.start(x-1,y,true)
-        hills[x-1].screen_focus = y
-        screen_dirty = true
-        hills[x-1][y].perf_led = true
-        grid_dirty = true
-        for i = 1,16 do
-          local table_to_record =
-          {
-            ["event"] = "start with reset",
-            ["x"] = x-1,
-            ["y"] = y,
-            ["id"] = i
-          }
-          write_pattern_data(i,table_to_record,true)
+      if hills[x-1][y].highway == false then
+        if hills[x-1][y].playmode == 'latch' then
+          stop(x-1,true)
+        elseif params:string('hill '..(x-1)..' reset at stop') == 'no' then
+          hills[x-1][y].index = hills[x-1][y].low_bound.note
+          hills[x-1][y].step = hills[x-1][y].note_timestamp[hills[x-1][y].index] -- reset
+          _a.start(x-1,y,true)
+          hills[x-1].screen_focus = y
+          screen_dirty = true
+          hills[x-1][y].perf_led = true
+          grid_dirty = true
+          for i = 1,16 do
+            local table_to_record =
+            {
+              ["event"] = "start with reset",
+              ["x"] = x-1,
+              ["y"] = y,
+              ["id"] = i
+            }
+            write_pattern_data(i,table_to_record,true)
+          end
         end
+      else
+        _htracks.stop_playback(x-1)
       end
     elseif mods["alt"] and z == 0 and not mods.snapshots and not mods.playmode and not mods.hill then
       stop(x-1,true)
@@ -1025,7 +1038,7 @@ function grid_lib.earthsea_press(x,y,z)
         params:set('hill '..i..' kildare_notes',2)
       end
       local current_step = track[i][j].step
-      if es[i].legato then
+      if params:get('hill_'..i..'_legato') == 1 then
         focused_set.legato_trigs[current_step] = true
         send_note_data(i,j,1,played_note)
       else
@@ -1039,7 +1052,7 @@ function grid_lib.earthsea_press(x,y,z)
         params:set('hill '..i..' kildare_notes',2)
       end
       local pos = track[i][j].ui_position
-      if es[i].legato then
+      if params:get('hill_'..i..'_legato') == 1 then
         focused_set.legato_trigs[pos] = true
       else
         focused_set.trigs[pos] = true
@@ -1048,7 +1061,7 @@ function grid_lib.earthsea_press(x,y,z)
       focused_set.velocities[pos] = params:get('hill_'..i..'_iso_velocity')
       track[i][j].ui_position = util.wrap(track[i][j].ui_position+1,track[i][j].start_point,track[i][j].end_point)
     else
-      if es[i].legato then
+      if params:get('hill_'..i..'_legato') == 1 then
         send_note_data(i,j,1,played_note)
       else
         force_note(i,j,played_note)
@@ -1064,7 +1077,7 @@ function grid_lib.earthsea_press(x,y,z)
         ["hill_i"] = i,
         ["hill_j"] = j,
         ["octave"] = params:get('hill_'..i..'_iso_octave'),
-        ["legato"] = es[i].legato
+        ["legato"] = params:get('hill_'..i..'_legato') == 1
       }
       write_pattern_data(k,table_to_record,false)
     end
@@ -1087,7 +1100,7 @@ function grid_lib.earthsea_press(x,y,z)
   elseif (x == 5 or x == 7) and y == 8 and z == 1 and track[i].manual_note_entry then
     track[i][j].ui_position = util.wrap(track[i][j].ui_position + (x == 5 and -1 or 1), track[i][j].start_point, track[i][j].end_point)
   elseif x == 7 and y == 7 then
-    es[i].legato = z == 1
+    params:set('hill_'..i..'_legato', z)
   end
   if z == 1 then
     grid_dirty = true
@@ -1114,10 +1127,18 @@ function grid_redraw()
             end
           end
           if mods["alt"] then
-            if hills[i-1].segment == j then
-              g:led(i,j,hills[i-1][j].perf_led and 15 or (hills[i-1][j].iterated and 6 or 15))
+            if hills[i-1].highway == false then
+              if hills[i-1].segment == j then
+                g:led(i,j,hills[i-1][j].perf_led and 15 or (hills[i-1][j].iterated and 6 or 15))
+              else
+                g:led(i,j,0)
+              end
             else
-              g:led(i,j,0)
+              if track[i-1].active_hill == j then
+                g:led(i,j,track[i-1][j].playing and 15 or 10)
+              else
+                g:led(i,j,#track[i-1] >= j and 6 or 0)
+              end
             end
             -- g:led(i,j,hills[i-1].screen_focus == j and 15 or 4)
           end
@@ -1245,10 +1266,16 @@ function grid_redraw()
           end
         end
       else
-        if hills[i-1].segment == j then
+        if not hills[i-1].highway and hills[i-1].segment == j then
           g:led(i,j,hills[i-1][j].perf_led and 15 or (hills[i-1][j].iterated and 6 or 8))
+        elseif hills[i-1].highway and track[i-1].active_hill == j then
+          g:led(i,j,track[i-1][j].playing and 15 or 10)
         else
-          g:led(i,j,0)
+          if hills[i-1].highway then
+            g:led(i,j,#track[i-1] >= j and 6 or 0)
+          else
+            g:led(i,j,0)
+          end
         end
       end
     end
