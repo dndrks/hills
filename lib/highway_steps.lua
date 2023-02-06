@@ -123,8 +123,12 @@ function hway_ui.draw_menu()
           local note_index = focused_set.base_note[i]
           if focused_set.trigs[i] == true then
             if focused_set.base_note[i] == -1 then
-              local note_check = params:string('voice_model_'..hf) ~= 'sample' and params:get(hf..'_'..params:string('voice_model_'..hf)..'_carHz')
-                or params:get('hill '..hf..' base note')
+              local note_check;
+              if params:string('voice_model_'..hf) ~= 'sample' and params:string('voice_model_'..hf) ~= 'input' then
+                note_check = params:get(hf..'_'..params:string('voice_model_'..hf)..'_carHz')
+              else
+                note_check = params:get('hill '..hf..' base note')
+              end
               display_step_data = note_check
             else
               display_step_data = note_index
@@ -151,8 +155,12 @@ function hway_ui.draw_menu()
           screen.text_center(first..second..third)
         else
           screen.text_center(display_step_data)
-          local note_check = params:string('voice_model_'..hf) ~= 'sample' and params:get(hf..'_'..params:string('voice_model_'..hf)..'_carHz')
-            or params:get('hill '..hf..' base note')
+          local note_check;
+          if params:string('voice_model_'..hf) ~= 'sample' and params:string('voice_model_'..hf) ~= 'input' then
+            note_check = params:get(hf..'_'..params:string('voice_model_'..hf)..'_carHz')
+          else
+            note_check = params:get('hill '..hf..' base note')
+          end
           if focused_set.base_note[i] == note_check then
             if e_pos == i then
               screen.level(15)
@@ -267,8 +275,12 @@ function hway_ui.draw_menu()
           if focused_set.trigs[pos] == false then
             display_text = 'set note adds trig'
           else
-            local note_check = params:string('voice_model_'..hf) ~= 'sample' and params:get(hf..'_'..params:string('voice_model_'..hf)..'_carHz')
-              or params:get('hill '..hf..' base note')
+            local note_check;
+            if params:string('voice_model_'..hf) ~= 'sample' and params:string('voice_model_'..hf) ~= 'input' then
+              note_check = params:get(hf..'_'..params:string('voice_model_'..hf)..'_carHz')
+            else
+              note_check = params:get('hill '..hf..' base note')
+            end
             if focused_set.base_note[pos] == note_check then
               display_text = 'K3: clear to default'
             end

@@ -1161,7 +1161,7 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
     if params:string("hill "..i.." MIDI output") == "yes" then
       local ch = params:get("hill "..i.." MIDI note channel")
       local dev = params:get("hill "..i.." MIDI device")
-      if pre_note[i] ~= nil then
+      if pre_note[i] ~= nil and params:get('hill_'..i..'_legato') ~= 1 then
         midi_device[dev]:note_off(pre_note[i],seg.note_velocity,ch)
       end
       midi_device[dev]:note_on(played_note,seg.note_velocity,ch)
