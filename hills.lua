@@ -208,8 +208,9 @@ function init()
                   {
                     ["event"] = "midi_trig",
                     ["id"] = k,
-                    ["hill"] = j
-                    -- ["legato"] = es[i].legato
+                    ["hill"] = j,
+                    ["segment"] = hills[j].segment,
+                    ["legato"] = params:get('hill_'..j..'_legato') == 1
                   }
                 write_pattern_data(k,table_to_record,false)
               end
@@ -988,8 +989,12 @@ local function trigger_notes(i,j,index,velocity,retrigger_bool,played_note)
     if hills[i].highway then
       local focused_notes = track[i][j].focus == 'main' and track[i][j].base_note[index] or track[i][j].fill.base_note[index]
       local focused_chords = track[i][j].focus == 'main' and track[i][j].chord_notes[index] or track[i][j].fill.chord_notes[index]
-      local note_check = params:string('voice_model_'..i) ~= 'sample' and params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
-        or params:get('hill '..i..' base note')
+      local note_check;
+      if params:string('voice_model_'..i) ~= 'sample' and params:string('voice_model_'..i) ~= 'input' then
+        note_check = params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+      else
+        note_check = params:get('hill '..i..' base note')
+      end
       for notes = 1,3 do
         if focused_chords[notes] ~= 0 then
           force_note(i,j,focused_notes == -1 and note_check+focused_chords[notes] or focused_notes+focused_chords[notes])

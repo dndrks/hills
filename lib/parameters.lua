@@ -51,6 +51,7 @@ function parameters.init()
       else
         hills[i].highway = true
       end
+      hills[i].screen_focus = 1
       screen_dirty = true
     end)
     params:add_option('hill_'..i..'_iterator', 'iterator', {'norns','external MIDI'}, 1)
@@ -101,7 +102,7 @@ function parameters.init()
         params:hide("hill "..i.." random offset style")
         params:hide("hill "..i.." random offset probability")
       else
-        params:hide("hill "..i.." scale")
+        params:show("hill "..i.." scale")
         params:show("hill "..i.." base note")
         params:show("hill "..i.." span")
         params:show("hill "..i.." octave up")
@@ -187,8 +188,12 @@ function parameters.init()
     params:set_action("hill "..i.." kildare_notes",
       function(x)
         if x == 1 then
-          local note_check = params:string('voice_model_'..i) ~= 'sample' and params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
-            or params:get('hill '..i..' base note')
+          local note_check;
+          if params:string('voice_model_'..i) ~= 'sample' and params:string('voice_model_'..i) ~= 'input' then
+            note_check = params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+          else
+            note_check = params:get('hill '..i..' base note')
+          end
           local note_to_send = mu.note_num_to_freq(note_check)
           engine.set_voice_param(i,"carHz", note_to_send)
           engine.set_voice_param(i,"carHzThird", note_to_send)
@@ -206,8 +211,12 @@ function parameters.init()
     params:set_action("hill "..i.." kildare_chords",
       function(x)
         if x == 1 then
-          local note_check = params:string('voice_model_'..i) ~= 'sample' and params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
-            or params:get('hill '..i..' base note')
+          local note_check;
+          if params:string('voice_model_'..i) ~= 'sample' and params:string('voice_model_'..i) ~= 'input' then
+            note_check = params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+          else
+            note_check = params:get('hill '..i..' base note')
+          end
           local return_to = mu.note_num_to_freq(note_check)
           engine.set_voice_param(i,"carHzThird", return_to)
           engine.set_voice_param(i,"carHzSeventh", return_to)

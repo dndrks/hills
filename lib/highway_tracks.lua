@@ -736,8 +736,12 @@ function track_actions.execute_step(target, step)
   if focused_legato and not focused_trigs then
     send_note_data(i,j,step,focused_notes)
   else
-    local note_check = params:string('voice_model_'..i) ~= 'sample' and params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
-      or params:get('hill '..i..' base note')
+    local note_check;
+    if params:string('voice_model_'..i) ~= 'sample' and params:string('voice_model_'..i) ~= 'input' then
+      note_check = params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+    else
+      note_check = params:get('hill '..i..' base note')
+    end
     pass_note(
       i,
       j,
@@ -780,8 +784,12 @@ function track_actions.retrig_step(target,step)
       function()
         for retrigs = 1,focused_set.retrig_count[step] do
           clock.sleep(((clock.get_beat_sec() * _active.time)*focused_set.retrig_time[step])+swung_time)
-          local note_check = params:string('voice_model_'..i) ~= 'sample' and params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
-            or params:get('hill '..i..' base note')
+          local note_check;
+          if params:string('voice_model_'..i) ~= 'sample' and params:string('voice_model_'..i) ~= 'input' then
+            note_check = params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+          else
+            note_check = params:get('hill '..i..' base note')
+          end
           pass_note(
             i,
             j,
@@ -803,8 +811,12 @@ end
 function track_actions.reset_note_to_default(i,j)
   local _active = track[i][j]
   local focused_set = _active.focus == 'main' and _active or _active.fill
-  local note_check = params:string('voice_model_'..i) ~= 'sample' and params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
-    or params:get('hill '..i..' base note')
+  local note_check;
+  if params:string('voice_model_'..i) ~= 'sample' and params:string('voice_model_'..i) ~= 'input' then
+    note_check = params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+  else
+    note_check = params:get('hill '..i..' base note')
+  end
   if focused_set.base_note[_active.ui_position] == note_check then
     focused_set.base_note[_active.ui_position] = -1
   end

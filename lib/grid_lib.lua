@@ -91,7 +91,21 @@ function grid_lib.pattern_execute(data)
     local focused_set = data.track_focus == "main" and track[i][j] or track[i][j].fill
     focused_set.trigs[data.step] = data.state
   elseif data.event == "midi_trig" then
-    _htracks.tick(data.hill)
+    if data.legato then
+      params:set('hill_'..data.hill..'_legato', 1)
+    else
+      params:set('hill_'..data.hill..'_legato', 0)
+    end
+    if hills[data.hill].highway then
+      _htracks.tick(data.hill)
+    else
+      local j = data.hill
+      local k = data.segment
+      if hills[j][k].note_num.pool[hills[j][k].index] ~= nil then
+        pass_note(j,k,hills[j][k],hills[j][k].note_num.pool[hills[j][k].index],hills[j][k].index)
+      end
+      hills[j][k].index = util.wrap(hills[j][k].index + 1, hills[j][k].low_bound.note,hills[j][k].high_bound.note)
+    end
   else
     if data.voice ~= nil then
       if params:string('voice_model_'..data.voice) == data.model then
@@ -258,6 +272,8 @@ function grid_lib.stop_pattern_playback(i)
 end
 
 hill_fade = 0
+
+clock.run(function() while true do clock.sync(1/4) grid_dirty = true end end) -- TODO: make this unnecessary...
 
 function grid_lib.init()
   reset_state.loop_modifier()
@@ -500,7 +516,7 @@ function g.key(x,y,z)
         if params:string('hill_'..(x-1)..'_iterator') == 'norns' then
           _a.start(x-1,y,true)
         else
-          hills[i].segment = y
+          hills[x-1].segment = y
         end
         hills[x-1].screen_focus = y
       else
@@ -1060,13 +1076,14 @@ function grid_lib.earthsea_press(x,y,z)
       focused_set.base_note[pos] = played_note
       focused_set.velocities[pos] = params:get('hill_'..i..'_iso_velocity')
       track[i][j].ui_position = util.wrap(track[i][j].ui_position+1,track[i][j].start_point,track[i][j].end_point)
-    else
-      if params:get('hill_'..i..'_legato') == 1 then
-        send_note_data(i,j,1,played_note)
-      else
-        force_note(i,j,played_note)
-      end
+    -- else
     end
+    if params:get('hill_'..i..'_legato') == 1 then
+      send_note_data(i,j,1,played_note)
+    else
+      force_note(i,j,played_note)
+    end
+    -- end
     for k = 1,16 do
       local table_to_record =
       {
