@@ -28,11 +28,11 @@ end
 
 function parameters.send_to_engine(voice,param,value)
   if param == 'carHz' then
-    engine.set_voice_param(voice, param, mu.note_num_to_freq(value))
-    engine.set_voice_param(voice,"carHzThird", mu.note_num_to_freq(value))
-    engine.set_voice_param(voice,"carHzSeventh", mu.note_num_to_freq(value))
+    -- engine.set_voice_param(voice, param, mu.note_num_to_freq(value))
+    send_to_engine('set_voice_param',{voice, param, mu.note_num_to_freq(value)})
   else
-    engine.set_voice_param(voice, param, value)
+    -- engine.set_voice_param(voice, param, value)
+    send_to_engine('set_voice_param',{voice, param, value})
   end
 end
 
@@ -195,9 +195,8 @@ function parameters.init()
             note_check = params:get('hill '..i..' base note')
           end
           local note_to_send = mu.note_num_to_freq(note_check)
-          engine.set_voice_param(i,"carHz", note_to_send)
-          engine.set_voice_param(i,"carHzThird", note_to_send)
-          engine.set_voice_param(i,"carHzSeventh", note_to_send)
+          -- engine.set_voice_param(i,"carHz", note_to_send)
+          send_to_engine('set_voice_param',{i,"carHz", note_to_send})
           params:hide("hill "..i.." kildare_chords")
           params:set("hill "..i.." kildare_chords",1)
         elseif x == 2 then
@@ -218,8 +217,8 @@ function parameters.init()
             note_check = params:get('hill '..i..' base note')
           end
           local return_to = mu.note_num_to_freq(note_check)
-          engine.set_voice_param(i,"carHzThird", return_to)
-          engine.set_voice_param(i,"carHzSeventh", return_to)
+          -- engine.set_voice_param(i,"carHzThird", return_to)
+          -- engine.set_voice_param(i,"carHzSeventh", return_to)
         end
       end
     )

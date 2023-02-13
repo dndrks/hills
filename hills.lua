@@ -82,6 +82,11 @@ osc.event=function(path,args,from)
   end
 end
 
+function send_to_engine(action, args)
+  engine[action](table.unpack(args))
+  osc.send({"192.168.0.137",57120},"/command",{action,table.unpack(args)})
+end
+
 pt = include 'lib/hills_new_pt'
 curves = include 'lib/easing'
 _midi = include 'lib/midi'
@@ -111,6 +116,7 @@ development_state = function()
   -- song_atoms.transport_active = true
   for i = 1,number_of_hills do
     params:set('hill_'..i..'_mode', 2)
+    params:set('hill_'..i..'_iterator_midi_record',2)
   end
   _htracks.sync_playheads()
   screen_dirty = true
@@ -923,8 +929,8 @@ function play_chord(i,j,index)
     chord_target,
     true
   )
-  engine.set_voice_param(i,"carHzThird",midi_to_hz(shell_notes[2]))
-  engine.set_voice_param(i,"carHzSeventh",midi_to_hz(shell_notes[4]))
+  -- engine.set_voice_param(i,"carHzThird",midi_to_hz(shell_notes[2]))
+  -- engine.set_voice_param(i,"carHzSeventh",midi_to_hz(shell_notes[4]))
 end
 
 local function play_linked_sample(i, j, played_note, vel_target, retrig_index, force)
@@ -963,11 +969,10 @@ force_note = function(i,j,played_note)
   if params:string('voice_model_'..i) ~= 'sample' then
     if params:get('hill_'..i..'_legato') == 0 then
       kildare.allocVoice[i] = util.wrap(kildare.allocVoice[i]+1, 1, params:get(i..'_poly_voice_count'))
-      engine.trig(i,vel_target,'false',kildare.allocVoice[i])
+      -- engine.trig(i,vel_target,'false',kildare.allocVoice[i])
+      send_to_engine('trig',{i,vel_target,'false',kildare.allocVoice[i]})
     end
     send_note_data(i,j,index,played_note)
-    -- engine.set_voice_param(i,"carHz",midi_to_hz(played_note))
-    -- play_linked_sample(i, j, played_note, vel_target, retrig_index)
   else
     play_linked_sample(i, j, played_note, vel_target, retrig_index, true)
   end
@@ -978,7 +983,8 @@ end
 local function trigger_notes(i,j,index,velocity,retrigger_bool,played_note)
   if params:get('hill_'..i..'_legato') == 0 then
     kildare.allocVoice[i] = util.wrap(kildare.allocVoice[i]+1, 1, params:get(i..'_poly_voice_count'))
-    engine.trig(i,velocity,retrigger_bool,kildare.allocVoice[i])
+    -- engine.trig(i,velocity,retrigger_bool,kildare.allocVoice[i])
+    send_to_engine('trig',{i,velocity,retrigger_bool,kildare.allocVoice[i]})
   end
   if params:get('hill_'..i..'_flatten') == 1 then
     send_note_data(i,j,index,params:get(i..'_'..params:string('voice_model_'..i)..'_carHz'))
@@ -1005,7 +1011,8 @@ local function trigger_notes(i,j,index,velocity,retrigger_bool,played_note)
 end
 
 send_note_data = function(i,j,index,played_note)
-  engine.set_voice_param(i,"carHz",midi_to_hz(played_note))
+  -- engine.set_voice_param(i,"carHz",midi_to_hz(played_note))
+  send_to_engine('set_voice_param',{i,"carHz",midi_to_hz(played_note)})
 end
 
 pass_note = function(i,j,seg,note_val,index,retrig_index)

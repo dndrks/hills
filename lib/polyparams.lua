@@ -229,7 +229,8 @@ function m:delta(index, d, voice, alloc)
     -- do nothing, because it just needs to end up handled by the clip actions...
   else
     -- print(voice, alloc, paramKey, paramValue)
-    engine.set_poly_voice_param(voice, alloc, paramKey, paramValue)
+    -- engine.set_poly_voice_param(voice, alloc, paramKey, paramValue)
+    send_to_engine('set_poly_voice_param',{voice, alloc, paramKey, paramValue})
   end
   
   if util.round(m.adjusted_params[voice][alloc].params[index],0.001) == util.round(params:get_raw(index),0.001) then
