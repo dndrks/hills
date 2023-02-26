@@ -5,6 +5,10 @@
 -- ____/\\\\\___/\_
 -- /\///_____/\\\__
 
+-- replace this IP string with your computer's to
+-- send OSC to an external instance of Kildare:
+osc_echo = "169.254.186.68"
+
 if tonumber(norns.version.update) < 220802 then
   norns.script.clear()
   norns.script.load('code/hills/lib/fail_state.lua')
@@ -18,6 +22,7 @@ function kildare.restart_needed_callback()
 end
 
 engine.name = "Kildare"
+osc.send({osc_echo,57120},"/command",{'establish_engine'})
 
 number_of_hills = 7
 hill_names = {
@@ -80,11 +85,6 @@ osc.event=function(path,args,from)
   if osc_fun[path]~= 'progressbar' or 'aubiodone' then
     osc_fun[path](args)
   end
-end
-
-function send_to_engine(action, args)
-  engine[action](table.unpack(args))
-  osc.send({"192.168.0.137",57120},"/command",{action,table.unpack(args)})
 end
 
 pt = include 'lib/hills_new_pt'
@@ -1376,5 +1376,6 @@ end
 
 function cleanup ()
   print("cleanup")
+  osc.send({osc_echo,57120},"/command",{'cleanup'})
   metro.free_all()
 end
