@@ -273,11 +273,11 @@ end
 
 hill_fade = 0
 
-clock.run(function() while true do clock.sync(1/4) grid_dirty = true end end) -- TODO: make this unnecessary...
+grid_dirty_runner = clock.run(function() while true do clock.sync(1/4) grid_dirty = true end end) -- TODO: make this unnecessary...
 
 function grid_lib.init()
   reset_state.loop_modifier()
-  clock.run(function()
+  grid_lib_redraw = clock.run(function()
     while true do
       clock.sleep(1/30)
       grid_data_blink = util.wrap(grid_data_blink + 1,1,15)

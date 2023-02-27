@@ -9,6 +9,28 @@
 -- send OSC to an external instance of Kildare:
 osc_echo = "169.254.217.203"
 
+function full_PSET_swap()
+  clock.run(
+    function()
+      clock.sleep(0.1)
+      if PSET_SWAPPING == nil then
+        PSET_SWAPPING = true
+        for i = 1,7 do
+          params:set(i..'_voice_state',0)
+        end
+        clock.sleep(0.1)
+        _polyparams.reset_polyparams()
+        clock.sleep(0.1)
+        send_to_engine('reset',{})
+        clock.sleep(0.3)
+        params:read()
+        clock.sleep(1)
+        params:read()
+      end
+    end
+  )
+end
+
 if tonumber(norns.version.update) < 220802 then
   norns.script.clear()
   norns.script.load('code/hills/lib/fail_state.lua')
@@ -363,7 +385,7 @@ function init()
       end
     )
 
-    clock.run(function()
+    menu_rebuild_clock = clock.run(function()
       while true do
         clock.sleep(1/15)
         if screen_dirty then
@@ -380,8 +402,7 @@ function init()
   print('built hills: '..util.time())
 
   params.action_preread = function(filename,name,number)
-    print('ooo gonna load a PSET!!')
-    readingPSET = true
+    -- readingPSET = true
     -- for i = 1,7 do params:set(i..'_voice_state',0) end
     -- _polyparams.reset_polyparams()
     -- send_to_engine('reset',{})
@@ -456,10 +477,23 @@ function init()
     print('loading pset!'..this_filepath)
     if util.file_exists(this_filepath.."poly-params.txt") then
       print('loading poly params!')
-      kildare.queued_read_file = this_filepath.."poly-params.txt"
+      -- kildare.queued_read_file = this_filepath.."poly-params.txt"
       engine.load_poly_params(this_filepath.."poly-params.txt")
     end
-    clock.run(function() clock.sleep(0.3) readingPSET = false end)
+    full_PSET_swap()
+    clock.run(
+      function()
+        clock.sleep(0.3)
+        readingPSET = false
+        if PSET_LOOP == nil then PSET_LOOP = 0 end
+        PSET_LOOP = PSET_LOOP + 1
+        print('PSET NOT READING')
+        if PSET_LOOP == 3 then
+          PSET_LOOP = 0
+          PSET_SWAPPING = nil
+        end
+      end
+    )
   end
 
   local function params_write_silent(filename,name)
@@ -595,7 +629,7 @@ function init()
       clock.sleep(1)
       development_state()
       if kildare.queued_read_file ~= nil then
-        print('queud read')
+        print('!!!!!!!!!!!!!!!!!!!!!!!!queud read')
         engine.load_poly_params(kildare.queued_read_file)
         kildare.queued_read_file = nil
       end
