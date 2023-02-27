@@ -52,7 +52,7 @@ function grid_lib.pattern_execute(data)
     screen_dirty = true
     hills[data.x][data.y].perf_led = false
     if params:string("hill "..data.x.." sample momentary") == "yes" then
-      _ca.stop_sample('sample'..params:get("hill "..data.x.." sample slot"))
+      _ca.stop_sample(params:get("hill "..data.x.." sample slot"))
     end
     grid_dirty = true
   elseif data.event == "snapshot_restore" then
@@ -255,7 +255,7 @@ function grid_lib.stop_pattern_playback(i)
   for j = 1,#active_voices[i] do
     if active_voices[i][j] then
       stop(j,true)
-      _ca.stop_sample('sample'..params:get("hill "..j.." sample slot"))
+      _ca.stop_sample(params:get("hill "..j.." sample slot"))
       active_voices[i][j] = false
     end
   end
@@ -557,7 +557,7 @@ function g.key(x,y,z)
       end
       hills[x-1][y].perf_led = false
       if params:string("hill "..(x-1).." sample momentary") == "yes" then
-        _ca.stop_sample('sample'..params:get("hill "..(x-1).." sample slot"))
+        _ca.stop_sample(params:get("hill "..(x-1).." sample slot"))
       end
       for i = 1,16 do
         grid_pattern[i]:watch(
@@ -600,7 +600,7 @@ function g.key(x,y,z)
     elseif mods["alt"] and z == 0 and not mods.snapshots and not mods.playmode and not mods.hill then
       stop(x-1,true)
       if params:string("hill "..(x-1).." sample momentary") == "yes" then
-        _ca.stop_sample('sample'..params:get("hill "..(x-1).." sample slot"))
+        _ca.stop_sample(params:get("hill "..(x-1).." sample slot"))
       end
       for i = 1,16 do
         grid_pattern[i]:watch(

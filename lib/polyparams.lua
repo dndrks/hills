@@ -365,6 +365,12 @@ m.init = function()
       m.adjusted_params[i][j] = {params = {}}
     end
   end
+  m.reset_polyparams()
+  print('poly!!')
+end
+
+m.reset_polyparams = function()
+  m.allocVoice = 1
   m.queued_loop = {}
   m.queued_unloop = {}
   m.queued_rate_change = {}
@@ -373,7 +379,7 @@ m.init = function()
     m.queued_unloop[i] = {}
     m.queued_rate_change[i] = {}
   end
-  print('poly!!')
+  m.reset()
 end
 
 return m

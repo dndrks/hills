@@ -281,7 +281,7 @@ function parameters.init()
     params:add_number("hill "..i.." sample slice count", "slice count",2,48,16)
     params:add_number("hill "..i.." sample distribution", "total distribution",0,100,100, 
       function(param)
-        return(util.round(sample_info['sample'..params:get('hill '..i..' sample slot')].sample_count * (param:get()/100))..'/'..sample_info['sample'..params:get('hill '..i..' sample slot')].sample_count)
+        return(util.round(sample_info[params:get('hill '..i..' sample slot')].sample_count * (param:get()/100))..'/'..sample_info[params:get('hill '..i..' sample slot')].sample_count)
       end
     )   
     params:add_number("hill "..i.." sample probability", "playback probability",0,100,100, function(param) return(param:get().."%") end)

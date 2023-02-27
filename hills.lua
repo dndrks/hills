@@ -5,9 +5,9 @@
 -- ____/\\\\\___/\_
 -- /\///_____/\\\__
 
--- replace this IP string with your computer's to
+-- replace this string with your computer's IP to
 -- send OSC to an external instance of Kildare:
-osc_echo = "169.254.186.68"
+osc_echo = "169.254.217.203"
 
 if tonumber(norns.version.update) < 220802 then
   norns.script.clear()
@@ -22,7 +22,9 @@ function kildare.restart_needed_callback()
 end
 
 engine.name = "Kildare"
-osc.send({osc_echo,57120},"/command",{'establish_engine'})
+if osc_echo ~= nil then
+  osc.send({osc_echo,57120},"/command",{'establish_engine'})
+end
 
 number_of_hills = 7
 hill_names = {
@@ -377,9 +379,25 @@ function init()
 
   print('built hills: '..util.time())
 
+  params.action_preread = function(filename,name,number)
+    print('ooo gonna load a PSET!!')
+    readingPSET = true
+    -- for i = 1,7 do params:set(i..'_voice_state',0) end
+    -- _polyparams.reset_polyparams()
+    -- send_to_engine('reset',{})
+  end
+
   params.action_read = function(filename,name,number)
     readingPSET = true
     print("loading hills data for PSET: "..number)
+    for i = 1,number_of_hills do
+      if params:get(i..'_voice_state') == 0 then
+        _menu.m.PARAMS.on[params.lookup[i..'_voice_state']] = 0
+      else
+        _menu.m.PARAMS.on[params.lookup[i..'_voice_state']] = 1
+      end
+    end
+    -- for i = 1,7 do params:set(i..'_voice_state',0) end
     local this_filepath = _path.data..'hills/'..number..'/'
     for i = 1,number_of_hills do
       if hills[i].active then
@@ -1376,6 +1394,8 @@ end
 
 function cleanup ()
   print("cleanup")
-  osc.send({osc_echo,57120},"/command",{'cleanup'})
+  if osc_echo ~= nil then
+    osc.send({osc_echo,57120},"/command",{'cleanup'})
+  end
   metro.free_all()
 end
