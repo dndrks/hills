@@ -7,7 +7,9 @@
 
 -- replace this string with your computer's IP to
 -- send OSC to an external instance of Kildare:
-osc_echo = "169.254.217.203"
+-- osc_echo = "224.0.0.1"
+osc_echo = "169.254.64.84"
+-- osc_echo = "224.0.0.1"
 
 function full_PSET_swap()
   clock.run(
