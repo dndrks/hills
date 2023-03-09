@@ -173,6 +173,7 @@ function track_actions.init(target, hill_number, clear_reset)
     track[target].rec = false
     track[target].rec_note_entry = false
     track[target].manual_note_entry = false
+    track[target].mute_during_note_entry = false
     -- build_clock = true
   end
 

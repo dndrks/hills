@@ -45,7 +45,7 @@ function hway_ui.draw_menu()
   screen.fill()
   screen.aa(0)
   if ui.control_set ~= "seq" then
-    if ui.control_set ~= 'step parameters' and ui.control_set ~= 'poly parameters' then
+    if ui.control_set ~= 'step parameters' and ui.control_set ~= 'poly parameters' and ui.control_set ~= 'cc parameters' then
       local focus = h.screen_focus
       local seg = h[focus]
       screen.level(1)
@@ -587,6 +587,8 @@ function hway_ui.draw_menu()
       _fkprm.redraw()
     elseif ui.control_set == 'poly parameters' then
       _polyparams.redraw()
+    elseif ui.control_set == 'cc parameters' then
+      _ccparams.redraw()
     end
   end
 end
@@ -598,7 +600,7 @@ function hway_ui.process_key(n,z)
   local _active = track[hf][h.screen_focus]
   local focused_set = _active.focus == "main" and track[_hui.sel] or _active.fill
   if n == 1 then
-    key1_hold = z == 1 and true or false
+    key1_hold = z == 1
     highway_ui.alt = z == 1
     if z == 1 then
     end

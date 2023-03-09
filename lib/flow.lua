@@ -274,7 +274,7 @@ function f_m.process_key(n,z)
   elseif n == 2 and z == 0 and ignore_key2_up and not _fm_.alt then
     ignore_key2_up = false
   elseif n == 1 then
-    _fm_.alt = z == 1 and true or false
+    _fm_.alt = z == 1
   end
 end
 

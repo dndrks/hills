@@ -18,6 +18,8 @@ function enc_actions.parse(n,d)
     _fkprm.enc(n,d)
   elseif ui.control_set == 'poly parameters' then
     _polyparams.enc(n,d)
+  elseif ui.control_set == 'cc parameters' then
+    _ccparams.enc(n,d)
   else
     local s_c = ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]
     local i = ui.hill_focus

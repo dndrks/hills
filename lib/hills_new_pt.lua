@@ -252,7 +252,7 @@ function pattern:set_overdub(s)
     self.overdub = 0
   end
   if self.overdub_action ~= nil then
-    self.overdub_action(self.name,self.overdub == 1 and true or false)
+    self.overdub_action(self.name,self.overdub == 1)
   end
 end
 

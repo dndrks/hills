@@ -8,7 +8,7 @@
 -- replace this string with your computer's IP to
 -- send OSC to an external instance of Kildare:
 -- osc_echo = "224.0.0.1"
-osc_echo = "169.254.64.84"
+-- osc_echo = "169.254.64.84"
 -- osc_echo = "224.0.0.1"
 
 function full_PSET_swap()
@@ -22,6 +22,7 @@ function full_PSET_swap()
         end
         clock.sleep(0.1)
         _polyparams.reset_polyparams()
+        _ccparams.reset_polyparams()
         clock.sleep(0.1)
         send_to_engine('reset',{})
         clock.sleep(0.3)
@@ -129,6 +130,7 @@ _ca = include 'lib/clip'
 _snapshots = include 'lib/snapshot'
 _fkprm = include 'lib/fkprm'
 _polyparams = include 'lib/polyparams'
+_ccparams = include 'lib/ccparams'
 _hsteps = include 'lib/highway_steps'
 _htracks = include 'lib/highway_tracks'
 mu = require 'musicutil'
@@ -263,6 +265,7 @@ function init()
   prms.init()
   _fkprm.init()
   _polyparams.init()
+  _ccparams.init()
   _midi.init()
   -- prms.reload_engine(params:string("global engine"),true)
   
@@ -275,7 +278,6 @@ function init()
     hills[i].active = false
     hills[i].crow_change_queued = false
 
-    hills[i].note_scale = mu.generate_scale_of_length(60,1,28)
     hills[i].segment = 1
     hills[i].looper = {["clock"] = nil}
 
@@ -989,7 +991,7 @@ end
 
 local function play_linked_sample(i, j, played_note, vel_target, retrig_index, force)
   if params:string("hill "..i.." sample output") == "yes" then
-    if params:get("hill "..i.." sample probability") >= math.random(100) then      
+    if params:get("hill "..i.." sample probability") >= math.random(100) then
       local should_play;
       if hills[i].highway then
         local index = track[i][j].step
@@ -998,6 +1000,10 @@ local function play_linked_sample(i, j, played_note, vel_target, retrig_index, f
         end
       else
         should_play = true
+      end
+      if should_play then
+        local pad_id = (played_note - params:get("hill "..i.." base note")) + 1
+        _ccparams:unpack_pad(i,pad_id)
       end
       local target = i..'_sample_'
       if params:string(target..'sampleMode') == 'chop' and should_play then
@@ -1018,6 +1024,7 @@ local function play_linked_sample(i, j, played_note, vel_target, retrig_index, f
 end
 
 force_note = function(i,j,played_note)
+  print('note happening')
   local vel_target = params:get('hill_'..i..'_iso_velocity')
   local retrig_index = 0
   if params:string('voice_model_'..i) ~= 'sample' then
