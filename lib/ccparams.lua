@@ -208,8 +208,7 @@ function m:unpack_pad(voice,pad)
     end
   end
   for prm,val in pairs(m.adjusted_params[voice][pad].params) do
-    print(prm,val)
-    -- params:set(prm,val)
+    -- print(prm,val)
     params:lookup_param(prm).action(params:lookup_param(prm):map_value(val))
   end
 end
