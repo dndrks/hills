@@ -182,15 +182,15 @@ end
 function ca.play_slice(target,slice,velocity,i,j, played_note, retrig_index)
   if params:get(target..'_sample_sampleFile') ~= _path.audio then
     kildare.allocVoice[i] = util.wrap(kildare.allocVoice[i]+1, 1, params:get(i..'_poly_voice_count'))
-    print(target,kildare.allocVoice[i],sample_loop_info[target].clocks[kildare.allocVoice[i]])
-    if clock.threads[sample_loop_info[target].clocks[kildare.allocVoice[i]]] then
-      clock.cancel(sample_loop_info[target].clocks[kildare.allocVoice[i]])
-    end
-    if params:get(i..'_poly_voice_count') > 1
-    and _polyparams.adjusted_params[target][kildare.allocVoice[i]].params[target..'_sample_loop'] == 1
-    then
-      _polyparams.queued_loop[i][kildare.allocVoice[i]] = true
-    end
+    -- print(target,kildare.allocVoice[i],sample_loop_info[target].clocks[kildare.allocVoice[i]])
+    -- if clock.threads[sample_loop_info[target].clocks[kildare.allocVoice[i]]] then
+    --   clock.cancel(sample_loop_info[target].clocks[kildare.allocVoice[i]])
+    -- end
+    -- if params:get(i..'_poly_voice_count') > 1
+    -- and _polyparams.adjusted_params[target][kildare.allocVoice[i]].params[target..'_sample_loop'] == 1
+    -- then
+    --   _polyparams.queued_loop[i][kildare.allocVoice[i]] = true
+    -- end
     local slice_count = params:get('hill '..i..' sample slice count')
     local sampleEnd = (slice)/slice_count
     local sampleStart = (slice-1)/slice_count
@@ -208,16 +208,13 @@ function ca.play_slice(target,slice,velocity,i,j, played_note, retrig_index)
     else
       rate = ca.get_resampled_rate(target, i, j)
     end
-    -- engine.set_voice_param(target, 'rate', rate)
     send_to_engine('set_voice_param',{target, 'rate', rate})
     if retrig_index == 0 then
-      -- engine.trig(target,velocity,'false',kildare.allocVoice[i])
       send_to_engine('trig',{target,velocity,'false',kildare.allocVoice[i]})
-      print('no trig '..kildare.allocVoice[i])
+      -- print('no trig '..kildare.allocVoice[i])
     else
-      -- engine.trig(target,velocity,'true',kildare.allocVoice[i])
       send_to_engine('trig',{target,velocity,'true',kildare.allocVoice[i]})
-      print('yes trig '..kildare.allocVoice[i])
+      -- print('yes trig '..kildare.allocVoice[i])
     end
     -- TODO: confirm this is still useful...230312
     if params:get(i..'_poly_voice_count') ~= 1 then
@@ -228,47 +225,30 @@ function ca.play_slice(target,slice,velocity,i,j, played_note, retrig_index)
         send_to_engine('set_poly_voice_param',{i, loop_voice, 'rate', rate})
       end
     end
-    -- if params:get(i..'_poly_voice_count') == 1 then
-    --   if params:string(i..'_sample_loop') == "on" then
-    --     local loop_voice = kildare.allocVoice[i]
-    --     sample_loop_info[target].clocks[loop_voice] = clock.run(
-    --       function()
-    --         while true do
-    --           clock.sleep(window)
-    --           -- engine.trig(target,velocity,'false',loop_voice)
-    --           send_to_engine('trig',{target,velocity,'false',loop_voice})
-    --         end
-    --       end)
-    --   end
-    -- else
-    --   local loop_voice = kildare.allocVoice[i]
-    --   if _polyparams.queued_loop[i][loop_voice] then
-    --     local loop_voice = kildare.allocVoice[i]
-    --     sample_loop_info[target].clocks[loop_voice] = clock.run( -- TODO: 'target' is just 'i'...
-    --       function()
-    --         while true do
-    --           clock.sleep(window) -- does 'window' need to be a var?
-    --           -- engine.trig(target,velocity,'false',loop_voice)
-    --           send_to_engine('trig',{target,velocity,'false',loop_voice})
-    --         end
-    --       end
-    --     )
-    --     _polyparams.queued_loop[i][loop_voice] = false
-    --   elseif _polyparams.queued_unloop[i][loop_voice] then
-    --     if clock.threads[sample_loop_info[target].clocks[loop_voice]] then
-    --       clock.cancel(sample_loop_info[target].clocks[loop_voice])
-    --     end
-    --     _polyparams.queued_unloop[i][loop_voice] = false
-    --   end
-    --   local check_rate_change = _polyparams.adjusted_params[i][loop_voice].params[i..'_sample_playbackRateBase']
-    --   if check_rate_change ~= nil then
-    --     local rate = params:lookup_param(i..'_sample_playbackRateBase'):map_value(check_rate_change)
-    --     rate = sample_speedlist[rate]
-    --     -- engine.set_poly_voice_param(i, loop_voice, 'rate', rate)
-    --     send_to_engine('set_poly_voice_param',{i, loop_voice, 'rate', rate})
-    --   end
-    -- end
-    -- print('> playing slice: '..target,slice,velocity,i,j, played_note, retrig_index)
+  end
+end
+
+function ca.play_index(target,index,velocity,i,j, played_note, retrig_index)
+  kildare.allocVoice[i] = util.wrap(kildare.allocVoice[i]+1, 1, params:get(i..'_poly_voice_count'))
+  send_to_engine('change_sample',{target,index})
+  send_to_engine('set_voice_param',{target,'sampleStart',0})
+  send_to_engine('set_voice_param',{target,'sampleEnd',1})
+  if params:string(target..'_sample_loop') == 'off' then
+    send_to_engine('set_voice_param',{target,'loop',hills[i][j].sample_controls.loop[hills[i][j].index] and 1 or 0})
+  else
+    send_to_engine('set_voice_param',{target,'loop',1})
+  end
+  local rate;
+  if params:string('hill '..i..' sample repitch') == "yes" and played_note ~= nil then
+    rate = ca.get_pitched_rate(target,i,j,played_note)
+  else
+    rate = ca.get_resampled_rate(target, i, j)
+  end
+  send_to_engine('set_voice_param',{target, 'rate', rate})
+  if retrig_index == 0 then
+    send_to_engine('trig',{target,velocity,'false',kildare.allocVoice[i]})
+  else
+    send_to_engine('trig',{target,velocity,'true',kildare.allocVoice[i]})
   end
 end
 
@@ -310,15 +290,11 @@ end
 
 function ca.play_through(target,velocity,i,j, played_note, retrig_index)
   kildare.allocVoice[i] = util.wrap(kildare.allocVoice[i]+1, 1, params:get(i..'_poly_voice_count'))
-  -- engine.set_voice_param(target,'sampleStart',0)
-  send_to_engine('set_voice_param',{target,'sampleStart',0})
-  -- engine.set_voice_param(target,'sampleEnd',1)
-  send_to_engine('set_voice_param',{target,'sampleEnd',1})
+  -- send_to_engine('set_voice_param',{target,'sampleStart',params:get(target..'_sample_sampleStart')})
+  -- send_to_engine('set_voice_param',{target,'sampleEnd',params:get(target..'_sample_sampleEnd')})
   if params:string(target..'_sample_loop') == 'off' then
-    -- engine.set_voice_param(target,'loop',hills[i][j].sample_controls.loop[hills[i][j].index] and 1 or 0)
     send_to_engine('set_voice_param',{target,'loop',hills[i][j].sample_controls.loop[hills[i][j].index] and 1 or 0})
   else
-    -- engine.set_voice_param(target,'loop',1)
     send_to_engine('set_voice_param',{target,'loop',1})
   end
   local rate;
@@ -327,45 +303,10 @@ function ca.play_through(target,velocity,i,j, played_note, retrig_index)
   else
     rate = ca.get_resampled_rate(target, i, j)
   end
-  -- engine.set_voice_param(target, 'rate', rate)
   send_to_engine('set_voice_param',{target, 'rate', rate})
   if retrig_index == 0 then
-    -- engine.trig(target,velocity,'false',kildare.allocVoice[i])
     send_to_engine('trig',{target,velocity,'false',kildare.allocVoice[i]})
   else
-    -- engine.trig(target,velocity,'true',kildare.allocVoice[i])
-    send_to_engine('trig',{target,velocity,'true',kildare.allocVoice[i]})
-  end
-end
-
-function ca.play_index(target,index,velocity,i,j, played_note, retrig_index)
-  kildare.allocVoice[i] = util.wrap(kildare.allocVoice[i]+1, 1, params:get(i..'_poly_voice_count'))
-  -- engine.change_sample(target,index)
-  send_to_engine('change_sample',{target,index})
-  -- engine.set_voice_param(target,'sampleStart',0)
-  send_to_engine('set_voice_param',{target,'sampleStart',0})
-  -- engine.set_voice_param(target,'sampleEnd',1)
-  send_to_engine('set_voice_param',{target,'sampleEnd',1})
-  if params:string(target..'_sample_loop') == 'off' then
-    -- engine.set_voice_param(target,'loop',hills[i][j].sample_controls.loop[hills[i][j].index] and 1 or 0)
-    send_to_engine('set_voice_param',{target,'loop',hills[i][j].sample_controls.loop[hills[i][j].index] and 1 or 0})
-  else
-    -- engine.set_voice_param(target,'loop',1)
-    send_to_engine('set_voice_param',{target,'loop',1})
-  end
-  local rate;
-  if params:string('hill '..i..' sample repitch') == "yes" and played_note ~= nil then
-    rate = ca.get_pitched_rate(target,i,j,played_note)
-  else
-    rate = ca.get_resampled_rate(target, i, j)
-  end
-  -- engine.set_voice_param(target, 'rate', rate)
-  send_to_engine('set_voice_param',{target, 'rate', rate})
-  if retrig_index == 0 then
-    -- engine.trig(target,velocity,'false',kildare.allocVoice[i])
-    send_to_engine('trig',{target,velocity,'false',kildare.allocVoice[i]})
-  else
-    -- engine.trig(target,velocity,'true',kildare.allocVoice[i])
     send_to_engine('trig',{target,velocity,'true',kildare.allocVoice[i]})
   end
 end
