@@ -189,7 +189,6 @@ local function build_check(target_trig,voice,hill,step)
       [hill] = {
         [step] = {
           ['params'] = {},
-          ['ids_idx'] = {},
         }
       }
     }
@@ -198,13 +197,11 @@ local function build_check(target_trig,voice,hill,step)
       
       [step] = {
         ['params'] = {},
-        ['ids_idx'] = {},
       }
     }
   elseif target_trig[voice][hill][step] == nil then
     target_trig[voice][hill][step] = {
       ['params'] = {},
-      ['ids_idx'] = {},
     }
   end
 end
@@ -223,7 +220,7 @@ end
 
 function m:force(index, voice, hill, step)
   local target_trig = get_focus(voice,hill,step)
-  build_check(target_trig, voice, hill, step)
+  -- build_check(target_trig, voice, hill, step)
   print('forcing',voice,hill,step,index)
   if target_trig[voice][hill][step].params[index] ~= params:lookup_param(index).raw then
     target_trig[voice][hill][step].params[index] = params:lookup_param(index).raw
@@ -240,7 +237,7 @@ end
 
 function m:delta(index, d, voice, hill, step)
   local target_trig = get_focus(voice,hill,step)
-  build_check(target_trig, voice, hill, step)
+  -- build_check(target_trig, voice, hill, step)
   local val;
   if target_trig[voice][hill][step].params[index] == nil then
     -- write index and value
@@ -401,6 +398,18 @@ m.init = function()
   m.fine = false
   m.adjusted_params = {}
   m.adjusted_params_lock_trigs = {}
+  for i = 1,number_of_hills do
+    m.adjusted_params[i] = {}
+    m.adjusted_params_lock_trigs[i] = {}
+    for j = 1,number_of_patterns do
+      m.adjusted_params[i][j] = {}
+      m.adjusted_params_lock_trigs[i][j] = {}
+      for steps = 1,128 do
+        m.adjusted_params[i][j][steps] = {['params'] = {}}
+        m.adjusted_params_lock_trigs[i][j][steps] = {['params'] = {}}
+      end
+    end
+  end
 end
 
 return m

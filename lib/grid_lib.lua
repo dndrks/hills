@@ -96,7 +96,8 @@ function grid_lib.pattern_execute(data)
     local i = data.hill_i
     local j = data.hill_j
     local focused_set = data.track_focus == "main" and track[i][j] or track[i][j].fill
-    focused_set.trigs[data.step] = data.state
+    -- focused_set.trigs[data.step] = data.state
+    _htracks.change_trig_state(focused_set,data.step,data.state, i, j)
   elseif data.event == "midi_trig" then
     if data.legato then
       params:set('hill_'..data.hill..'_legato', 1)
@@ -382,6 +383,7 @@ function write_pattern_data(i,data_table,from_current)
       current_count = #grid_pattern[i].event[1] + 1
     end
     grid_pattern[i].event[1][current_count] = data_table
+    grid_pattern[i].count = 1
   else
     grid_pattern[i]:watch(data_table)
   end
@@ -919,7 +921,7 @@ function grid_lib.highway_press(x,y,z)
   -- change pattern focus:
   elseif y == 2 and x == 1 and z == 1 then
     if not mods.alt then
-      if #track[i]+1 <= 8 then
+      if #track[i]+1 <= number_of_patterns then
         _htracks.init(i,#track[i]+1)
       end
     end
@@ -947,7 +949,9 @@ function grid_lib.highway_press(x,y,z)
     and not grid_accent
     and not grid_mute then
       track[i][j].ui_position = pressed_step
-      focused_set.trigs[pressed_step] = not focused_set.trigs[pressed_step]
+      -- focused_set.trigs[pressed_step] = not focused_set.trigs[pressed_step]
+      _htracks.change_trig_state(focused_set,pressed_step, not (focused_set.trigs[pressed_step]), i, j)
+      print('happening')
       for k = 1,16 do
         local table_to_record =
         {
@@ -1046,7 +1050,8 @@ function grid_lib.highway_press(x,y,z)
       end
       if track[i].rec then
         local current_step = track[i][j].step
-        track[i][j].trigs[current_step] = true
+        -- track[i][j].trigs[current_step] = true
+        _htracks.change_trig_state(track[i][j],current_step, true, i, j)
       end
     end
   end
@@ -1062,7 +1067,8 @@ local function process_ccES(i,j,played_note)
     if params:get('hill_'..i..'_legato') == 1 then
       focused_set.legato_trigs[current_step] = true
     else
-      focused_set.trigs[current_step] = true
+      -- focused_set.trigs[current_step] = true
+      _htracks.change_trig_state(focused_set,current_step, true, i, j)
     end
     focused_set.base_note[current_step] = played_note
     focused_set.velocities[current_step] = params:get('hill_'..i..'_iso_velocity')
@@ -1074,7 +1080,8 @@ local function process_ccES(i,j,played_note)
     if params:get('hill_'..i..'_legato') == 1 then
       focused_set.legato_trigs[pos] = true
     else
-      focused_set.trigs[pos] = true
+      -- focused_set.trigs[pos] = true
+      _htracks.change_trig_state(focused_set,pos, true, i, j)
     end
     focused_set.base_note[pos] = played_note
     focused_set.velocities[pos] = params:get('hill_'..i..'_iso_velocity')
@@ -1130,7 +1137,8 @@ function grid_lib.cc_press(x,y,z)
     if track[i].manual_note_entry then
       local focused_set = track[i][j].focus == 'main' and track[i][j] or track[i][j].fill
       local pos = track[i][j].ui_position
-      focused_set.trigs[pos] = false
+      -- focused_set.trigs[pos] = false
+      _htracks.change_trig_state(focused_set,pos, false, i, j)
       track[i][j].ui_position = util.wrap(track[i][j].ui_position+1,track[i][j].start_point,track[i][j].end_point)
     end
   elseif (x == 5 or x == 7) and y == 8 and z == 1 and track[i].manual_note_entry then
@@ -1197,7 +1205,8 @@ function grid_lib.earthsea_press(x,y,z)
     if track[i].manual_note_entry then
       local focused_set = track[i][j].focus == 'main' and track[i][j] or track[i][j].fill
       local pos = track[i][j].ui_position
-      focused_set.trigs[pos] = false
+      -- focused_set.trigs[pos] = false
+      _htracks.change_trig_state(focused_set,pos, false, i, j)
       track[i][j].ui_position = util.wrap(track[i][j].ui_position+1,track[i][j].start_point,track[i][j].end_point)
     end
   elseif (x == 5 or x == 7) and y == 8 and z == 1 and track[i].manual_note_entry then
@@ -1600,9 +1609,17 @@ function grid_lib.draw_highway()
               lvl = 0
             else
               if display_step <= _active.end_point and display_step >= _active.start_point then
-                lvl = 2
+                if _active.lock_trigs[display_step] then
+                  lvl = 5
+                else
+                  lvl = 2
+                end
               else
-                lvl = 0
+                if _active.lock_trigs[display_step] then
+                  lvl = 4
+                else
+                  lvl = 0
+                end
               end
             end
           end

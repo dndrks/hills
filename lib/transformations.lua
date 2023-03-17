@@ -31,7 +31,8 @@ m.track_transpose = function(i,j,pos,delta)
     focused_set = _active.base_note
     if _active.trigs[pos] == false then
       if delta > 0 then
-        _active.trigs[pos] = true
+        -- _active.trigs[pos] = true
+        _htracks.change_trig_state(_active,pos, true, i, j)
       end
       goto finished
     end
@@ -39,16 +40,19 @@ m.track_transpose = function(i,j,pos,delta)
     focused_set = _active.fill.base_note
     if _active.fill.trigs[pos] == false then
       if delta > 0 then
-        _active.fill.trigs[pos] = true
+        -- _active.fill.trigs[pos] = true
+        _htracks.change_trig_state(_active.fill,pos, true, i, j)
       end
       goto finished
     end
   end
   if focused_set[pos] == 0 and delta < 1 then
     if focused_set == _active.base_note then
-      _active.trigs[pos] = false
+      -- _active.trigs[pos] = false
+      _htracks.change_trig_state(_active,pos, false, i, j)
     else
-      _active.fill.trigs[pos] = false
+      -- _active.fill.trigs[pos] = false
+      _htracks.change_trig_state(_active.fill,pos, true, i, j)
     end
     local note_check;
     if params:string('voice_model_'..i) ~= 'sample' and params:string('voice_model_'..i) ~= 'input' then

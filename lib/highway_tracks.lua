@@ -451,6 +451,15 @@ function track_actions.retrig_fill(target,s_p,e_p,val,type)
   end
 end
 
+function track_actions.change_trig_state(target_track,target_step,state, i, j)
+  target_track.trigs[target_step] = state
+  if state == true then
+    if tab.count(_fkprm.adjusted_params_lock_trigs[i][j][target_step].params) > 0 then
+      _fkprm.adjusted_params[i][j][target_step].params = _t.deep_copy(_fkprm.adjusted_params_lock_trigs[i][j][target_step].params)
+    end
+  end
+end
+
 function track_actions.copy(target)
   local _active = track[target][track[target].active_hill]
   if track_clipboard == nil then
@@ -576,13 +585,14 @@ function track_actions.generate_er(i,j)
   local focused_set = _active.focus == "main" and _active or _active.fill
   local generated = euclid.gen(focused_set.er.pulses, focused_set.er.steps, focused_set.er.shift)
   for length = focused_set.start_point, focused_set.end_point do
-    focused_set.trigs[length] = generated[length-(focused_set.start_point-1)]
+    -- focused_set.trigs[length] = generated[length-(focused_set.start_point-1)]
+    _htracks.change_trig_state(focused_set,length, generated[length-(focused_set.start_point-1)], i, j)
   end
 end
 
 track_direction = {}
 
-for i = 1,8 do
+for i = 1,number_of_patterns do
   track_direction[i] = "positive"
 end
 

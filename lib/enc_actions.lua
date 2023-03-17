@@ -225,11 +225,13 @@ function enc_actions.parse(n,d)
                 local focused_set = _active.focus == 'main' and _active or _active.fill
                 if d > 0 then
                   if focused_set.trigs[_pos] == false then
-                    focused_set.trigs[_pos] = true
+                    -- focused_set.trigs[_pos] = true
+                    _htracks.change_trig_state(focused_set,_pos,true,i,j)
                   end
                 else
                   if focused_set.trigs[_pos] == true then
-                    focused_set.trigs[_pos] = false
+                    -- focused_set.trigs[_pos] = false
+                    _htracks.change_trig_state(focused_set,_pos,false,i,j)
                   end
                 end
               end

@@ -52,6 +52,7 @@ if osc_echo ~= nil then
 end
 
 number_of_hills = 7
+number_of_patterns = 8
 hill_names = {
   "1: bd",
   "2: sd",
@@ -1115,19 +1116,24 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
             print('>S>S>S'..check_prm)
             if _fkprm.adjusted_params[i][j][index].params[check_prm] == nil then
               local lock_trig = track[i][j].focus == 'main' and track[i][j].lock_trigs[index] or track[i][j].fill.lock_trigs[index]
-              local is_drum_voice = check_prm <= last_voice_param
+              local is_drum_voice = params.lookup[check_prm] <= last_voice_param
               local id = check_prm
               if is_drum_voice and i <= number_of_hills then
-                local target_voice = string.match(params:get_id(id),"%d+")
-                local target_drum = params:get_id(id):match('(.*_)')
+                -- local target_voice = string.match(params:get_id(id),"%d+")
+                local target_voice = string.match(id,"%d+")
+                -- local target_drum = params:get_id(id):match('(.*_)')
+                local target_drum = id:match('(.*_)')
                 target_drum = string.gsub(target_drum, target_voice..'_', '')
                 target_drum = string.gsub(target_drum, '_', '')
-                local p_name = string.gsub(params:get_id(id),target_voice..'_'..target_drum..'_','')
+                -- local p_name = string.gsub(params:get_id(id),target_voice..'_'..target_drum..'_','')
+                local p_name = string.gsub(id,target_voice..'_'..target_drum..'_','')
                 prms.send_to_engine(target_voice,p_name,params:get(id))
                 print('reseeding non-adjusted value for voice', target_voice, j, index, id, p_name)
               else
-                local p_name = extract_voice_from_string(params:get_id(id))
-                local sc_target = string.gsub(params:get_id(id),p_name..'_','')
+                -- local p_name = extract_voice_from_string(params:get_id(id))
+                local p_name = extract_voice_from_string(id)
+                -- local sc_target = string.gsub(params:get_id(id),p_name..'_','')
+                local sc_target = string.gsub(id,p_name..'_','')
                 -- print('reseeding non-adjusted value for fx', i, j, index, id)
                 engine['set_'..p_name..'_param'](sc_target,params:get(id))
               end
