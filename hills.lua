@@ -10,6 +10,7 @@
 -- osc_echo = "224.0.0.1"
 -- osc_echo = "169.254.64.84"
 -- osc_echo = "224.0.0.1"
+osc_echo = "169.254.6.200"
 
 function full_PSET_swap()
   clock.run(
@@ -1003,7 +1004,7 @@ local function play_linked_sample(i, j, played_note, vel_target, retrig_index, f
         should_play = true
       end
       if should_play then
-        local pad_id = (played_note - params:get("hill "..i.." base note")) + 1
+        local pad_id = util.wrap((played_note - params:get("hill "..i.." base note")) + 1,1,16)
         _ccparams:unpack_pad(i,pad_id)
       end
       local target = i..'_sample_'
@@ -1045,7 +1046,6 @@ end
 local function trigger_notes(i,j,index,velocity,retrigger_bool,played_note)
   if params:get('hill_'..i..'_legato') == 0 then
     kildare.allocVoice[i] = util.wrap(kildare.allocVoice[i]+1, 1, params:get(i..'_poly_voice_count'))
-    -- engine.trig(i,velocity,retrigger_bool,kildare.allocVoice[i])
     send_to_engine('trig',{i,velocity,retrigger_bool,kildare.allocVoice[i]})
   end
   if params:get('hill_'..i..'_flatten') == 1 then
@@ -1145,21 +1145,20 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
         -- per_step_params_adjusted[i] = {param = {}, value = {}}
         -- for k,v in next,_fkprm.adjusted_params[i][j][index].params do
         for k,v in next,target_trig[i][j][index].params do
-
           -- local is_drum_voice = k <= last_voice_param
           local param_id = k
           k = params.lookup[k]
           local is_drum_voice = k <= last_voice_param
-          local id = k
-          local drum_target = params:get_id(id):match('(.+)_(.+)_(.+)')
+          local drum_target = param_id:match('(.+)_(.+)_(.+)')
           drum_target = tonumber(drum_target)
+          print('huh! '..drum_target, k, params:get_id(k), param_id)
           if is_drum_voice and type(drum_target) == 'number' and drum_target <= number_of_hills then
             if retrig_index == 0 then
               local target_voice = drum_target
-              local target_drum = params:get_id(k):match('(.*_)')
+              local target_drum = param_id:match('(.*_)')
               target_drum = string.gsub(target_drum, target_voice..'_', '')
               target_drum = string.gsub(target_drum, '_', '')
-              local p_name = string.gsub(params:get_id(k),target_voice..'_'..target_drum..'_','')
+              local p_name = string.gsub(param_id,target_voice..'_'..target_drum..'_','')
               print('sending voice param',target_voice,p_name,fkmap(i,j,index,param_id))
               if target_voice ~= i then
                 if not tab.contains(track[target_voice].external_prm_change,param_id) then
@@ -1169,8 +1168,8 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
               prms.send_to_engine(target_voice,p_name,fkmap(i,j,index,param_id))
             end
           else
-            local p_name = extract_voice_from_string(params:get_id(k))
-            local sc_target = string.gsub(params:get_id(k),p_name..'_','')
+            local p_name = extract_voice_from_string(param_id)
+            local sc_target = string.gsub(param_id,p_name..'_','')
             -- print('sending step param to fx', i, j, index, k)
             engine['set_'..p_name..'_param'](sc_target,fkmap(i,j,index,param_id))
           end
@@ -1194,46 +1193,38 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
     end
     -- // per-step params
     -- print('done with fkprm stuff')
-    if params:string('voice_model_'..i) ~= 'sample' then
-      local accent_vel = tonumber(params:string("hill "..i.." accent mult"):sub(1,-2))
-      local vel_target = hills[i].highway == false
-        and hills[i][j].note_velocity[index]
-        or (focused_set.velocities[index] * (focused_set.accented_trigs[index] and accent_vel or 1))
-      if hills[i].highway then
-        local lock_trig = track[i][j].focus == 'main' and track[i][j].lock_trigs[index] or track[i][j].fill.lock_trigs[index]
-        if focused_set.trigs[index] and not focused_set.muted_trigs[index] then
-          if retrig_index == nil then
+    local accent_vel = tonumber(params:string("hill "..i.." accent mult"):sub(1,-2))
+    local vel_target = hills[i].highway == false
+      and hills[i][j].note_velocity[index]
+      or (focused_set.velocities[index] * (focused_set.accented_trigs[index] and accent_vel or 1))
+    if hills[i].highway then
+      local lock_trig = track[i][j].focus == 'main' and track[i][j].lock_trigs[index] or track[i][j].fill.lock_trigs[index]
+      if focused_set.trigs[index] and not focused_set.muted_trigs[index] then
+        if retrig_index == nil then
+          if params:string('voice_model_'..i) ~= 'sample' then
             trigger_notes(i,j,index,vel_target,'false',played_note)
-          else
-            local destination_vel = focused_set.velocities[index] * (focused_set.accented_trigs[index] and accent_vel or 1)
-            local destination_count = focused_set.conditional.retrig_count[index]
-            local destination_curve = focused_set.conditional.retrig_slope[index]
-            local retrig_vel;
-            if destination_curve < 0 and destination_count > 0 then
-              local destination_min = lin_lin(-128, -1, 0, destination_vel, destination_curve)
-              retrig_vel = util_round(lin_lin(0, destination_count, destination_vel, destination_min, retrig_index))
-            elseif destination_curve > 0 and destination_count > 0 then
-              local destination_max = lin_lin(1, 128, 0, destination_vel, destination_curve)
-              retrig_vel = util_round(lin_lin(0, destination_count, 0, destination_max, retrig_index))
-            else
-              retrig_vel = destination_vel
-            end
-            trigger_notes(i,j,index,retrig_vel,'true',played_note)
           end
+          play_linked_sample(i, j, played_note, vel_target, retrig_index)
+        else
+          local destination_vel = focused_set.velocities[index] * (focused_set.accented_trigs[index] and accent_vel or 1)
+          local destination_count = focused_set.conditional.retrig_count[index]
+          local destination_curve = focused_set.conditional.retrig_slope[index]
+          local retrig_vel;
+          if destination_curve < 0 and destination_count > 0 then
+            local destination_min = lin_lin(-128, -1, 0, destination_vel, destination_curve)
+            retrig_vel = util_round(lin_lin(0, destination_count, destination_vel, destination_min, retrig_index))
+          elseif destination_curve > 0 and destination_count > 0 then
+            local destination_max = lin_lin(1, 128, 0, destination_vel, destination_curve)
+            retrig_vel = util_round(lin_lin(0, destination_count, 0, destination_max, retrig_index))
+          else
+            retrig_vel = destination_vel
+          end
+          trigger_notes(i,j,index,retrig_vel,'true',played_note)
+          play_linked_sample(i, j, played_note, retrig_vel, retrig_index)
         end
-      else
-        trigger_notes(i,j,index,vel_target,'false',played_note)
       end
-      -- if params:string("hill "..i.." kildare_notes") == "yes" then
-      --   send_note_data(i,j,index,played_note)
-      -- end
-      play_linked_sample(i, j, played_note, vel_target, retrig_index)
     else
-      -- TRIGGER SAMPLE
-      local accent_vel = tonumber(params:string("hill "..i.." accent mult"):sub(1,-2))
-      local vel_target = hills[i].highway == false
-        and hills[i][j].note_velocity[index]
-        or (focused_set.velocities[index] * (focused_set.accented_trigs[index] and accent_vel or 1))
+      trigger_notes(i,j,index,vel_target,'false',played_note)
       play_linked_sample(i, j, played_note, vel_target, retrig_index)
     end
     manual_iter(i,j)

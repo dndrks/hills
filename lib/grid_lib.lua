@@ -1603,7 +1603,11 @@ function grid_lib.draw_highway()
           lvl = grid_data_blink
         else
           if focused_set.trigs[display_step] then
-            lvl = 8
+            if _active.step == display_step and _active.playing then
+              lvl = 0
+            else
+              lvl = 8
+            end
           else
             if _active.step == display_step and _active.playing then
               lvl = 0
