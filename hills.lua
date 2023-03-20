@@ -10,7 +10,7 @@
 -- osc_echo = "224.0.0.1"
 -- osc_echo = "169.254.64.84"
 -- osc_echo = "224.0.0.1"
-osc_echo = "169.254.6.200"
+osc_echo = "169.254.210.64"
 
 function full_PSET_swap()
   clock.run(
@@ -1219,12 +1219,16 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
           else
             retrig_vel = destination_vel
           end
-          trigger_notes(i,j,index,retrig_vel,'true',played_note)
+          if params:string('voice_model_'..i) ~= 'sample' then
+            trigger_notes(i,j,index,retrig_vel,'true',played_note)
+          end
           play_linked_sample(i, j, played_note, retrig_vel, retrig_index)
         end
       end
     else
-      trigger_notes(i,j,index,vel_target,'false',played_note)
+      if params:string('voice_model_'..i) ~= 'sample' then
+        trigger_notes(i,j,index,vel_target,'false',played_note)
+      end
       play_linked_sample(i, j, played_note, vel_target, retrig_index)
     end
     manual_iter(i,j)
