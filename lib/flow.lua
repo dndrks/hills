@@ -252,7 +252,7 @@ function f_m.process_key(n,z)
             clock.cancel(track_clock[i])
           end
           if params:string('hill_'..i..'_iterator') == 'norns' then
-            _htracks.start_playback(i)
+            _htracks.start_playback(i, track[i].active_hill)
             track_clock[i] = clock.run(_htracks.iterate,i)
           end
         end

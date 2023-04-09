@@ -41,7 +41,7 @@ function parameters.init()
 
   params:add_separator('hills_main_header', 'hills + highways')
   for i = 1,number_of_hills do
-    params:add_group('hill_'..i..'_group', hill_names[i], 77)
+    params:add_group('hill_'..i..'_group', hill_names[i], 79)
 
     params:add_separator('hill_'..i..'_highway_header', 'mode')
     params:add_option('hill_'..i..'_mode', 'mode', {'hill','highway'}, 1)
@@ -60,12 +60,14 @@ function parameters.init()
         if hills[i].highway then
           if not clock.threads[track_clock[i]] then
             track[i][track[i].active_hill].micro[0] = track[i][track[i].active_hill].micro[1]
-            _htracks.start_playback(i)
+            _htracks.start_playback(i,track[i].active_hill)
             track_clock[i] = clock.run(_htracks.iterate,i)
           end
         end
         params:hide('hill_'..i..'_iterator_midi_device')
         params:hide('hill_'..i..'_iterator_midi_note')
+        params:hide('hill_'..i..'_iterator_midi_velocity_lo')
+        params:hide('hill_'..i..'_iterator_midi_velocity_hi')
         params:hide('hill_'..i..'_iterator_midi_record')
         menu_rebuild_queued = true
       elseif x == 2 then
@@ -75,6 +77,8 @@ function parameters.init()
         end
         params:show('hill_'..i..'_iterator_midi_device')
         params:show('hill_'..i..'_iterator_midi_note')
+        params:show('hill_'..i..'_iterator_midi_velocity_lo')
+        params:show('hill_'..i..'_iterator_midi_velocity_hi')
         params:show('hill_'..i..'_iterator_midi_record')
         menu_rebuild_queued = true
       end
@@ -84,9 +88,17 @@ function parameters.init()
       all_midi[j] = j..': '..all_midi[j]
     end
     params:add_option('hill_'..i..'_iterator_midi_device', 'midi device', all_midi, 1)
-    params:add_number('hill_'..i..'_iterator_midi_note', 'trigger via note_on', 0,128, 59+i)
+    params:add_number('hill_'..i..'_iterator_midi_note', 'note on = trigger', 0,127, 59+i)
     params:set_action('hill_'..i..'_iterator_midi_note', function(x)
       _midi.iterator.note[i] = x
+    end)
+    params:add_number('hill_'..i..'_iterator_midi_velocity_lo', 'velocity (lo)', 0,127, 0)
+    params:set_action('hill_'..i..'_iterator_midi_velocity_lo', function(x)
+      _midi.iterator.velocity_lo[i] = x
+    end)
+    params:add_number('hill_'..i..'_iterator_midi_velocity_hi', 'velocity (hi)', 0,127, 127)
+    params:set_action('hill_'..i..'_iterator_midi_velocity_hi', function(x)
+      _midi.iterator.velocity_hi[i] = x
     end)
     -- params:add_binary('hill_'..i..'_iterator_portamento')
     params:add_option('hill_'..i..'_iterator_midi_record','record triggers?', {'no','yes'}, 1)

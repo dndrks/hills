@@ -90,7 +90,14 @@ m.key = function(n,z)
       key2_hold = false
     end
   elseif n==3 and z==1 and key1_hold then
-    m:force(page[m.pos+1], m.voice_focus, m.hill_focus, m.step_focus)
+    -- m:force(page[m.pos+1], m.voice_focus, m.hill_focus, m.step_focus)
+    if m.alt_menu_focus == 1 or m.alt_menu_focus == 4 then
+      m:clear(params:lookup_param(page[m.pos+1]).id, m.voice_focus, m.hill_focus, m.step_focus, m.alt_menu_focus == 1 and '' or 'all')
+    elseif m.alt_menu_focus == 2 or m.alt_menu_focus == 5 then
+      m:force(params:lookup_param(page[m.pos+1]).id, m.voice_focus, m.hill_focus, m.step_focus, m.alt_menu_focus == 2 and '' or 'all')
+    elseif m.alt_menu_focus == 3 or m.alt_menu_focus == 6 then
+      m:random(params:lookup_param(page[m.pos+1]).id, m.voice_focus, m.hill_focus, m.step_focus, m.alt_menu_focus == 3 and '' or 'all')
+    end
   elseif n==3 and z==1 then
     if t == params.tGROUP then
       build_sub(i)
@@ -148,63 +155,63 @@ m.enc = function(n,d)
     end
   else
     if n == 2 then
-      m.alt_menu_focus = util.clamp(m.alt_menu_focus+d,1,3)
+      m.alt_menu_focus = util.clamp(m.alt_menu_focus+d,1,6)
     elseif n == 3 then
-      if m.alt_menu_focus == 1 then
-        m.voice_focus = util.clamp(m.voice_focus+d,1,number_of_hills)
-        local i = m.voice_focus
-        local j = m.hill_focus
-        local low_bound = hills[i].highway == true and 1 or hills[i][j].low_bound.note
-        local high_bound = hills[i].highway == true and 128 or hills[i][j].high_bound.note
-        if m.step_focus < low_bound then
-          m.step_focus = low_bound
-        elseif m.step_focus > high_bound then
-          m.step_focus = high_bound
-        end
-      elseif m.alt_menu_focus == 2 then
-        m.hill_focus = util.clamp(m.hill_focus+d,1,8)
-        local i = m.voice_focus
-        local j = m.hill_focus
-        local low_bound = hills[i].highway == true and 1 or hills[i][j].low_bound.note
-        local high_bound = hills[i].highway == true and 128 or hills[i][j].high_bound.note
-        if m.step_focus < low_bound then
-          m.step_focus = low_bound
-        elseif m.step_focus > high_bounde then
-          m.step_focus = high_bound
-        end
-      elseif m.alt_menu_focus == 3 then
-        local i = m.voice_focus
-        local j = m.hill_focus
-        local low_bound = hills[i].highway == true and 1 or hills[i][j].low_bound.note
-        local high_bound = hills[i].highway == true and 128 or hills[i][j].high_bound.note
-        m.step_focus = util.clamp(m.step_focus+d, low_bound, high_bound)
-      end
+      -- if m.alt_menu_focus == 1 then
+      --   m.voice_focus = util.clamp(m.voice_focus+d,1,number_of_hills)
+      --   local i = m.voice_focus
+      --   local j = m.hill_focus
+      --   local low_bound = hills[i].highway == true and 1 or hills[i][j].low_bound.note
+      --   local high_bound = hills[i].highway == true and 128 or hills[i][j].high_bound.note
+      --   if m.step_focus < low_bound then
+      --     m.step_focus = low_bound
+      --   elseif m.step_focus > high_bound then
+      --     m.step_focus = high_bound
+      --   end
+      -- elseif m.alt_menu_focus == 2 then
+      --   m.hill_focus = util.clamp(m.hill_focus+d,1,8)
+      --   local i = m.voice_focus
+      --   local j = m.hill_focus
+      --   local low_bound = hills[i].highway == true and 1 or hills[i][j].low_bound.note
+      --   local high_bound = hills[i].highway == true and 128 or hills[i][j].high_bound.note
+      --   if m.step_focus < low_bound then
+      --     m.step_focus = low_bound
+      --   elseif m.step_focus > high_bound then
+      --     m.step_focus = high_bound
+      --   end
+      -- elseif m.alt_menu_focus == 3 then
+      --   local i = m.voice_focus
+      --   local j = m.hill_focus
+      --   local low_bound = hills[i].highway == true and 1 or hills[i][j].low_bound.note
+      --   local high_bound = hills[i].highway == true and 128 or hills[i][j].high_bound.note
+      --   m.step_focus = util.clamp(m.step_focus+d, low_bound, high_bound)
+      -- end
     end
   end
 end
 
-local function build_check(target_trig,voice,hill,step)
-  if target_trig[voice] == nil then
-    target_trig[voice] = {
-      [hill] = {
-        [step] = {
-          ['params'] = {},
-        }
-      }
-    }
-  elseif target_trig[voice][hill] == nil then
-    target_trig[voice][hill] = {
+-- local function build_check(target_trig,voice,hill,step)
+--   if target_trig[voice] == nil then
+--     target_trig[voice] = {
+--       [hill] = {
+--         [step] = {
+--           ['params'] = {},
+--         }
+--       }
+--     }
+--   elseif target_trig[voice][hill] == nil then
+--     target_trig[voice][hill] = {
       
-      [step] = {
-        ['params'] = {},
-      }
-    }
-  elseif target_trig[voice][hill][step] == nil then
-    target_trig[voice][hill][step] = {
-      ['params'] = {},
-    }
-  end
-end
+--       [step] = {
+--         ['params'] = {},
+--       }
+--     }
+--   elseif target_trig[voice][hill][step] == nil then
+--     target_trig[voice][hill][step] = {
+--       ['params'] = {},
+--     }
+--   end
+-- end
 
 local function get_focus(voice,hill,step)
   if hills[voice].highway == true then
@@ -218,26 +225,61 @@ local function get_focus(voice,hill,step)
   end
 end
 
-function m:force(index, voice, hill, step)
-  local target_trig = get_focus(voice,hill,step)
-  -- build_check(target_trig, voice, hill, step)
-  print('forcing',voice,hill,step,index)
-  if target_trig[voice][hill][step].params[index] ~= params:lookup_param(index).raw then
-    target_trig[voice][hill][step].params[index] = params:lookup_param(index).raw
-    -- target_trig[voice][hill][step].lock_trigs[index] = true
-    track[voice][hill].lock_trigs[step] = true
+function m:clear(index, voice, hill, step, mode)
+  if mode == 'all' then
+    for i = track[voice][hill].start_point, track[voice][hill].end_point do
+      local target_trig = get_focus(voice,hill,i)
+      target_trig[voice][hill][i].params[index] = nil
+      if tab.count(target_trig[voice][hill][i].params) == 0 then
+        track[voice][hill].lock_trigs[i] = false
+      end
+    end
   else
+    local target_trig = get_focus(voice,hill,step)
+    print('clearing',voice,hill,step,index)
     target_trig[voice][hill][step].params[index] = nil
-    -- target_trig[voice][hill][step].lock_trigs[index] = false
     if tab.count(target_trig[voice][hill][step].params) == 0 then
       track[voice][hill].lock_trigs[step] = false
     end
   end
 end
 
+function m:force(index, voice, hill, step, mode)
+  if mode == 'all' then
+    for i = track[voice][hill].start_point, track[voice][hill].end_point do
+      local target_trig = get_focus(voice,hill,i)
+      if target_trig[voice][hill][i].params[index] ~= params:lookup_param(index).raw then
+        target_trig[voice][hill][i].params[index] = params:lookup_param(index).raw
+        track[voice][hill].lock_trigs[i] = true
+      end
+    end
+  else
+    local target_trig = get_focus(voice,hill,step)
+    print('forcing',voice,hill,step,index)
+    if target_trig[voice][hill][step].params[index] ~= params:lookup_param(index).raw then
+      target_trig[voice][hill][step].params[index] = params:lookup_param(index).raw
+      track[voice][hill].lock_trigs[step] = true
+    end
+  end
+end
+
+function m:random(index, voice, hill, step, mode)
+  if mode == 'all' then
+    for i = track[voice][hill].start_point, track[voice][hill].end_point do
+      local target_trig = get_focus(voice,hill,i)
+      target_trig[voice][hill][i].params[index] = math.random(0,10000)/10000
+      track[voice][hill].lock_trigs[i] = true
+    end
+  else
+    local target_trig = get_focus(voice,hill,step)
+    print('randomizing',voice,hill,step,index)
+    target_trig[voice][hill][step].params[index] = math.random(0,10000)/10000
+    track[voice][hill].lock_trigs[step] = true
+  end
+end
+
 function m:delta(index, d, voice, hill, step)
   local target_trig = get_focus(voice,hill,step)
-  -- build_check(target_trig, voice, hill, step)
   local val;
   if target_trig[voice][hill][step].params[index] == nil then
     -- write index and value
@@ -337,7 +379,8 @@ m.redraw = function()
       local highlight = {[0] = true, [3] = true, [7] = true}
       if i==3 then
         if highlight[params:lookup_param(page[m.pos+1]).t] then
-          screen.level(key1_hold and 4 or 15)
+          -- screen.level(key1_hold and 4 or 15)
+          screen.level(15)
         else
           screen.level(1)
         end
@@ -378,16 +421,32 @@ m.redraw = function()
     end
   end
   if key1_hold then
-    draw_popup("///_")
-    screen.move(70,23)
-    screen.level(m.alt_menu_focus == 1 and 15 or 4)
-    screen.text('VOICE: '..m.voice_focus)
-    screen.move(70,33)
-    screen.level(m.alt_menu_focus == 2 and 15 or 4)
-    screen.text('HILL: '..m.hill_focus)
-    screen.move(70,43)
-    screen.level(m.alt_menu_focus == 3 and 15 or 4)
-    screen.text('STEP: '..m.step_focus)
+    draw_small_popup()
+    screen.move(12,48)
+    screen.level(15)
+    screen.font_size(15)
+    screen.text('K3')
+    screen.font_size(8)
+
+    screen.move(36,47)
+    screen.level(m.alt_menu_focus == 1 and 15 or (m.alt_menu_focus == 4 and 15 or 4))
+    screen.text('RESET')
+    screen.move(64,47)
+    screen.level(m.alt_menu_focus == 2 and 15 or (m.alt_menu_focus == 5 and 15 or 4))
+    screen.text('FORCE')
+    screen.move(92,47)
+    screen.level(m.alt_menu_focus == 3 and 15 or (m.alt_menu_focus == 6 and 15 or 4))
+    screen.text('RAND')
+
+    screen.move(40,55)
+    screen.level(m.alt_menu_focus == 4 and 15 or 1)
+    screen.text('ALL')
+    screen.move(68,55)
+    screen.level(m.alt_menu_focus == 5 and 15 or 1)
+    screen.text('ALL')
+    screen.move(96,55)
+    screen.level(m.alt_menu_focus == 6 and 15 or 1)
+    screen.text('ALL')
   end
   screen.update()
 end

@@ -19,6 +19,15 @@ function draw_popup(text,x,y)
   end
 end
 
+function draw_small_popup()
+  screen.rect(7,33,113,30)
+  screen.level(15)
+  screen.fill()
+  screen.rect(8,34,111,28)
+  screen.level(0)
+  screen.fill()
+end
+
 function draw_prepop(text)
   screen.rect(7,11,113,44)
   screen.level(15)

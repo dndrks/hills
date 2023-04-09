@@ -6,6 +6,8 @@ track_clock = {}
 
 track_paste_style = 1
 
+track_queues = {}
+
 local function wrap(n, min, max)
   if max >= min then
     local y = n
@@ -293,6 +295,7 @@ function track_actions.init(target, hill_number, clear_reset)
   if build_clock then
     track_clock[target] = clock.run(track_actions.iterate,target)
   end
+
   print('initializing track: '..target..', '..util.time())
 end
 
@@ -304,21 +307,28 @@ end
 --   end
 -- end
 
+function track_actions.change_pattern(i,j,source)
+  track_actions.stop_playback(i)
+  if source ~= 'from pattern' then
+    track[i].active_hill = j
+  end
+  track_actions.start_playback(i,j)
+end
+
 function track_actions.enable(target,state)
   track[target][track[target].active_hill].enabled = state
 end
 
-function track_actions.toggle(state,target)
-  local i = target
-  if state == "start" then
-    track_actions.start_playback(i)
-  elseif state == "stop" then
-    track_actions.stop_playback(i)
-  end
-end
+-- function track_actions.toggle(state,target)
+--   local i = target
+--   if state == "start" then
+--     track_actions.start_playback(i)
+--   elseif state == "stop" then
+--     track_actions.stop_playback(i)
+--   end
+-- end
 
-function track_actions.start_playback(i)
-  local j = track[i].active_hill
+function track_actions.start_playback(i,j)
   track[i][j].micro[0] = track[i][j].micro[1]
   local track_start =
   {
@@ -460,14 +470,32 @@ function track_actions.change_trig_state(target_track,target_step,state, i, j)
   end
 end
 
-function track_actions.copy(target)
-  local _active = track[target][track[target].active_hill]
+function track_actions.copy(target,pattern)
+  local _active = track[target][pattern]
   if track_clipboard == nil then
-    track_clipboard = mc.deep_copy(_active)
+    track_clipboard = _t.deep_copy(_active)
+
+    track_clipboard.playing = false
+    track_clipboard.down = 0
+    track_clipboard.pause = false
+    track_clipboard.step = 1
+    track_clipboard.enabled = false
+
     track_clipboard_bank_source = target
-    track_clipboard_pad_source = page.tracks.seq_position[target]
+    track_clipboard_pattern_source = pattern
+    -- track_clipboard_pad_source = page.tracks.seq_position[target]
     track_clipboard_layer_source = _active.focus
   end
+  if fkprm_clipboard == nil then
+    fkprm_clipboard = _t.deep_copy(_fkprm.adjusted_params[target][pattern])
+  end
+end
+
+function track_actions.paste_new(target,pattern)
+  track[target][pattern] = _t.deep_copy(track_clipboard)
+  track_clipboard = nil
+  _fkprm.adjusted_params[target][pattern] = _t.deep_copy(fkprm_clipboard)
+  fkprm_clipboard = nil
 end
 
 function track_actions.paste(target,style)

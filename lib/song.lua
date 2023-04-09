@@ -64,7 +64,7 @@ song.check_step = function(i)
           if hills[k].highway then
             _htracks.stop_playback(k)
             track[k].active_hill = shot - 16
-            _htracks.start_playback(k)
+            _htracks.start_playback(k,track[k].active_hill)
             if k == 1 then
               print('check step: '..clock.get_beats())
             end
@@ -103,7 +103,7 @@ song.start = function()
   if params:string('global_transport_mode') == 'highways' then
     for i = 1,number_of_hills do
       if hills[i].highway then
-        _htracks.start_playback(i)
+        _htracks.start_playback(i,track[i].active_hill)
       end
     end
   end

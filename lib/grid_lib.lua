@@ -536,11 +536,12 @@ function g.key(x,y,z)
         if params:string('hill_'..(x-1)..'_iterator') == 'norns' and #track[x-1] >= y then
           _htracks.stop_playback(x-1)
           track[x-1].active_hill = y
-          _htracks.start_playback(x-1)
+          _htracks.start_playback(x-1,y)
           print('start and stop')
           hills[x-1].screen_focus = y
         elseif #track[x-1] >= y then
-          track[x-1].active_hill = y
+          -- track[x-1].active_hill = y
+          _htracks.change_pattern(x-1,y)
           hills[x-1].screen_focus = y
         end
       end
@@ -817,14 +818,14 @@ function g.key(x,y,z)
       end
     end
   elseif mod_held and mods["snapshots"] and is_toggle_state_off() then
-    if x >= 15 then
+    if x == 9 or x == 10 then
       if z == 1 then
         if y == 6 then
-          snapshots.mod.index = x - 14
+          snapshots.mod.index = x - 8
         elseif y == 7 then
-          snapshots.mod.index = (x + 2) - 14
+          snapshots.mod.index = (x + 2) - 8
         elseif y == 8 then
-          snapshots.mod.index = (x + 4) - 14
+          snapshots.mod.index = (x + 4) - 8
         end
       else
         snapshots.mod.index = 0
@@ -912,30 +913,43 @@ local function check_other_mods()
   end
 end
 
+local highway_mod_copy_pattern = {state = false, clipboard = {}}
+
+local function pattern_selector(i,j,new_pattern)
+if not mods.alt then
+  if new_pattern <= #track[i] then
+    if hills[i].screen_focus ~= new_pattern then
+      hills[i].screen_focus = new_pattern
+      _fkprm.hill_focus = new_pattern
+      highway_ui.seq_page[i] = math.ceil(track[i][hills[i].screen_focus].ui_position/32)
+    else -- if a pattern is double-tapped
+      _htracks.change_pattern(i,new_pattern)
+    end
+  end
+else
+  if x <= #track[i]+1 then
+    _htracks.clear(i,x-1)
+  end
+end
+end
+
 function grid_lib.highway_press(x,y,z)
   -- change voice focus:
   local i = ui.hill_focus
   local j = hills[ui.hill_focus].screen_focus
   if y == 1 and z == 1 and x <= 11 then
     ui.hill_focus = x-1
-  -- change pattern focus:
+    _fkprm.voice_focus = x-1
+  -- add pattern:
   elseif y == 2 and x == 1 and z == 1 then
     if not mods.alt then
       if #track[i]+1 <= number_of_patterns then
         _htracks.init(i,#track[i]+1)
       end
     end
+  -- change between patterns:
   elseif y == 2 and z == 1 and (x > 1 and x <= 9) then
-    if not mods.alt then
-      if x <= #track[i]+1 then
-        hills[i].screen_focus = x-1
-        highway_ui.seq_page[i] = math.ceil(track[i][hills[i].screen_focus].ui_position/32)
-      end
-    else
-      if x <= #track[i]+1 then
-        _htracks.clear(i,x-1)
-      end
-    end
+    pattern_selector(i,j,x-1)
   -- enter steps
   elseif y <= 6 and z == 1 and (x >= 1 and x <= 8) then
     local _active = track[i][j]
@@ -995,6 +1009,8 @@ function grid_lib.highway_press(x,y,z)
     elseif grid_data_entry then
       data_entry_steps.held[i] = util.clamp(data_entry_steps.held[i] - 1,0,128)
     end
+  elseif y == 7 and x == 1 then
+    highway_mod_copy_pattern.state = z == 1
   elseif y == 7 and x == 3 then
     if z == 1 then
       reset_step_mods('grid_loop_modifier')
@@ -1103,6 +1119,10 @@ function grid_lib.cc_press(x,y,z)
   end
   local i = ui.hill_focus
   local j = hills[ui.hill_focus].screen_focus
+  -- change between patterns:
+  if y == 2 and z == 1 and (x > 1 and x <= 9) then
+    pattern_selector(i,j,x-1)
+  end
   if y >= 4 and y <= 7 and x >= 2 and x <= 5 and z == 1 then
     if not cc[i].alt then
       cc[i].x = x
@@ -1164,6 +1184,9 @@ function grid_lib.earthsea_press(x,y,z)
   end
   local i = ui.hill_focus
   local j = hills[ui.hill_focus].screen_focus
+  if y == 2 and z == 1 and (x > 1 and x <= 9) then
+    pattern_selector(i,j,x-1)
+  end
   if y >=3 and y<=7 and x>=2 and x<=6 and z == 1 then
     es[i].x = x
     es[i].y = y
@@ -1410,10 +1433,10 @@ function grid_redraw()
     g:led(15,8,dirs["D"] and 15 or 8)
     g:led(16,8,dirs["R"] and 15 or 8)
   elseif mod_held and mods["snapshots"] and is_toggle_state_off() then
-    for i = 15,16 do
-      g:led(i,6,snapshots.mod.index == (i - 14) and 15 or 6)
-      g:led(i,7,snapshots.mod.index == (i - 12) and 15 or 6)
-      g:led(i,8,snapshots.mod.index == (i - 10) and 15 or 6)
+    for i = 9,10 do
+      g:led(i,6,snapshots.mod.index == (i - 8) and 15 or 6)
+      g:led(i,7,snapshots.mod.index == (i - 6) and 15 or 6)
+      g:led(i,8,snapshots.mod.index == (i - 4) and 15 or 6)
     end
   end
   
@@ -1554,6 +1577,16 @@ function grid_redraw()
   g:refresh()
 end
 
+local function draw_pattern_selector(i)
+  local focused = hills[i].screen_focus
+  for j = 1,#track[i] do
+    g:led(j+1, 2, focused == j and 15 or 4)
+    if track[i].active_hill == j and track[i].active_hill ~= focused then
+      g:led(j+1, 2, 10)
+    end
+  end
+end
+
 function grid_lib.draw_highway()
   local i = ui.hill_focus
   local focused = hills[i].screen_focus
@@ -1644,12 +1677,13 @@ function grid_lib.draw_highway()
       g:led(_hsteps.index_to_grid_pos(display_step,8)[1], util.wrap(_hsteps.index_to_grid_pos(display_step,8)[2],1,4)+2,lvl)
     end
   end
-  for j = 1,#track[i] do
-    g:led(j+1, 2, focused == j and 15 or 4)
-    if track[i].active_hill == j and track[i].active_hill ~= focused then
-      g:led(j+1, 2, 10)
-    end
-  end
+  -- for j = 1,#track[i] do
+  --   g:led(j+1, 2, focused == j and 15 or 4)
+  --   if track[i].active_hill == j and track[i].active_hill ~= focused then
+  --     g:led(j+1, 2, 10)
+  --   end
+  -- end
+  draw_pattern_selector(i)
   for j = 1,4 do
     if highway_ui.seq_page[i] == j then
       lvl = 5
@@ -1660,6 +1694,7 @@ function grid_lib.draw_highway()
   end
 
   -- draw grid_lock:
+  g:led(1,7,highway_mod_copy_pattern.state and 5 or 2)
   g:led(3,7,grid_loop_modifier and 5 or 2)
   g:led(2,8,grid_conditional_entry and 15 or 5)
   g:led(3,8,grid_data_entry and 15 or 5)
@@ -1672,6 +1707,7 @@ end
 function grid_lib.draw_cc()
   local i = ui.hill_focus
   local j = hills[ui.hill_focus].screen_focus
+  draw_pattern_selector(i)
   -- top controls:
   for k = 1,number_of_hills do
     g:led(k+1,1,k == i and 15 or 4)
@@ -1711,7 +1747,7 @@ function grid_lib.draw_es()
   -- print(util.time())
   local i = ui.hill_focus
   local j = hills[ui.hill_focus].screen_focus
-  
+  draw_pattern_selector(i)
   -- top controls:
   for k = 1,number_of_hills do
     g:led(k+1,1,k == i and 15 or 4)

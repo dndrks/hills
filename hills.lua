@@ -10,7 +10,9 @@
 -- osc_echo = "224.0.0.1"
 -- osc_echo = "169.254.64.84"
 -- osc_echo = "224.0.0.1"
-osc_echo = "169.254.210.64"
+-- osc_echo = "169.254.202.238"
+-- osc_echo = "192.168.0.137"
+-- osc_echo = "10.42.0.212"
 
 function full_PSET_swap()
   clock.run(
@@ -225,7 +227,12 @@ function init()
       local d = midi.to_msg(data)
       if d.type == 'note_on' then
         for j = 1,number_of_hills do
-          if d.note == params:get('hill_'..j..'_iterator_midi_note')
+          -- if d.note == params:get('hill_'..j..'_iterator_midi_note')
+          -- and d.vel >= params:get('hill_'..j..'_iterator_midi_velocity_lo')
+          -- and d.vel <= params:get('hill_'..j..'_iterator_midi_velocity_hi')
+          if d.note == _midi.iterator.note[j]
+          and d.vel >= _midi.iterator.velocity_lo[j]
+          and d.vel <= _midi.iterator.velocity_hi[j]
           and params:string('hill_'..j..'_iterator') == 'external MIDI'
           and params:get('hill_'..j..'_iterator_midi_device') == i
           then
@@ -1146,8 +1153,11 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
         -- for k,v in next,_fkprm.adjusted_params[i][j][index].params do
         for k,v in next,target_trig[i][j][index].params do
           -- local is_drum_voice = k <= last_voice_param
+          print('this is ahppening!!')
           local param_id = k
+          print(k, last_voice_param)
           k = params.lookup[k]
+          print(k, last_voice_param)
           local is_drum_voice = k <= last_voice_param
           local drum_target = param_id:match('(.+)_(.+)_(.+)')
           drum_target = tonumber(drum_target)

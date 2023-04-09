@@ -12,7 +12,7 @@ _midi.hills = {}
 for i = 1,number_of_hills do
   _midi.hills[i] = {trigger = {}}
 end
-_midi.iterator = {note = {}, event = {}}
+_midi.iterator = {note = {}, event = {}, velocity_lo = {}, velocity_hi = {}}
 
 function _midi.init()
   function midi.add()
