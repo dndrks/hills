@@ -147,9 +147,13 @@ end
 development_state = function()
   -- song_atoms.transport_active = true
   for i = 1,number_of_hills do
-    params:set('hill_'..i..'_mode', 2)
+    if i ~= 2 then
+      params:set('hill_'..i..'_mode', 2)
+    end
     params:set('hill_'..i..'_iterator_midi_record',2)
   end
+  params:set('hill_1_iterator',3)
+  params:set('hill_1_iterator_hill_2',2)
   _htracks.sync_playheads()
   screen_dirty = true
 end
@@ -298,15 +302,10 @@ function init()
     hills[i].iter_links = {}
     hills[i].iter_pulses = {}
     hills[i].iter_counter = {}
-    for j = 1,8 do
-      hills[i].iter_links[j] = {}
-      hills[i].iter_pulses[j] = {}
-      hills[i].iter_counter[j] = {}
-      for k = 1,number_of_hills do
-        hills[i].iter_links[j][k] = 0
-        hills[i].iter_pulses[j][k] = 1
-        hills[i].iter_counter[j][k] = 1
-      end
+    for j = 1,number_of_hills do
+      hills[i].iter_links[j] = false
+      hills[i].iter_pulses[j] = 1
+      hills[i].iter_counter[j] = 1
     end
     
     ui.seq_controls[i] =
@@ -443,13 +442,9 @@ function init()
       if hills[i].iter_pulses == nil then
         hills[i].iter_pulses = {}
         hills[i].iter_counter = {}
-        for j = 1,8 do
-          hills[i].iter_pulses[j] = {}
-          hills[i].iter_counter[j] = {}
-          for k = 1,number_of_hills do
-            hills[i].iter_pulses[j][k] = 1
-            hills[i].iter_counter[j][k] = 1
-          end
+        for j = 1,number_of_hills do
+          hills[i].iter_pulses = 1
+          hills[i].iter_counter = 1
         end
       end
       for j = 1,8 do
@@ -1315,16 +1310,20 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
 end
 
 function manual_iter(i,j)
-  for idx = 1,#hills[i].iter_links[j] do
-    if hills[i].iter_links[j][idx] ~= 0 then
-      if hills[i].iter_counter[j][idx] == 1 then
-        local c_hill = hills[i].iter_links[j][idx]
-        if hills[idx][c_hill].note_num.pool[hills[idx][c_hill].index] ~= nil then
-          pass_note(idx,j,hills[idx][c_hill],hills[idx][c_hill].note_num.pool[hills[idx][c_hill].index],hills[idx][c_hill].index)
+  for idx = 1,#hills[i].iter_links do
+    if hills[i].iter_links[idx] == true then
+      if hills[i].iter_counter[idx] == 1 then
+        local c_hill = hills[idx].segment
+        if hills[idx].highway then
+          _htracks.tick(idx)
+        else
+          if hills[idx][c_hill].note_num.pool[hills[idx][c_hill].index] ~= nil then
+            pass_note(idx,c_hill,hills[idx][c_hill],hills[idx][c_hill].note_num.pool[hills[idx][c_hill].index],hills[idx][c_hill].index)
+          end
+          hills[idx][c_hill].index = util.wrap(hills[idx][c_hill].index + 1, hills[idx][c_hill].low_bound.note,hills[idx][c_hill].high_bound.note)
         end
-        hills[idx][c_hill].index = util.wrap(hills[idx][c_hill].index + 1, hills[idx][c_hill].low_bound.note,hills[idx][c_hill].high_bound.note)
       end
-      hills[i].iter_counter[j][idx] = util.wrap(hills[i].iter_counter[j][idx]+1, 1, hills[i].iter_pulses[j][idx])
+      hills[i].iter_counter[idx] = util.wrap(hills[i].iter_counter[idx]+1, 1, hills[i].iter_pulses[idx])
     end
   end
 end

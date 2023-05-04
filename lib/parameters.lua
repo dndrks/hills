@@ -41,7 +41,7 @@ function parameters.init()
 
   params:add_separator('hills_main_header', 'hills + highways')
   for i = 1,number_of_hills do
-    params:add_group('hill_'..i..'_group', hill_names[i], 79)
+    params:add_group('hill_'..i..'_group', hill_names[i], 79 + (number_of_hills-1))
 
     params:add_separator('hill_'..i..'_highway_header', 'mode')
     params:add_option('hill_'..i..'_mode', 'mode', {'hill','highway'}, 1)
@@ -54,7 +54,7 @@ function parameters.init()
       hills[i].screen_focus = 1
       screen_dirty = true
     end)
-    params:add_option('hill_'..i..'_iterator', 'iterator', {'norns','external MIDI'}, 1)
+    params:add_option('hill_'..i..'_iterator', 'iterator', {'norns','external MIDI', 'hill'}, 1)
     params:set_action('hill_'..i..'_iterator', function(x)
       if x == 1 then
         if hills[i].highway then
@@ -69,6 +69,11 @@ function parameters.init()
         params:hide('hill_'..i..'_iterator_midi_velocity_lo')
         params:hide('hill_'..i..'_iterator_midi_velocity_hi')
         params:hide('hill_'..i..'_iterator_midi_record')
+        for j = 1,number_of_hills do
+          if i ~= j then
+            params:hide('hill_'..i..'_iterator_hill_'..j, 'hill '..j, 'toggle', 0)
+          end
+        end
         menu_rebuild_queued = true
       elseif x == 2 then
         if clock.threads[track_clock[i]] then
@@ -80,6 +85,27 @@ function parameters.init()
         params:show('hill_'..i..'_iterator_midi_velocity_lo')
         params:show('hill_'..i..'_iterator_midi_velocity_hi')
         params:show('hill_'..i..'_iterator_midi_record')
+        for j = 1,number_of_hills do
+          if i ~= j then
+            params:hide('hill_'..i..'_iterator_hill_'..j, 'hill '..j, 'toggle', 0)
+          end
+        end
+        menu_rebuild_queued = true
+      elseif x == 3 then
+        if clock.threads[track_clock[i]] then
+          clock.cancel(track_clock[i])
+          _htracks.stop_playback(i)
+        end
+        params:hide('hill_'..i..'_iterator_midi_device')
+        params:hide('hill_'..i..'_iterator_midi_note')
+        params:hide('hill_'..i..'_iterator_midi_velocity_lo')
+        params:hide('hill_'..i..'_iterator_midi_velocity_hi')
+        params:hide('hill_'..i..'_iterator_midi_record')
+        for j = 1,number_of_hills do
+          if i ~= j then
+            params:show('hill_'..i..'_iterator_hill_'..j, 'hill '..j, 'toggle', 0)
+          end
+        end
         menu_rebuild_queued = true
       end
     end)
@@ -102,6 +128,20 @@ function parameters.init()
     end)
     -- params:add_binary('hill_'..i..'_iterator_portamento')
     params:add_option('hill_'..i..'_iterator_midi_record','record triggers?', {'no','yes'}, 1)
+
+    for j = 1,number_of_hills do
+      if i ~= j then
+        params:add_option('hill_'..i..'_iterator_hill_'..j, '  via hill '..j..'?', {'no','yes'}, 1)
+        params:set_action('hill_'..i..'_iterator_hill_'..j, function(x)
+          if x == 1 then
+            hills[j].iter_links[i] = false
+          else
+            hills[j].iter_links[i] = true
+          end
+        end)
+      end
+    end
+
     params:add_separator('hill_'..i..'_note_header', "note management "..hill_names[i])
     params:add_binary('hill_'..i..'_flatten', 'flatten to carrier freq', 'toggle', 0)
     params:set_action('hill_'..i..'_flatten', function(x)
