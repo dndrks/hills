@@ -20,10 +20,10 @@ function draw_popup(text,x,y)
 end
 
 function draw_small_popup()
-  screen.rect(7,33,113,30)
+  screen.rect(1,34,125,27)
   screen.level(15)
   screen.fill()
-  screen.rect(8,34,111,28)
+  screen.rect(2,35,123,25)
   screen.level(0)
   screen.fill()
 end

@@ -109,13 +109,18 @@ osc_fun={
 }
 
 osc.event=function(path,args,from)
-  if string.sub(path,1,1)=="/" then
-    path=string.sub(path,2)
-  end
-  print('osc path: '..path)
-  if osc_fun[path]~= 'progressbar' or 'aubiodone' then
-    osc_fun[path](args)
-  end
+  -- if string.sub(path,1,1)=="/" then
+  --   path=string.sub(path,2)
+  -- end
+  -- print('osc path: '..path)
+  -- if osc_fun[path] ~= 'progressbar' or 'aubiodone' then
+  --   osc_fun[path](args)
+  -- end
+  -- params:delta(path, args[1])
+  -- print(args[1])
+  -- local d = args[1] == 1 and 1 or -1
+  print(args[1])
+  params:delta(path, args[1])
 end
 
 pt = include 'lib/hills_new_pt'
@@ -152,8 +157,8 @@ development_state = function()
     end
     params:set('hill_'..i..'_iterator_midi_record',2)
   end
-  params:set('hill_1_iterator',3)
-  params:set('hill_1_iterator_hill_2',2)
+  -- params:set('hill_1_iterator',3)
+  -- params:set('hill_1_iterator_hill_2',2)
   _htracks.sync_playheads()
   screen_dirty = true
 end

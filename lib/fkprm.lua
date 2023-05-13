@@ -8,6 +8,7 @@ local m = {
   hill_focus = 1,
   step_focus = 1,
   alt_menu_focus = 1,
+  random_window = 100
 }
 
 local page
@@ -157,61 +158,10 @@ m.enc = function(n,d)
     if n == 2 then
       m.alt_menu_focus = util.clamp(m.alt_menu_focus+d,1,6)
     elseif n == 3 then
-      -- if m.alt_menu_focus == 1 then
-      --   m.voice_focus = util.clamp(m.voice_focus+d,1,number_of_hills)
-      --   local i = m.voice_focus
-      --   local j = m.hill_focus
-      --   local low_bound = hills[i].highway == true and 1 or hills[i][j].low_bound.note
-      --   local high_bound = hills[i].highway == true and 128 or hills[i][j].high_bound.note
-      --   if m.step_focus < low_bound then
-      --     m.step_focus = low_bound
-      --   elseif m.step_focus > high_bound then
-      --     m.step_focus = high_bound
-      --   end
-      -- elseif m.alt_menu_focus == 2 then
-      --   m.hill_focus = util.clamp(m.hill_focus+d,1,8)
-      --   local i = m.voice_focus
-      --   local j = m.hill_focus
-      --   local low_bound = hills[i].highway == true and 1 or hills[i][j].low_bound.note
-      --   local high_bound = hills[i].highway == true and 128 or hills[i][j].high_bound.note
-      --   if m.step_focus < low_bound then
-      --     m.step_focus = low_bound
-      --   elseif m.step_focus > high_bound then
-      --     m.step_focus = high_bound
-      --   end
-      -- elseif m.alt_menu_focus == 3 then
-      --   local i = m.voice_focus
-      --   local j = m.hill_focus
-      --   local low_bound = hills[i].highway == true and 1 or hills[i][j].low_bound.note
-      --   local high_bound = hills[i].highway == true and 128 or hills[i][j].high_bound.note
-      --   m.step_focus = util.clamp(m.step_focus+d, low_bound, high_bound)
-      -- end
+      m.random_window = util.clamp(m.random_window+d,1,100)
     end
   end
 end
-
--- local function build_check(target_trig,voice,hill,step)
---   if target_trig[voice] == nil then
---     target_trig[voice] = {
---       [hill] = {
---         [step] = {
---           ['params'] = {},
---         }
---       }
---     }
---   elseif target_trig[voice][hill] == nil then
---     target_trig[voice][hill] = {
-      
---       [step] = {
---         ['params'] = {},
---       }
---     }
---   elseif target_trig[voice][hill][step] == nil then
---     target_trig[voice][hill][step] = {
---       ['params'] = {},
---     }
---   end
--- end
 
 local function get_focus(voice,hill,step)
   if hills[voice].highway == true then
@@ -267,6 +217,7 @@ function m:random(index, voice, hill, step, mode)
   if mode == 'all' then
     for i = track[voice][hill].start_point, track[voice][hill].end_point do
       local target_trig = get_focus(voice,hill,i)
+      -- local deviation = (m.random_window/100) * 
       target_trig[voice][hill][i].params[index] = math.random(0,10000)/10000
       track[voice][hill].lock_trigs[i] = true
     end
@@ -420,31 +371,31 @@ m.redraw = function()
       end
     end
   end
-  if key1_hold then
+  if key1_hold and params:lookup_param(page[m.pos+1]).t == 3 then
     draw_small_popup()
-    screen.move(12,48)
+    screen.move(6,56)
     screen.level(15)
     screen.font_size(15)
     screen.text('K3')
     screen.font_size(8)
 
-    screen.move(36,47)
+    screen.move(30,47)
     screen.level(m.alt_menu_focus == 1 and 15 or (m.alt_menu_focus == 4 and 15 or 4))
     screen.text('RESET')
-    screen.move(64,47)
+    screen.move(58,47)
     screen.level(m.alt_menu_focus == 2 and 15 or (m.alt_menu_focus == 5 and 15 or 4))
     screen.text('FORCE')
-    screen.move(92,47)
+    screen.move(86,47)
     screen.level(m.alt_menu_focus == 3 and 15 or (m.alt_menu_focus == 6 and 15 or 4))
     screen.text('RAND')
 
-    screen.move(40,55)
+    screen.move(34,55)
     screen.level(m.alt_menu_focus == 4 and 15 or 1)
     screen.text('ALL')
-    screen.move(68,55)
+    screen.move(62,55)
     screen.level(m.alt_menu_focus == 5 and 15 or 1)
     screen.text('ALL')
-    screen.move(96,55)
+    screen.move(90,55)
     screen.level(m.alt_menu_focus == 6 and 15 or 1)
     screen.text('ALL')
   end

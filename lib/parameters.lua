@@ -41,7 +41,7 @@ function parameters.init()
 
   params:add_separator('hills_main_header', 'hills + highways')
   for i = 1,number_of_hills do
-    params:add_group('hill_'..i..'_group', hill_names[i], 79 + (number_of_hills-1))
+    params:add_group('hill_'..i..'_group', hill_names[i], 79 + ((number_of_hills-1)*2))
 
     params:add_separator('hill_'..i..'_highway_header', 'mode')
     params:add_option('hill_'..i..'_mode', 'mode', {'hill','highway'}, 1)
@@ -71,7 +71,8 @@ function parameters.init()
         params:hide('hill_'..i..'_iterator_midi_record')
         for j = 1,number_of_hills do
           if i ~= j then
-            params:hide('hill_'..i..'_iterator_hill_'..j, 'hill '..j, 'toggle', 0)
+            params:hide('hill_'..i..'_iterator_hill_'..j, 'hill '..j)
+            params:hide('hill_'..i..'_iterator_hill_'..j..'_pulse_count')
           end
         end
         menu_rebuild_queued = true
@@ -87,7 +88,8 @@ function parameters.init()
         params:show('hill_'..i..'_iterator_midi_record')
         for j = 1,number_of_hills do
           if i ~= j then
-            params:hide('hill_'..i..'_iterator_hill_'..j, 'hill '..j, 'toggle', 0)
+            params:hide('hill_'..i..'_iterator_hill_'..j)
+            params:hide('hill_'..i..'_iterator_hill_'..j..'_pulse_count')
           end
         end
         menu_rebuild_queued = true
@@ -103,7 +105,10 @@ function parameters.init()
         params:hide('hill_'..i..'_iterator_midi_record')
         for j = 1,number_of_hills do
           if i ~= j then
-            params:show('hill_'..i..'_iterator_hill_'..j, 'hill '..j, 'toggle', 0)
+            params:show('hill_'..i..'_iterator_hill_'..j)
+            if params:get('hill_'..i..'_iterator_hill_'..j) ~= 1 then
+              params:show('hill_'..i..'_iterator_hill_'..j..'_pulse_count')
+            end
           end
         end
         menu_rebuild_queued = true
@@ -132,12 +137,19 @@ function parameters.init()
     for j = 1,number_of_hills do
       if i ~= j then
         params:add_option('hill_'..i..'_iterator_hill_'..j, '  via hill '..j..'?', {'no','yes'}, 1)
+        params:add_number('hill_'..i..'_iterator_hill_'..j..'_pulse_count', '    pulse count',1,128,1)
         params:set_action('hill_'..i..'_iterator_hill_'..j, function(x)
           if x == 1 then
             hills[j].iter_links[i] = false
+            params:hide('hill_'..i..'_iterator_hill_'..j..'_pulse_count')
           else
             hills[j].iter_links[i] = true
+            params:show('hill_'..i..'_iterator_hill_'..j..'_pulse_count')
           end
+          menu_rebuild_queued = true
+        end)
+        params:set_action('hill_'..i..'_iterator_hill_'..j..'_pulse_count', function(x)
+          hills[j].iter_pulses[i] = x
         end)
       end
     end
