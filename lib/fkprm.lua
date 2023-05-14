@@ -213,18 +213,38 @@ function m:force(index, voice, hill, step, mode)
   end
 end
 
+function deviate(val, deviation)
+  local over,under = 0,0
+  local min,max = 0,1
+  local split_deviation = (deviation/200)
+  if val + split_deviation > 1 then
+    min = 1-(deviation/100)
+  else
+    max = val + split_deviation
+  end
+  if val - split_deviation < 0 then
+    max = deviation/100
+  else
+    min = val - split_deviation
+  end
+  return {min,max}
+end
+
 function m:random(index, voice, hill, step, mode)
+  local current_val = params:lookup_param(index).raw
   if mode == 'all' then
     for i = track[voice][hill].start_point, track[voice][hill].end_point do
       local target_trig = get_focus(voice,hill,i)
-      -- local deviation = (m.random_window/100) * 
-      target_trig[voice][hill][i].params[index] = math.random(0,10000)/10000
+      local min = util.round(deviate(current_val, m.random_window)[1] * 1000)
+      local max = util.round(deviate(current_val, m.random_window)[2] * 1000)
+      target_trig[voice][hill][i].params[index] = math.random(min,max)/1000
       track[voice][hill].lock_trigs[i] = true
     end
   else
     local target_trig = get_focus(voice,hill,step)
-    print('randomizing',voice,hill,step,index)
-    target_trig[voice][hill][step].params[index] = math.random(0,10000)/10000
+    local min = util.round(deviate(current_val, m.random_window)[1] * 1000)
+    local max = util.round(deviate(current_val, m.random_window)[2] * 1000)
+    target_trig[voice][hill][step].params[index] = math.random(min,max)/1000
     track[voice][hill].lock_trigs[step] = true
   end
 end
@@ -373,29 +393,29 @@ m.redraw = function()
   end
   if key1_hold and params:lookup_param(page[m.pos+1]).t == 3 then
     draw_small_popup()
-    screen.move(6,56)
+    screen.move(4,52)
     screen.level(15)
     screen.font_size(15)
     screen.text('K3')
     screen.font_size(8)
 
-    screen.move(30,47)
+    screen.move(28,45)
     screen.level(m.alt_menu_focus == 1 and 15 or (m.alt_menu_focus == 4 and 15 or 4))
     screen.text('RESET')
-    screen.move(58,47)
+    screen.move(56,45)
     screen.level(m.alt_menu_focus == 2 and 15 or (m.alt_menu_focus == 5 and 15 or 4))
     screen.text('FORCE')
-    screen.move(86,47)
+    screen.move(84,45)
     screen.level(m.alt_menu_focus == 3 and 15 or (m.alt_menu_focus == 6 and 15 or 4))
-    screen.text('RAND')
+    screen.text('RND@'..m.random_window..'%')
 
-    screen.move(34,55)
+    screen.move(32,53)
     screen.level(m.alt_menu_focus == 4 and 15 or 1)
     screen.text('ALL')
-    screen.move(62,55)
+    screen.move(60,53)
     screen.level(m.alt_menu_focus == 5 and 15 or 1)
     screen.text('ALL')
-    screen.move(90,55)
+    screen.move(94,53)
     screen.level(m.alt_menu_focus == 6 and 15 or 1)
     screen.text('ALL')
   end
