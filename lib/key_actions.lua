@@ -71,7 +71,16 @@ function key_actions.parse(n,z)
                 end
               end
             else
-              if ui.menu_focus == 2 then
+              if ui.menu_focus == 1 then
+                -- print('k3 pressed')
+                if not grid_conditional_entry then
+                  grid_conditional_entry = true
+                  conditional_entry_steps.focus[i] = {track[i][j].ui_position}
+                else
+                  grid_conditional_entry = false
+                  conditional_entry_steps.focus[i] = {}
+                end
+              elseif ui.menu_focus == 2 then
                 if key1_hold and _s.popup_focus.tracks[i][2] == 4 then
                   _htracks.generate_er(i,j)
                 end

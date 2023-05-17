@@ -29,17 +29,18 @@ function draw_small_popup()
 end
 
 function draw_prepop(text)
-  screen.rect(7,11,113,44)
+  -- screen.rect(7,11,113,44)
+  screen.rect(31,2,94,9)
   screen.level(15)
   screen.fill()
-  screen.rect(8,12,111,42)
+  -- screen.rect(8,12,111,42)
+  screen.rect(32,3,92,7)
   screen.level(0)
   screen.fill()
   screen.level(15)
-  screen.move(64,30)
-  screen.text_center(text)
-  screen.move(64,40)
-  screen.text_center('(select a step)')
+  -- screen.move(64,30)
+  screen.move(33,9)
+  screen.text(text)
 end
 
 screen_actions.popup_focus = {1,1,1,1,1,1,1,1,1,1}

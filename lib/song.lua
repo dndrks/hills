@@ -160,6 +160,26 @@ function clock.transport.stop()
   song_atoms.transport_active = false
 end
 
+function song.toggle_transport()
+  if song_atoms.transport_active then
+    clock.transport.stop()
+  else
+    if params:string("clock_source") == "internal" then
+      clock.internal.start(-0.1)
+    end
+    clock.transport.start()
+    for i = 1,number_of_hills do
+      if clock.threads[track_clock[i]] then
+        clock.cancel(track_clock[i])
+      end
+      if params:string('hill_'..i..'_iterator') == 'norns' then
+        _htracks.start_playback(i, track[i].active_hill)
+        track_clock[i] = clock.run(_htracks.iterate,i)
+      end
+    end
+  end
+end
+
 song.add_line = function(b,loc)
   table.insert(song_atoms[b].lane, loc+1, {{}, {}, {}, {}})
   for k,v in pairs(song_atoms[b].lane[loc+1]) do

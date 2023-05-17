@@ -240,23 +240,7 @@ function f_m.process_key(n,z)
         end
       end
     else
-      if song_atoms.transport_active then
-        clock.transport.stop()
-      else
-        if params:string("clock_source") == "internal" then
-          clock.internal.start(-0.1)
-        end
-        clock.transport.start()
-        for i = 1,number_of_hills do
-          if clock.threads[track_clock[i]] then
-            clock.cancel(track_clock[i])
-          end
-          if params:string('hill_'..i..'_iterator') == 'norns' then
-            _htracks.start_playback(i, track[i].active_hill)
-            track_clock[i] = clock.run(_htracks.iterate,i)
-          end
-        end
-      end
+      _song.toggle_transport()
     end
   elseif n == 2 and z == 1 then
     if _fm_.alt then

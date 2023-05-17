@@ -3,10 +3,6 @@ local grid = util.file_exists(_path.code.."midigrid") and include "midigrid/lib/
 
 g = grid.connect()
 
-local dirs = {["L"] = false,["R"] = false,["U"] = false,["D"] = false}
-held_dirs_clocks = {["L"] = nil,["R"] = nil,["U"] = nil,["D"] = nil}
-held_dirs_iters = {["L"] = 0,["R"] = 0,["U"] = 0,["D"] = 0}
-
 active_voices = {}
 for i = 1,16 do
   active_voices[i] = {}
@@ -149,9 +145,11 @@ grid_loop_modifier = false
 
 local reset_state = {}
 local loop_modifier_stage = 'define start'
-function reset_state.loop_modifier()
+function reset_state.loop_modifier(reset_mod)
   loop_modifier_stage = 'define start'
-  grid_loop_modifier = false
+  if reset_mod then
+    grid_loop_modifier = false
+  end
 end
 
 function get_loop_modifier_stage()
@@ -791,33 +789,7 @@ function g.key(x,y,z)
   elseif x == 16 and y == 8 and z == 1 and mods['playmode'] then
     mods['playmode_extended'] = not mods['playmode_extended']
   end
-  if mod_held and not mods["alt"] and not mods["copy"] and not mods["snapshots"] then
-    if x == 14 and y == 8 then
-      if z == 1 then
-        start_dir_clock("L",2,-1)
-      elseif z == 0 then
-        stop_dir_clock("L")
-      end
-    elseif x == 15 and y == 8 then
-      if z == 1 then
-        start_dir_clock("D",3,-1)
-      elseif z == 0 then
-        stop_dir_clock("D")
-      end
-    elseif x == 16 and y == 8 then
-      if z == 1 then
-        start_dir_clock("R",2,1)
-      elseif z == 0 then
-        stop_dir_clock("R")
-      end
-    elseif x == 15 and y == 7 then
-      if z == 1 then
-        start_dir_clock("U",3,1)
-      elseif z == 0 then
-        stop_dir_clock("U")
-      end
-    end
-  elseif mod_held and mods["snapshots"] and is_toggle_state_off() then
+  if mod_held and mods["snapshots"] and is_toggle_state_off() then
     if x == 9 or x == 10 then
       if z == 1 then
         if y == 6 then
@@ -913,7 +885,7 @@ local function check_other_mods()
   end
 end
 
-local highway_mod_copy_pattern = {state = false, clipboard = {}}
+highway_mod_copy = {state = false, clipboard = {}}
 
 local function pattern_selector(i,j,new_pattern)
 if not mods.alt then
@@ -927,9 +899,9 @@ if not mods.alt then
     end
   end
 else
-  if x <= #track[i]+1 then
-    _htracks.clear(i,x-1)
-  end
+  -- if x <= #track[i]+1 then
+  --   _htracks.clear(i,x-1)
+  -- end
 end
 end
 
@@ -942,67 +914,83 @@ function grid_lib.highway_press(x,y,z)
     _fkprm.voice_focus = x-1
   -- add pattern:
   elseif y == 2 and x == 1 and z == 1 then
-    if not mods.alt then
-      if #track[i]+1 <= number_of_patterns then
-        _htracks.init(i,#track[i]+1)
+    if not highway_mod_copy.state then
+      if not mods.alt then
+        if #track[i]+1 <= number_of_patterns then
+          _htracks.init(i,#track[i]+1)
+        end
       end
     end
   -- change between patterns:
   elseif y == 2 and z == 1 and (x > 1 and x <= 9) then
-    pattern_selector(i,j,x-1)
+    if not highway_mod_copy.state then
+      pattern_selector(i,j,x-1)
+    else
+
+    end
   -- enter steps
-  elseif y <= 6 and z == 1 and (x >= 1 and x <= 8) then
-    local _active = track[i][j]
-    local focused_set = _active.focus == 'main' and _active or _active.fill
-    local min_max = {{1,32},{33,64},{65,96},{97,128}}
-    local pos = ((y - 3) * 8) + x
-    local pressed_step = pos + ((highway_ui.seq_page[i] - 1) * 32)
-    if not grid_data_entry
-    and not grid_conditional_entry
-    and not grid_loop_modifier
-    and not grid_accent
-    and not grid_mute then
-      track[i][j].ui_position = pressed_step
-      -- focused_set.trigs[pressed_step] = not focused_set.trigs[pressed_step]
-      _htracks.change_trig_state(focused_set,pressed_step, not (focused_set.trigs[pressed_step]), i, j)
-      print('happening')
-      for k = 1,16 do
-        local table_to_record =
-        {
-          ["event"] = "trig_flip",
-          ["track_focus"] = _active.focus,
-          ["step"] = pressed_step,
-          ["state"] = focused_set.trigs[pressed_step],
-          ["id"] = k,
-          ["hill_i"] = i,
-          ["hill_j"] = j,
-        }
-        write_pattern_data(k,table_to_record,false)
+  elseif y <= 4 and z == 1 and (x >= 1 and x <= 8) then
+    if not highway_mod_copy.state then
+      local _active = track[i][j]
+      local focused_set = _active.focus == 'main' and _active or _active.fill
+      local pos = ((y - 3) * 8) + x
+      local pressed_step = pos + ((highway_ui.seq_page[i] - 1) * 16)
+      if not grid_data_entry
+      and not grid_conditional_entry
+      and not grid_loop_modifier
+      and not grid_accent
+      and not grid_mute then
+        track[i][j].ui_position = pressed_step
+        -- focused_set.trigs[pressed_step] = not focused_set.trigs[pressed_step]
+        _htracks.change_trig_state(focused_set,pressed_step, not (focused_set.trigs[pressed_step]), i, j)
+        print('happening')
+        for k = 1,16 do
+          local table_to_record =
+          {
+            ["event"] = "trig_flip",
+            ["track_focus"] = _active.focus,
+            ["step"] = pressed_step,
+            ["state"] = focused_set.trigs[pressed_step],
+            ["id"] = k,
+            ["hill_i"] = i,
+            ["hill_j"] = j,
+          }
+          write_pattern_data(k,table_to_record,false)
+        end
+      elseif grid_data_entry then
+        process_modifier(data_entry_steps, pressed_step, i, j)
+      elseif grid_conditional_entry then
+        process_modifier(conditional_entry_steps, pressed_step, i, j)
+      elseif grid_loop_modifier then
+        if loop_modifier_stage == 'define start' then
+          track[i][j].start_point = util.clamp(pressed_step, 1, track[i][j].end_point)
+          loop_modifier_stage = 'define end'
+        elseif loop_modifier_stage == 'define end' then
+          track[i][j].end_point = util.clamp(pressed_step, track[i][j].start_point, 128)
+          reset_state.loop_modifier(false)
+        end
+      elseif grid_accent then
+        track[i][j].ui_position = pressed_step
+        if focused_set.trigs[pressed_step] then
+          focused_set.accented_trigs[pressed_step] = not focused_set.accented_trigs[pressed_step]
+        end
+      elseif grid_mute then
+        track[i][j].ui_position = pressed_step
+        if focused_set.trigs[pressed_step] then
+          focused_set.muted_trigs[pressed_step] = not focused_set.muted_trigs[pressed_step]
+        end
       end
-    elseif grid_data_entry then
-      process_modifier(data_entry_steps, pressed_step, i, j)
-    elseif grid_conditional_entry then
-      process_modifier(conditional_entry_steps, pressed_step, i, j)
-    elseif grid_loop_modifier then
-      if loop_modifier_stage == 'define start' then
-        track[i][j].start_point = util.clamp(pressed_step, 1, track[i][j].end_point)
-        loop_modifier_stage = 'define end'
-      elseif loop_modifier_stage == 'define end' then
-        track[i][j].end_point = util.clamp(pressed_step, track[i][j].start_point, 128)
-        reset_state.loop_modifier()
-      end
-    elseif grid_accent then
-      track[i][j].ui_position = pressed_step
-      if focused_set.trigs[pressed_step] then
-        focused_set.accented_trigs[pressed_step] = not focused_set.accented_trigs[pressed_step]
-      end
-    elseif grid_mute then
-      track[i][j].ui_position = pressed_step
-      if focused_set.trigs[pressed_step] then
-        focused_set.muted_trigs[pressed_step] = not focused_set.muted_trigs[pressed_step]
+    else
+      if grid_data_entry then
+        print('would handle copy/paste of plocks')
+      elseif grid_conditional_entry then
+        print('would handle copy/paste of conditionals')
       end
     end
   -- grid lock mode:
+  elseif (y == 5 or y == 6) and (x >=5 and x <= 8) then
+    highway_ui.seq_page[i] = x-4 + (y == 5 and 0 or 4)
+    track[i][j].ui_position = ((highway_ui.seq_page[i] - 1) * 16) + 1
   elseif y <= 6 and z == 0 and (x >= 1 and x <= 8) then
     if grid_conditional_entry then
       conditional_entry_steps.held[i] = util.clamp(conditional_entry_steps.held[i] - 1,0,128)
@@ -1010,17 +998,17 @@ function grid_lib.highway_press(x,y,z)
       data_entry_steps.held[i] = util.clamp(data_entry_steps.held[i] - 1,0,128)
     end
   elseif y == 7 and x == 1 then
-    highway_mod_copy_pattern.state = z == 1
-  elseif y == 7 and x == 3 then
+    highway_mod_copy.state = z == 1
+  elseif y == 5 and x == 1 then
     if z == 1 then
       reset_step_mods('grid_loop_modifier')
     else
       grid_loop_modifier = false
       reset_state.loop_modifier()
     end
-  elseif y == 7 and z == 1 and (x >= 5 and x <= 8) then
-    highway_ui.seq_page[i] = x-4
-    track[i][j].ui_position = ((highway_ui.seq_page[i] - 1) * 32) + 1
+  -- elseif y == 7 and z == 1 and (x >= 5 and x <= 8) then
+  --   highway_ui.seq_page[i] = x-4
+  --   track[i][j].ui_position = ((highway_ui.seq_page[i] - 1) * 32) + 1
   elseif y == 8 and x == 3 and z == 1 then
     if not grid_loop_modifier then
       reset_step_mods('grid_data_entry')
@@ -1427,12 +1415,7 @@ function grid_redraw()
       grid_lib.draw_es()
     end
   end
-  if mod_held and not mods["playmode"] and not mods["alt"] and not mods["copy"] and not mods["snapshots"] then
-    g:led(14,8,dirs["L"] and 15 or 8)
-    g:led(15,7,dirs["U"] and 15 or 8)
-    g:led(15,8,dirs["D"] and 15 or 8)
-    g:led(16,8,dirs["R"] and 15 or 8)
-  elseif mod_held and mods["snapshots"] and is_toggle_state_off() then
+  if mod_held and mods["snapshots"] and is_toggle_state_off() then
     for i = 9,10 do
       g:led(i,6,snapshots.mod.index == (i - 8) and 15 or 6)
       g:led(i,7,snapshots.mod.index == (i - 6) and 15 or 6)
@@ -1601,10 +1584,9 @@ function grid_lib.draw_highway()
   end
 
   -- draw steps + sequence selector
-  local min_max = {{1,32},{33,64},{65,96},{97,128}}
   local lvl = 5
   local flipped_entry_steps = tab.invert(grid_data_entry and data_entry_steps.focus[i] or conditional_entry_steps.focus[i])
-  for display_step = min_max[_hui.seq_page[i]][1], min_max[_hui.seq_page[i]][2] do
+  for display_step = steps_min_max[_hui.seq_page[i]][1], steps_min_max[_hui.seq_page[i]][2] do
     if grid_loop_modifier then
       if display_step == _active.end_point or display_step == _active.start_point then
         if loop_modifier_stage == 'define start' and display_step == _active.start_point then
@@ -1619,7 +1601,7 @@ function grid_lib.draw_highway()
       else
         lvl = 0
       end
-      g:led(_hsteps.index_to_grid_pos(display_step,8)[1], util.wrap(_hsteps.index_to_grid_pos(display_step,8)[2],1,4)+2,lvl)
+      g:led(_hsteps.index_to_grid_pos(display_step,8)[1], util.wrap(_hsteps.index_to_grid_pos(display_step,8)[2],1,2)+2,lvl)
     else
       if display_step <= _active.end_point and display_step >= _active.start_point then
         if _active.step == display_step and track[i].active_hill == focused then
@@ -1646,8 +1628,27 @@ function grid_lib.draw_highway()
               lvl = 0
             else
               if display_step <= _active.end_point and display_step >= _active.start_point then
-                if _active.lock_trigs[display_step] then
+                if grid_data_entry and _active.lock_trigs[display_step] then
                   lvl = 5
+                elseif grid_conditional_entry then
+                  lvl = 2
+                  local conditional_focus = _s.popup_focus.tracks[i][1]
+                  if conditional_focus == 1 then
+                    if _active.conditional.A[display_step] ~= 1
+                    or _active.conditional.B[display_step] ~= 1
+                    or _active.conditional.mode[display_step] ~= "A:B"
+                    then
+                      lvl = 5
+                    end
+                  elseif conditional_focus == 2 then
+                    if _active.prob[display_step] ~= 100 then
+                      lvl = 5
+                    end
+                  elseif conditional_focus == 3 or conditional_focus == 4 or conditional_focus == 5 then
+                    if _active.conditional.retrig_count[display_step] ~= 0 then
+                      lvl = 5
+                    end
+                  end
                 else
                   lvl = 2
                 end
@@ -1674,28 +1675,36 @@ function grid_lib.draw_highway()
           end
         end
       end
-      g:led(_hsteps.index_to_grid_pos(display_step,8)[1], util.wrap(_hsteps.index_to_grid_pos(display_step,8)[2],1,4)+2,lvl)
+      g:led(_hsteps.index_to_grid_pos(display_step,8)[1], util.wrap(_hsteps.index_to_grid_pos(display_step,8)[2],1,2)+2,lvl)
     end
   end
-  -- for j = 1,#track[i] do
-  --   g:led(j+1, 2, focused == j and 15 or 4)
-  --   if track[i].active_hill == j and track[i].active_hill ~= focused then
-  --     g:led(j+1, 2, 10)
-  --   end
-  -- end
   draw_pattern_selector(i)
-  for j = 1,4 do
+  for j = 1,8 do
     if highway_ui.seq_page[i] == j then
-      lvl = 5
+      lvl = 10
     else
-      lvl = 2
+      if _active.playing then
+        if math.ceil(_active.step/16) == j then
+          lvl = 5
+        else
+          lvl = 2
+        end
+      else
+        lvl = 2
+      end
     end
-    g:led(4+j,7,lvl)
+    g:led(4 + util.wrap(j,1,4), j <= 4 and 5 or 6, lvl)
   end
 
   -- draw grid_lock:
-  g:led(1,7,highway_mod_copy_pattern.state and 5 or 2)
-  g:led(3,7,grid_loop_modifier and 5 or 2)
+  if highway_mod_copy.state then
+    g:led(1,7,5)
+  elseif #highway_mod_copy.clipboard > 0 then
+    g:led(1,7,10)
+  elseif not highway_mod_copy.state then
+    g:led(1,7,2)
+  end
+  g:led(1,5,grid_loop_modifier and 5 or 2)
   g:led(2,8,grid_conditional_entry and 15 or 5)
   g:led(3,8,grid_data_entry and 15 or 5)
   g:led(gkeys.accent[1], gkeys.accent[2], grid_accent and 15 or 5)
@@ -1797,32 +1806,6 @@ function grid_lib.draw_es()
   end
   g:led(7,7,params:get('hill_'..i..'_legato') == 1 and 15 or 0)
   -- print(util.time())
-end
-
-function start_dir_clock(dir,n,d)
-  if mods["hill"] and n == 3 then
-    d = d * -1
-  end
-  _e.parse(n,d)
-  held_dirs_clocks[dir] = clock.run(
-    function()
-      while true do
-        clock.sleep(held_dirs_iters[dir] <= 5 and 0.15 or (held_dirs_iters[dir] <= 15 and 0.1 or (held_dirs_iters[dir] <= 30 and 0.05 or 0.01)))
-        _e.parse(n,d)
-        held_dirs_iters[dir] = held_dirs_iters[dir]+1
-        screen_dirty = true
-      end
-    end
-  )
-  dirs[dir] = true
-end
-
-function stop_dir_clock(dir)
-  if held_dirs_clocks[dir] then
-    clock.cancel(held_dirs_clocks[dir])
-    held_dirs_iters[dir] = 0
-  end
-  dirs[dir] = false
 end
 
 return grid_lib
