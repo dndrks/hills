@@ -55,6 +55,10 @@ function hway_ui.draw_menu()
         screen.move(0,22)
         screen.level(3)
         screen.text("hwy: "..focus)
+      elseif ui.control_set == "edit" and ui.menu_focus == 1 then
+        screen.move(31,12)
+        screen.level(3)
+        screen.text("step: ".._active.ui_position)
       end
       local upper_bound;
       if ui.hill_focus <= 7 then
@@ -308,7 +312,7 @@ function hway_ui.draw_menu()
 
       -- if (key1_hold or (#conditional_entry_steps.focus[hf] > 0)) and ui.control_set == 'edit' then
       local current_step = track[hf][h.screen_focus].ui_position
-      if ui.menu_focus == 1 then
+      if ui.menu_focus == 1 and ui.control_set ~= 'play' then
         local lvl_sel, lvl_other;
         if (key1_hold or (#conditional_entry_steps.focus[hf] > 0)) and ui.control_set == 'edit' then
           lvl_sel = 15
