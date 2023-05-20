@@ -279,17 +279,18 @@ end
 --- UP TO HERE...230519
 function m:map(p)
   local target_trig;
+  local focused_step = track[self.voice_focus][self.hill_focus][self.page_focus].trigs[self.step_focus]
   if hills[self.voice_focus].highway == true then
-    if track[self.voice_focus][self.hill_focus].trigs[self.step_focus] then
-      target_trig = self.adjusted_params
+    if focused_step then
+      target_trig = self.adjusted_params[self.voice_focus][self.hill_focus][self.page_focus][self.step_focus]
     else
-      target_trig = self.adjusted_params_lock_trigs
+      target_trig = self.adjusted_params_lock_trigs[self.voice_focus][self.hill_focus][self.page_focus][self.step_focus]
     end
   else
-    target_trig = self.adjusted_params
+    target_trig = self.adjusted_params[self.voice_focus][self.hill_focus][self.page_focus][self.step_focus]
   end
   -- local value = target_trig[self.voice_focus][self.hill_focus][self.step_focus].params[p]
-  local value = target_trig[self.voice_focus][self.hill_focus][self.step_focus].params[params:lookup_param(p).id]
+  local value = target_trig.params[params:lookup_param(p).id]
   local clamped = util.clamp(value, 0, 1)
   local cs = params:lookup_param(p).controlspec
   local rounded = util.round(cs.warp.map(cs, clamped), cs.step)
@@ -302,7 +303,7 @@ function m:string(p)
   else
     local target_trig;
     if hills[self.voice_focus].highway == true then
-      if track[self.voice_focus][self.hill_focus].trigs[self.step_focus] then
+      if track[self.voice_focus][self.hill_focus][self.page_focus].trigs[self.step_focus] then
         target_trig = self.adjusted_params
       else
         target_trig = self.adjusted_params_lock_trigs
@@ -336,7 +337,7 @@ m.redraw = function()
   -- print(m.pos, 2 - m.pos, #page - m.pos + 3)
   screen.clear()
   screen.font_size(8)
-  local trig_type = track[m.voice_focus][m.hill_focus].trigs[m.step_focus] and '' or ' (parameter lock)'
+  local trig_type = track[m.voice_focus][m.hill_focus][m.page_focus].trigs[m.step_focus] and '' or ' (parameter lock)'
   local n = m.voice_focus..' / hill: '..m.hill_focus..trig_type
   screen.level(4)
   screen.move(0,10)

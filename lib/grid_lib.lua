@@ -91,9 +91,9 @@ function grid_lib.pattern_execute(data)
   elseif data.event == "trig_flip" then
     local i = data.hill_i
     local j = data.hill_j
-    local focused_set = data.track_focus == "main" and track[i][j] or track[i][j].fill
-    -- focused_set.trigs[data.step] = data.state
-    _htracks.change_trig_state(focused_set,data.step,data.state, i, j)
+    local _page = data.hill_page
+    local focused_set = data.track_focus == "main" and track[i][j][_page] or track[i][j][_page].fill
+    _htracks.change_trig_state(focused_set,data.step,data.state, i, j, _page)
   elseif data.event == "midi_trig" then
     if data.legato then
       params:set('hill_'..data.hill..'_legato', 1)
@@ -932,16 +932,19 @@ function grid_lib.highway_press(x,y,z)
   elseif y <= 4 and z == 1 and (x >= 1 and x <= 8) then
     if not highway_mod_copy.state then
       local _active = track[i][j]
-      local focused_set = _active.focus == 'main' and _active or _active.fill
+      local _page = highway_ui.seq_page[i]
+      local _a = _active[_page]
+      local focused_set = _active.focus == 'main' and _a or _a.fill
       local pos = ((y - 3) * 8) + x
-      local pressed_step = pos + ((highway_ui.seq_page[i] - 1) * 16)
+      local pressed_step = pos
       if not grid_data_entry
       and not grid_conditional_entry
       and not grid_loop_modifier
       and not grid_accent
       and not grid_mute then
         track[i][j].ui_position = pressed_step
-        _htracks.change_trig_state(focused_set,pressed_step, not (focused_set.trigs[pressed_step]), i, j)
+        print('here')
+        _htracks.change_trig_state(focused_set,pressed_step, not (focused_set.trigs[pressed_step]), i, j, _page)
         for k = 1,16 do
           local table_to_record =
           {
@@ -952,6 +955,7 @@ function grid_lib.highway_press(x,y,z)
             ["id"] = k,
             ["hill_i"] = i,
             ["hill_j"] = j,
+            ["hill_page"] = _active.page
           }
           write_pattern_data(k,table_to_record,false)
         end
@@ -961,10 +965,10 @@ function grid_lib.highway_press(x,y,z)
         process_modifier(conditional_entry_steps, pressed_step, i, j)
       elseif grid_loop_modifier then
         if loop_modifier_stage == 'define start' then
-          track[i][j].start_point = util.clamp(pressed_step, 1, track[i][j].end_point)
+          track[i][j][_page].start_point = util.clamp(pressed_step, 1, track[i][j][_page].end_point)
           loop_modifier_stage = 'define end'
         elseif loop_modifier_stage == 'define end' then
-          track[i][j].end_point = util.clamp(pressed_step, track[i][j].start_point, 128)
+          track[i][j][_page].end_point = util.clamp(pressed_step, track[i][j][_page].start_point, 16)
           reset_state.loop_modifier(false)
         end
       elseif grid_accent then
@@ -988,7 +992,7 @@ function grid_lib.highway_press(x,y,z)
   -- grid lock mode:
   elseif (y == 5 or y == 6) and (x >=5 and x <= 8) then
     highway_ui.seq_page[i] = x-4 + (y == 5 and 0 or 4)
-    track[i][j].ui_position = ((highway_ui.seq_page[i] - 1) * 16) + 1
+    -- track[i][j].ui_position = ((highway_ui.seq_page[i] - 1) * 16) + 1
   elseif y <= 6 and z == 0 and (x >= 1 and x <= 8) then
     if grid_conditional_entry then
       conditional_entry_steps.held[i] = util.clamp(conditional_entry_steps.held[i] - 1,0,128)
@@ -1004,9 +1008,6 @@ function grid_lib.highway_press(x,y,z)
       grid_loop_modifier = false
       reset_state.loop_modifier()
     end
-  -- elseif y == 7 and z == 1 and (x >= 5 and x <= 8) then
-  --   highway_ui.seq_page[i] = x-4
-  --   track[i][j].ui_position = ((highway_ui.seq_page[i] - 1) * 32) + 1
   elseif y == 8 and x == 3 and z == 1 then
     if not grid_loop_modifier then
       reset_step_mods('grid_data_entry')
@@ -1047,20 +1048,21 @@ function grid_lib.highway_press(x,y,z)
     grid_trigger = z == 1
     if z == 1 then
       if not grid_mute then
-        -- engine.trig(i,track[i][j].velocities[track[i][j].ui_position],'false',kildare.allocVoice[i])
-        send_to_engine('trig',{track[i][j].velocities[track[i][j].ui_position],'false',kildare.allocVoice[i]})
+        local _page = highway_ui.seq_page[i]
+        send_to_engine('trig',{track[i][j][_page].velocities[track[i][j].ui_position],'false',kildare.allocVoice[i]})
       end
       if track[i].rec then
-        local current_step = track[i][j].step
-        -- track[i][j].trigs[current_step] = true
-        _htracks.change_trig_state(track[i][j],current_step, true, i, j)
+        local _page = highway_ui.seq_page[i]
+        local current_step = track[i][j][_page].step
+        _htracks.change_trig_state(track[i][j][_page],current_step, true, i, j, _page)
       end
     end
   end
 end
 
 local function process_ccES(i,j,played_note)
-  local focused_set = track[i][j].focus == 'main' and track[i][j] or track[i][j].fill
+  local _page = highway_ui.seq_page[i]
+  local focused_set = track[i][j].focus == 'main' and track[i][j][_page] or track[i][j][_page].fill
   if track[i].rec_note_entry then
     if params:string('hill '..i..' kildare_notes') == 'no' then
       params:set('hill '..i..' kildare_notes',2)
@@ -1069,8 +1071,7 @@ local function process_ccES(i,j,played_note)
     if params:get('hill_'..i..'_legato') == 1 then
       focused_set.legato_trigs[current_step] = true
     else
-      -- focused_set.trigs[current_step] = true
-      _htracks.change_trig_state(focused_set,current_step, true, i, j)
+      _htracks.change_trig_state(focused_set,current_step, true, i, j, _page)
     end
     focused_set.base_note[current_step] = played_note
     focused_set.velocities[current_step] = params:get('hill_'..i..'_iso_velocity')
@@ -1082,12 +1083,11 @@ local function process_ccES(i,j,played_note)
     if params:get('hill_'..i..'_legato') == 1 then
       focused_set.legato_trigs[pos] = true
     else
-      -- focused_set.trigs[pos] = true
-      _htracks.change_trig_state(focused_set,pos, true, i, j)
+      _htracks.change_trig_state(focused_set,pos, true, i, j, _page)
     end
     focused_set.base_note[pos] = played_note
     focused_set.velocities[pos] = params:get('hill_'..i..'_iso_velocity')
-    track[i][j].ui_position = util.wrap(track[i][j].ui_position+1,track[i][j].start_point,track[i][j].end_point)
+    track[i][j].ui_position = util.wrap(track[i][j].ui_position+1,track[i][j][_page].start_point,track[i][j][_page].end_point)
   -- else
   end
   if track[i].mute_during_note_entry == false or (track[i].mute_during_note_entry and track[i].manual_note_entry == false) then
@@ -1105,6 +1105,7 @@ function grid_lib.cc_press(x,y,z)
   end
   local i = ui.hill_focus
   local j = hills[ui.hill_focus].screen_focus
+  local _page = highway_ui.seq_page[i]
   -- change between patterns:
   if y == 2 and z == 1 and (x > 1 and x <= 9) then
     pattern_selector(i,j,x-1)
@@ -1141,14 +1142,13 @@ function grid_lib.cc_press(x,y,z)
     track[i].manual_note_entry = not track[i].manual_note_entry
   elseif x == 6 and y == 8 and z == 1 then
     if track[i].manual_note_entry then
-      local focused_set = track[i][j].focus == 'main' and track[i][j] or track[i][j].fill
+      local focused_set = track[i][j].focus == 'main' and track[i][j][_page] or track[i][j][_page].fill
       local pos = track[i][j].ui_position
-      -- focused_set.trigs[pos] = false
-      _htracks.change_trig_state(focused_set,pos, false, i, j)
-      track[i][j].ui_position = util.wrap(track[i][j].ui_position+1,track[i][j].start_point,track[i][j].end_point)
+      _htracks.change_trig_state(focused_set,pos, false, i, j,_page)
+      track[i][j].ui_position = util.wrap(track[i][j].ui_position+1,track[i][j][_page].start_point,track[i][j][_page].end_point)
     end
   elseif (x == 5 or x == 7) and y == 8 and z == 1 and track[i].manual_note_entry then
-    track[i][j].ui_position = util.wrap(track[i][j].ui_position + (x == 5 and -1 or 1), track[i][j].start_point, track[i][j].end_point)
+    track[i][j].ui_position = util.wrap(track[i][j].ui_position + (x == 5 and -1 or 1), track[i][j][_page].start_point, track[i][j][_page].end_point)
   elseif x == 6 and y == 3 and z == 1 then
     if ui.control_set ~= 'cc parameters' then
       _ccparams.flip_to_fkprm(ui.control_set)
@@ -1212,14 +1212,14 @@ function grid_lib.earthsea_press(x,y,z)
     track[i].manual_note_entry = not track[i].manual_note_entry
   elseif x == 6 and y == 8 and z == 1 then
     if track[i].manual_note_entry then
-      local focused_set = track[i][j].focus == 'main' and track[i][j] or track[i][j].fill
+      local _page = highway_ui.seq_page[i]
+      local focused_set = track[i][j].focus == 'main' and track[i][j][_page] or track[i][j][_page].fill
       local pos = track[i][j].ui_position
-      -- focused_set.trigs[pos] = false
-      _htracks.change_trig_state(focused_set,pos, false, i, j)
-      track[i][j].ui_position = util.wrap(track[i][j].ui_position+1,track[i][j].start_point,track[i][j].end_point)
+      _htracks.change_trig_state(focused_set,pos, false, i, j, _page)
+      track[i][j].ui_position = util.wrap(track[i][j].ui_position+1,track[i][j][_page].start_point,track[i][j][_page].end_point)
     end
   elseif (x == 5 or x == 7) and y == 8 and z == 1 and track[i].manual_note_entry then
-    track[i][j].ui_position = util.wrap(track[i][j].ui_position + (x == 5 and -1 or 1), track[i][j].start_point, track[i][j].end_point)
+    track[i][j].ui_position = util.wrap(track[i][j].ui_position + (x == 5 and -1 or 1), track[i][j][_page].start_point, track[i][j][_page].end_point)
   elseif x == 7 and y == 7 then
     params:set('hill_'..i..'_legato', z)
   elseif x == 7 and y == 6 then
@@ -1572,7 +1572,8 @@ function grid_lib.draw_highway()
   local i = ui.hill_focus
   local focused = hills[i].screen_focus
   local _active = track[i][focused]
-  local focused_set = _active.focus == 'main' and _active or _active.fill
+  local _a = _active[highway_ui.seq_page[i]]
+  local focused_set = _active.focus == 'main' and _a or _a.fill
   local _hui = highway_ui
   local epos = _active.ui_position
   
@@ -1586,23 +1587,23 @@ function grid_lib.draw_highway()
   local flipped_entry_steps = tab.invert(grid_data_entry and data_entry_steps.focus[i] or conditional_entry_steps.focus[i])
   for display_step = 1,16 do
     if grid_loop_modifier then
-      if display_step == _active.end_point or display_step == _active.start_point then
-        if loop_modifier_stage == 'define start' and display_step == _active.start_point then
+      if display_step == _a.end_point or display_step == _a.start_point then
+        if loop_modifier_stage == 'define start' and display_step == _a.start_point then
           lvl = grid_data_blink
-        elseif loop_modifier_stage == 'define end' and display_step == _active.end_point then
+        elseif loop_modifier_stage == 'define end' and display_step == _a.end_point then
           lvl = grid_data_blink
         else
           lvl = 10
         end
-      elseif display_step < _active.end_point and display_step > _active.start_point then
+      elseif display_step < _a.end_point and display_step > _a.start_point then
         lvl = 3
       else
         lvl = 0
       end
       g:led(_hsteps.index_to_grid_pos(display_step,8)[1], util.wrap(_hsteps.index_to_grid_pos(display_step,8)[2],1,2)+2,lvl)
     else
-      if display_step <= _active.end_point and display_step >= _active.start_point then
-        if _active.step == display_step and track[i].active_hill == focused then
+      if display_step <= _a.end_point and display_step >= _a.start_point then
+        if _active.step == display_step and track[i].active_hill == focused and highway_ui.seq_page[i] == _active.page then
           lvl = 10
         else
           lvl = 3
@@ -1616,34 +1617,34 @@ function grid_lib.draw_highway()
           lvl = grid_data_blink
         else
           if focused_set.trigs[display_step] then
-            if _active.step == display_step and _active.playing then
+            if _active.step == display_step and _active.playing and highway_ui.seq_page[i] == _active.page then
               lvl = 0
             else
               lvl = 8
             end
           else
-            if _active.step == display_step and _active.playing then
+            if _active.step == display_step and _active.playing and highway_ui.seq_page[i] == _active.page then
               lvl = 0
             else
-              if display_step <= _active.end_point and display_step >= _active.start_point then
-                if grid_data_entry and _active.lock_trigs[display_step] then
+              if display_step <= _a.end_point and display_step >= _a.start_point then
+                if grid_data_entry and _a.lock_trigs[display_step] then
                   lvl = 5
                 elseif grid_conditional_entry then
                   lvl = 2
                   local conditional_focus = _s.popup_focus.tracks[i][1]
                   if conditional_focus == 1 then
-                    if _active.conditional.A[display_step] ~= 1
-                    or _active.conditional.B[display_step] ~= 1
-                    or _active.conditional.mode[display_step] ~= "A:B"
+                    if _a.conditional.A[display_step] ~= 1
+                    or _a.conditional.B[display_step] ~= 1
+                    or _a.conditional.mode[display_step] ~= "A:B"
                     then
                       lvl = 5
                     end
                   elseif conditional_focus == 2 then
-                    if _active.prob[display_step] ~= 100 then
+                    if _a.prob[display_step] ~= 100 then
                       lvl = 5
                     end
                   elseif conditional_focus == 3 or conditional_focus == 4 or conditional_focus == 5 then
-                    if _active.conditional.retrig_count[display_step] ~= 0 then
+                    if _a.conditional.retrig_count[display_step] ~= 0 then
                       lvl = 5
                     end
                   end
@@ -1651,7 +1652,7 @@ function grid_lib.draw_highway()
                   lvl = 2
                 end
               else
-                if _active.lock_trigs[display_step] then
+                if _a.lock_trigs[display_step] then
                   lvl = 4
                 else
                   lvl = 0
@@ -1662,7 +1663,7 @@ function grid_lib.draw_highway()
         end
       else
         if focused_set.trigs[display_step] then
-          if _active.step == display_step and _active.playing then
+          if _active.step == display_step and _active.playing and highway_ui.seq_page[i] == _active.page then
             lvl = 0
           else
             if focused_set.muted_trigs[display_step] then
