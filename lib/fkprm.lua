@@ -6,6 +6,7 @@ local m = {
   alt = false,
   voice_focus = 1,
   hill_focus = 1,
+  page_focus = 1,
   step_focus = 1,
   alt_menu_focus = 1,
   random_window = 100
@@ -23,8 +24,8 @@ end
 m.flip_to_fkprm = function(prev_page, locked_entry)
   if ui.menu_focus == 1 or ui.menu_focus == 3 then
     m.voice_focus = ui.hill_focus
-    m.hill_focus = hills[ui.hill_focus].screen_focus
-    if hills[ui.hill_focus].highway then
+    m.hill_focus = hills[m.voice_focus].screen_focus
+    if hills[m.voice_focus].highway then
       if not locked_entry then
         m.step_focus = track[m.voice_focus][m.hill_focus].ui_position
       end
@@ -91,7 +92,6 @@ m.key = function(n,z)
       key2_hold = false
     end
   elseif n==3 and z==1 and key1_hold then
-    -- m:force(page[m.pos+1], m.voice_focus, m.hill_focus, m.step_focus)
     if m.alt_menu_focus == 1 or m.alt_menu_focus == 4 then
       m:clear(params:lookup_param(page[m.pos+1]).id, m.voice_focus, m.hill_focus, m.step_focus, m.alt_menu_focus == 1 and '' or 'all')
     elseif m.alt_menu_focus == 2 or m.alt_menu_focus == 5 then
@@ -163,9 +163,9 @@ m.enc = function(n,d)
   end
 end
 
-local function get_focus(voice,hill,step)
+local function get_focus(voice,hill,page,step)
   if hills[voice].highway == true then
-    if track[voice][hill].trigs[step] then
+    if track[voice][hill][page].trigs[step] then
       return m.adjusted_params
     else
       return m.adjusted_params_lock_trigs
@@ -175,40 +175,40 @@ local function get_focus(voice,hill,step)
   end
 end
 
-function m:clear(index, voice, hill, step, mode)
+function m:clear(index, voice, hill, page, step, mode)
   if mode == 'all' then
-    for i = track[voice][hill].start_point, track[voice][hill].end_point do
-      local target_trig = get_focus(voice,hill,i)
-      target_trig[voice][hill][i].params[index] = nil
-      if tab.count(target_trig[voice][hill][i].params) == 0 then
-        track[voice][hill].lock_trigs[i] = false
+    for i = track[voice][hill][page].start_point, track[voice][hill][page].end_point do
+      local target_trig = get_focus(voice,hill,page,i)
+      target_trig[voice][hill][i][page].params[index] = nil
+      if tab.count(target_trig[voice][hill][i][page].params) == 0 then
+        track[voice][hill][page].lock_trigs[i] = false
       end
     end
   else
-    local target_trig = get_focus(voice,hill,step)
-    print('clearing',voice,hill,step,index)
-    target_trig[voice][hill][step].params[index] = nil
-    if tab.count(target_trig[voice][hill][step].params) == 0 then
-      track[voice][hill].lock_trigs[step] = false
+    local target_trig = get_focus(voice,hill,page,step)
+    print('clearing',voice,hill,page,step,index)
+    target_trig[voice][hill][page][step].params[index] = nil
+    if tab.count(target_trig[voice][hill][page][step].params) == 0 then
+      track[voice][hill][page].lock_trigs[step] = false
     end
   end
 end
 
-function m:force(index, voice, hill, step, mode)
+function m:force(index, voice, hill, page, step, mode)
   if mode == 'all' then
-    for i = track[voice][hill].start_point, track[voice][hill].end_point do
-      local target_trig = get_focus(voice,hill,i)
-      if target_trig[voice][hill][i].params[index] ~= params:lookup_param(index).raw then
-        target_trig[voice][hill][i].params[index] = params:lookup_param(index).raw
-        track[voice][hill].lock_trigs[i] = true
+    for i = track[voice][hill][page].start_point, track[voice][hill][page].end_point do
+      local target_trig = get_focus(voice,hill,page,i)
+      if target_trig[voice][hill][page][i].params[index] ~= params:lookup_param(index).raw then
+        target_trig[voice][hill][page][i].params[index] = params:lookup_param(index).raw
+        track[voice][hill][page].lock_trigs[i] = true
       end
     end
   else
-    local target_trig = get_focus(voice,hill,step)
-    print('forcing',voice,hill,step,index)
-    if target_trig[voice][hill][step].params[index] ~= params:lookup_param(index).raw then
-      target_trig[voice][hill][step].params[index] = params:lookup_param(index).raw
-      track[voice][hill].lock_trigs[step] = true
+    local target_trig = get_focus(voice,hill,page,step)
+    print('forcing',voice,hill,page,step,index)
+    if target_trig[voice][hill][page][step].params[index] ~= params:lookup_param(index).raw then
+      target_trig[voice][hill][page][step].params[index] = params:lookup_param(index).raw
+      track[voice][hill][page].lock_trigs[step] = true
     end
   end
 end
@@ -230,53 +230,53 @@ function deviate(val, deviation)
   return {min,max}
 end
 
-function m:random(index, voice, hill, step, mode)
+function m:random(index, voice, hill, page, step, mode)
   local current_val = params:lookup_param(index).raw
   if mode == 'all' then
-    for i = track[voice][hill].start_point, track[voice][hill].end_point do
-      local target_trig = get_focus(voice,hill,i)
+    for i = track[voice][hill][page].start_point, track[voice][hill][page].end_point do
+      local target_trig = get_focus(voice,hill,page,i)
       local min = util.round(deviate(current_val, m.random_window)[1] * 1000)
       local max = util.round(deviate(current_val, m.random_window)[2] * 1000)
-      target_trig[voice][hill][i].params[index] = math.random(min,max)/1000
-      track[voice][hill].lock_trigs[i] = true
+      target_trig[voice][hill][page][i].params[index] = math.random(min,max)/1000
+      track[voice][hill][page].lock_trigs[i] = true
     end
   else
-    local target_trig = get_focus(voice,hill,step)
+    local target_trig = get_focus(voice,hill,page,step)
     local min = util.round(deviate(current_val, m.random_window)[1] * 1000)
     local max = util.round(deviate(current_val, m.random_window)[2] * 1000)
-    target_trig[voice][hill][step].params[index] = math.random(min,max)/1000
-    track[voice][hill].lock_trigs[step] = true
+    target_trig[voice][hill][page][step].params[index] = math.random(min,max)/1000
+    track[voice][hill][page].lock_trigs[step] = true
   end
 end
 
-function m:delta(index, d, voice, hill, step)
-  local target_trig = get_focus(voice,hill,step)
+function m:delta(index, d, voice, hill, page, step)
+  local target_trig = get_focus(voice,hill,page,step)
   local val;
-  if target_trig[voice][hill][step].params[index] == nil then
+  if target_trig[voice][hill][page][step].params[index] == nil then
     -- write index and value
     val = params:lookup_param(index).raw
   else
     -- adjust value at index
-    val = target_trig[voice][hill][step].params[index]
+    val = target_trig[voice][hill][page][step].params[index]
   end
   local delta_val = params:lookup_param(index).controlspec.quantum
-  target_trig[voice][hill][step].params[index] = util.clamp(val + d * delta_val,0,1)
-  if util.round(target_trig[voice][hill][step].params[index],0.001) == util.round(params:get_raw(index),0.001) then
-    target_trig[voice][hill][step].params[index] = nil
-    if tab.count(target_trig[voice][hill][step].params) == 0 then
-      track[voice][hill].lock_trigs[step] = false
+  target_trig[voice][hill][page][step].params[index] = util.clamp(val + d * delta_val,0,1)
+  if util.round(target_trig[voice][hill][page][step].params[index],0.001) == util.round(params:get_raw(index),0.001) then
+    target_trig[voice][hill][page][step].params[index] = nil
+    if tab.count(target_trig[voice][hill][page][step].params) == 0 then
+      track[voice][hill][page].lock_trigs[step] = false
     end
   elseif target_trig == m.adjusted_params_lock_trigs then
-    track[voice][hill].lock_trigs[step] = true
+    track[voice][hill][page].lock_trigs[step] = true
   end
 end
 
-function m:delta_many(index, d, voice, hill)
+function m:delta_many(index, d, voice, hill, page)
   for i = 1,#data_entry_steps.focus[voice] do
-    m:delta(index, d, voice, hill, data_entry_steps.focus[voice][i])
+    m:delta(index, d, voice, hill, page, data_entry_steps.focus[voice][i])
   end
 end
-
+--- UP TO HERE...230519
 function m:map(p)
   local target_trig;
   if hills[self.voice_focus].highway == true then
@@ -434,9 +434,13 @@ m.init = function()
     for j = 1,number_of_patterns do
       m.adjusted_params[i][j] = {}
       m.adjusted_params_lock_trigs[i][j] = {}
-      for steps = 1,128 do
-        m.adjusted_params[i][j][steps] = {['params'] = {}}
-        m.adjusted_params_lock_trigs[i][j][steps] = {['params'] = {}}
+      for pages = 1,8 do
+        m.adjusted_params[i][j][pages] = {}
+        m.adjusted_params_lock_trigs[i][j][pages] = {}
+        for steps = 1,16 do
+          m.adjusted_params[i][j][pages][steps] = {['params'] = {}}
+          m.adjusted_params_lock_trigs[i][j][pages][steps] = {['params'] = {}}
+        end
       end
     end
   end

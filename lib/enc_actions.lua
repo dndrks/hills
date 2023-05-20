@@ -1,8 +1,21 @@
 local enc_actions = {}
 
 function enc_actions.delta_track_pos(i,j,d)
-  track[i][j].ui_position = util.clamp(track[i][j].ui_position + d, 1, 128)
-  highway_ui.seq_page[i] = math.ceil(track[i][j].ui_position/16)
+  if track[i][j].ui_position + d < 1 then
+    local pre_change = highway_ui.seq_page[i]
+    highway_ui.seq_page[i] = util.clamp(highway_ui.seq_page[i]-1,1,8)
+    if pre_change ~= highway_ui.seq_page[i] then
+      track[i][j].ui_position = 16
+    end
+  elseif track[i][j].ui_position + d > 16 then
+    local pre_change = highway_ui.seq_page[i]
+    highway_ui.seq_page[i] = util.clamp(highway_ui.seq_page[i]+1,1,8)
+    if pre_change ~= highway_ui.seq_page[i] then
+      track[i][j].ui_position = 1
+    end
+  else
+    track[i][j].ui_position = util.clamp(track[i][j].ui_position + d, 1, 16)
+  end
 end
 
 local function check_for_menu_condition(i)

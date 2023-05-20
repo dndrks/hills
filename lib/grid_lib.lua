@@ -1584,7 +1584,7 @@ function grid_lib.draw_highway()
   -- draw steps + sequence selector
   local lvl = 5
   local flipped_entry_steps = tab.invert(grid_data_entry and data_entry_steps.focus[i] or conditional_entry_steps.focus[i])
-  for display_step = steps_min_max[_hui.seq_page[i]][1], steps_min_max[_hui.seq_page[i]][2] do
+  for display_step = 1,16 do
     if grid_loop_modifier then
       if display_step == _active.end_point or display_step == _active.start_point then
         if loop_modifier_stage == 'define start' and display_step == _active.start_point then
