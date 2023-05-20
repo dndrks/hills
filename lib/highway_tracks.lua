@@ -1,4 +1,5 @@
 local track_actions = {}
+local s = require 'sequins'
 
 track = {}
 
@@ -203,6 +204,7 @@ function track_actions.init(target, hill_number, clear_reset)
   track[target][hill_number].mode = "fwd"
   track[target][hill_number].loop = true
   track[target][hill_number].focus = "main"
+  track[target][hill_number].page_chain = s{1}
   
   for pages = 1,8 do
     track[target][hill_number][pages] = {}
@@ -408,6 +410,7 @@ function track_actions.tick(target) -- FIXME: shouldn't just trigger all voices 
   end
 end
 
+-- 230520 TODO: evaluate necessity of these (probably would be cool tho!):
 -- function track_actions.prob_fill(target,s_p,e_p,value)
 --   local _active = track[target][track[target].active_hill]
 --   local focused_set = _active.focus == "main" and _active or _active.fill
@@ -447,7 +450,7 @@ end
 -- end
 
 function track_actions.change_trig_state(target_track,target_step,state, i, j, _page)
-  print('change_trig_state:',target_track,target_step,state, _page)
+  -- print('change_trig_state:',target_track,target_step,state, _page)
   target_track.trigs[target_step] = state
   if state == true then
     if tab.count(_fkprm.adjusted_params_lock_trigs[i][j][_page][target_step].params) > 0 then
@@ -457,6 +460,7 @@ function track_actions.change_trig_state(target_track,target_step,state, i, j, _
 end
 
 function track_actions.copy(target,pattern)
+  -- 230520: TODO fix indexing for 'pages'
   local _active = track[target][pattern]
   if track_clipboard == nil then
     track_clipboard = _t.deep_copy(_active)
@@ -573,10 +577,20 @@ end
 function track_actions.forward(target)
   local _active = track[target][track[target].active_hill]
   local _a = _active[_active.page]
-  _active.step = wrap(_active.step + 1,_a.start_point,_a.end_point)
-  if _active.step == _a.start_point then
+  _active.step = _active.step + 1
+  if _active.step > _a.end_point then
+    _active.page = _active.page_chain()
+    _a = _active[_active.page]
+    _active.step = _a.start_point
     _a.conditional.cycle = _a.conditional.cycle + 1
+    -- if _active.step == _a.start_point then
+    --   _a.conditional.cycle = _a.conditional.cycle + 1
+    -- end
   end
+  -- _active.step = wrap(_active.step + 1,_a.start_point,_a.end_point)
+  -- if _active.step == _a.start_point then
+  --   _a.conditional.cycle = _a.conditional.cycle + 1
+  -- end
 end
 
 function track_actions.backward(target)

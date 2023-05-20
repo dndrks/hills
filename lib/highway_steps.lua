@@ -336,11 +336,7 @@ function hway_ui.draw_menu()
           base = focused_set.conditional.mode[current_step]
           line_above = false
         end
-        if base == nil then
-          print(focused_set)
-        else
-          screen.text('COND: '..base)
-        end
+        screen.text('COND: '..base)
         if line_above then
           -- screen.move(87,14)
           screen.move(57,36)

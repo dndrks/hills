@@ -943,7 +943,6 @@ function grid_lib.highway_press(x,y,z)
       and not grid_accent
       and not grid_mute then
         track[i][j].ui_position = pressed_step
-        print('here')
         _htracks.change_trig_state(focused_set,pressed_step, not (focused_set.trigs[pressed_step]), i, j, _page)
         for k = 1,16 do
           local table_to_record =
