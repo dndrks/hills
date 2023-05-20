@@ -923,8 +923,8 @@ local non_indexed_voices = {'delay', 'feedback', 'main'}
 
 function fkmap(i,j,index,p)
   local target_trig;
+  local _page = track[i][j].page
   if hills[i].highway == true then
-    local _page = track[i][j].page
     if track[i][j][_page].trigs[index] then
       target_trig = _fkprm.adjusted_params
     else
@@ -1037,7 +1037,6 @@ local function play_linked_sample(i, j, played_note, vel_target, retrig_index, f
 end
 
 force_note = function(i,j,played_note)
-  print('note happening')
   local vel_target = params:get('hill_'..i..'_iso_velocity')
   local retrig_index = 0
   if params:string('voice_model_'..i) ~= 'sample' then
@@ -1123,8 +1122,8 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
         if target_trig == _fkprm.adjusted_params then
           for k = 1,#per_step_params_adjusted[i].param do
             local check_prm = per_step_params_adjusted[i].param[k]
-            print('>S>S>S'..check_prm)
-            if _fkprm.adjusted_params[i][j][index].params[check_prm] == nil then
+            -- print('>S>S>S'..check_prm)
+            if _fkprm.adjusted_params[i][j][_page][index].params[check_prm] == nil then
               local lock_trig = track[i][j].focus == 'main' and track[i][j][_page].lock_trigs[index] or track[i][j][_page].fill.lock_trigs[index]
               local is_drum_voice = params.lookup[check_prm] <= last_voice_param
               local id = check_prm
@@ -1135,7 +1134,7 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
                 target_drum = string.gsub(target_drum, '_', '')
                 local p_name = string.gsub(id,target_voice..'_'..target_drum..'_','')
                 prms.send_to_engine(target_voice,p_name,params:get(id))
-                print('reseeding non-adjusted value for voice', target_voice, j, index, id, p_name)
+                -- print('reseeding non-adjusted value for voice', target_voice, j, index, id, p_name)
               else
                 local p_name = extract_voice_from_string(id)
                 local sc_target = string.gsub(id,p_name..'_','')
@@ -1147,17 +1146,16 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
         end
         -- this step's entry handling:
         -- per_step_params_adjusted[i] = {param = {}, value = {}}
-        -- for k,v in next,_fkprm.adjusted_params[i][j][index].params do
         for k,v in next,target_trig[i][j][_page][index].params do
-          print('this is ahppening!!')
+          -- print('this is ahppening!!')
           local param_id = k
-          print(k, last_voice_param)
+          -- print(k, last_voice_param)
           k = params.lookup[k]
-          print(k, last_voice_param)
+          -- print(k, last_voice_param)
           local is_drum_voice = k <= last_voice_param
           local drum_target = param_id:match('(.+)_(.+)_(.+)')
           drum_target = tonumber(drum_target)
-          print('huh! '..drum_target, k, params:get_id(k), param_id)
+          -- print('huh! '..drum_target, k, params:get_id(k), param_id)
           if is_drum_voice and type(drum_target) == 'number' and drum_target <= number_of_hills then
             if retrig_index == 0 then
               local target_voice = drum_target
@@ -1165,7 +1163,7 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
               target_drum = string.gsub(target_drum, target_voice..'_', '')
               target_drum = string.gsub(target_drum, '_', '')
               local p_name = string.gsub(param_id,target_voice..'_'..target_drum..'_','')
-              print('sending voice param',target_voice,p_name,fkmap(i,j,index,param_id))
+              -- print('sending voice param',target_voice,p_name,fkmap(i,j,index,param_id))
               if target_voice ~= i then
                 if not tab.contains(track[target_voice].external_prm_change,param_id) then
                   track[target_voice].external_prm_change[#track[target_voice].external_prm_change+1] = param_id

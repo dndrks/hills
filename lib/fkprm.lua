@@ -24,6 +24,7 @@ end
 m.flip_to_fkprm = function(prev_page, locked_entry)
   if ui.menu_focus == 1 or ui.menu_focus == 3 then
     m.voice_focus = ui.hill_focus
+    m.page_focus = highway_ui.seq_page[m.voice_focus]
     m.hill_focus = hills[m.voice_focus].screen_focus
     if hills[m.voice_focus].highway then
       if not locked_entry then
@@ -93,11 +94,11 @@ m.key = function(n,z)
     end
   elseif n==3 and z==1 and key1_hold then
     if m.alt_menu_focus == 1 or m.alt_menu_focus == 4 then
-      m:clear(params:lookup_param(page[m.pos+1]).id, m.voice_focus, m.hill_focus, m.step_focus, m.alt_menu_focus == 1 and '' or 'all')
+      m:clear(params:lookup_param(page[m.pos+1]).id, m.voice_focus, m.hill_focus, m.page_focus, m.step_focus, m.alt_menu_focus == 1 and '' or 'all')
     elseif m.alt_menu_focus == 2 or m.alt_menu_focus == 5 then
-      m:force(params:lookup_param(page[m.pos+1]).id, m.voice_focus, m.hill_focus, m.step_focus, m.alt_menu_focus == 2 and '' or 'all')
+      m:force(params:lookup_param(page[m.pos+1]).id, m.voice_focus, m.hill_focus, m.page_focus, m.step_focus, m.alt_menu_focus == 2 and '' or 'all')
     elseif m.alt_menu_focus == 3 or m.alt_menu_focus == 6 then
-      m:random(params:lookup_param(page[m.pos+1]).id, m.voice_focus, m.hill_focus, m.step_focus, m.alt_menu_focus == 3 and '' or 'all')
+      m:random(params:lookup_param(page[m.pos+1]).id, m.voice_focus, m.hill_focus, m.page_focus, m.step_focus, m.alt_menu_focus == 3 and '' or 'all')
     end
   elseif n==3 and z==1 then
     if t == params.tGROUP then
@@ -138,10 +139,10 @@ m.enc = function(n,d)
         local dx = m.fine and (d/20) or d
         if grid_data_entry then
           -- m:delta_many(page[m.pos+1], dx, m.voice_focus, m.hill_focus)
-          m:delta_many(params:lookup_param(page[m.pos+1]).id, dx, m.voice_focus, m.hill_focus)
+          m:delta_many(params:lookup_param(page[m.pos+1]).id, dx, m.voice_focus, m.hill_focus, m.page_focus)
         else
           -- m:delta(page[m.pos+1], dx, m.voice_focus, m.hill_focus, m.step_focus)
-          m:delta(params:lookup_param(page[m.pos+1]).id, dx, m.voice_focus, m.hill_focus, m.step_focus)
+          m:delta(params:lookup_param(page[m.pos+1]).id, dx, m.voice_focus, m.hill_focus, m.page_focus, m.step_focus)
         end
         m.redraw()
       end
@@ -179,8 +180,8 @@ function m:clear(index, voice, hill, page, step, mode)
   if mode == 'all' then
     for i = track[voice][hill][page].start_point, track[voice][hill][page].end_point do
       local target_trig = get_focus(voice,hill,page,i)
-      target_trig[voice][hill][i][page].params[index] = nil
-      if tab.count(target_trig[voice][hill][i][page].params) == 0 then
+      target_trig[voice][hill][page][i].params[index] = nil
+      if tab.count(target_trig[voice][hill][page][i].params) == 0 then
         track[voice][hill][page].lock_trigs[i] = false
       end
     end
@@ -289,7 +290,6 @@ function m:map(p)
   else
     target_trig = self.adjusted_params[self.voice_focus][self.hill_focus][self.page_focus][self.step_focus]
   end
-  -- local value = target_trig[self.voice_focus][self.hill_focus][self.step_focus].params[p]
   local value = target_trig.params[params:lookup_param(p).id]
   local clamped = util.clamp(value, 0, 1)
   local cs = params:lookup_param(p).controlspec
@@ -311,7 +311,7 @@ function m:string(p)
     else
       target_trig = self.adjusted_params
     end
-    local value = target_trig[self.voice_focus][self.hill_focus][self.step_focus].params[p]
+    local value = target_trig[self.voice_focus][self.hill_focus][sel.page_focus][self.step_focus].params[p]
     local a = util.round(value, 0.01)
     return a.." "..params:lookup_param(p).controlspec.units
   end
@@ -328,9 +328,8 @@ local function prm_lookup(t, ...)
 end
 
 local function check_subtables(p)
-  local target_trig = get_focus(m.voice_focus,m.hill_focus,m.step_focus)
-  -- return prm_lookup(target_trig, m.voice_focus,m.hill_focus,m.step_focus,'params',p)
-  return prm_lookup(target_trig, m.voice_focus,m.hill_focus,m.step_focus,'params',params:lookup_param(p).id)
+  local target_trig = get_focus(m.voice_focus,m.hill_focus,m.page_focus,m.step_focus)
+  return prm_lookup(target_trig, m.voice_focus,m.hill_focus,m.page_focus,m.step_focus,'params',params:lookup_param(p).id)
 end
 
 m.redraw = function()
