@@ -68,10 +68,6 @@ hill_names = {
 }
 
 number_of_step_pages = 8
-steps_min_max = {}
-for i = 1,number_of_step_pages do
-  steps_min_max[i] = {1+(16 * (i-1)), (16 * i)}
-end
 
 pre_step_page = 'play'
 

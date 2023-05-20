@@ -32,7 +32,9 @@ function hway_ui.draw_menu()
 
   local hf = ui.hill_focus
   local h = hills[hf]
+  local _page = highway_ui.seq_page[hf]
   local _active = track[hf][h.screen_focus]
+  local _a = track[hf][h.screen_focus][_page]
   screen.level(15)
   screen.move(0,10)
   screen.aa(1)
@@ -84,7 +86,7 @@ function hway_ui.draw_menu()
         end
       end
 
-      local focused_set = _active.focus == "main" and _active or _active.fill
+      local focused_set = _active.focus == "main" and _a or _a.fill
       screen.move(0,10)
       screen.level(3)
       screen.level(_hui.focus == "seq" and 8 or 0)
@@ -93,7 +95,7 @@ function hway_ui.draw_menu()
       screen.fill()
       local lvl = 5
       screen.font_face(2)
-      for i = steps_min_max[_hui.seq_page[hf]][1], steps_min_max[_hui.seq_page[hf]][2] do
+      for i = 1,16 do
         if e_pos == i then
           if _active.step == i and _active.playing then
             lvl = _hui.focus == "seq" and 5 or 4
@@ -101,7 +103,7 @@ function hway_ui.draw_menu()
             lvl = _hui.focus == "seq" and 0 or 2
           end
         else
-          if i <= _active.end_point and i >= _active.start_point then
+          if i <= _a.end_point and i >= _a.start_point then
             if _active.step == i then
               lvl = _hui.focus == "seq" and 15 or 4
             else
@@ -248,9 +250,6 @@ function hway_ui.draw_menu()
           screen.rect(113 + (util.wrap(i-1,0,3) * 4),i <= 4 and 56 or 60,3,3)
           screen.fill()
         end
-        -- screen.move(128,64)
-        -- screen.level(3)
-        -- screen.text_right(track[hf][h.screen_focus].ui_position..' / '..steps_min_max[_hui.seq_page[hf]][1]..'-'..steps_min_max[_hui.seq_page[hf]][2])
       end
 
       if ui.menu_focus == 1 then
@@ -287,10 +286,9 @@ function hway_ui.draw_menu()
         screen.text_right("max: "..track[hf][h.screen_focus].end_point)
       elseif ui.menu_focus == 3 then
         if ui.control_set == 'edit' then
-          local _active = track[hf][h.screen_focus]
           local pos = _active.ui_position
           local display_text = ''
-          local focused_set = _active.focus == "main" and _active or _active.fill
+          local focused_set = _active.focus == "main" and _a or _a.fill
           screen.level(3)
           if focused_set.trigs[pos] == false then
             display_text = 'set note adds trig'
@@ -353,7 +351,7 @@ function hway_ui.draw_menu()
         screen.level(_s.popup_focus.tracks[hf][1] == 3 and lvl_sel or lvl_other)
         screen.text('RETRIG: '..focused_set.conditional.retrig_count[current_step]..'x')
         screen.level(_s.popup_focus.tracks[hf][1] == 4 and lvl_sel or lvl_other)
-        local get_string = _active.focus == 'main' and ('track_retrig_time_'..hf..'_'..h.screen_focus..'_'..current_step) or ('track_fill_retrig_time_'..hf..'_'..h.screen_focus..'_'..current_step)
+        local get_string = _active.focus == 'main' and ('track_retrig_time_'..hf..'_'..h.screen_focus..'_'.._page..'_'..current_step) or ('track_fill_retrig_time_'..hf..'_'..h.screen_focus..'_'.._page..'_'..current_step)
         screen.move(84,52)
         screen.text('RATE: '..track_paramset:string(get_string))
         screen.level(_s.popup_focus.tracks[hf][1] == 5 and lvl_sel or lvl_other)
@@ -524,24 +522,6 @@ function hway_ui.cycle_chord_degrees(i,j,step,d)
   local _active = track[i][j]
   local focused_set = _active.focus == 'main' and _active or _active.fill
   focused_set.chord_degrees[step] = util.clamp(focused_set.chord_degrees[step] + d, 1, 7)
-end
-
-function hway_ui.check_for_first_touch()
-  -- local _active = track[_hui.sel][track[_hui.sel].active_hill]
-  local hf = ui.hill_focus
-  local h = hills[hf]
-  local _active = track[hf][h.screen_focus]
-  local focused_set = _active.focus == "main" and track[_hui.sel] or _active.fill
-  if tab.count(focused_set.base_note) == 1
-  and not _active.playing
-  and not _active.pause
-  and not _active.enabled
-  then
-    step.enable(_hui.sel,true)
-    _active.pause = true
-    _active.hold = true
-    grid_dirty = true
-  end
 end
 
 function hway_ui.index_to_grid_pos(val,columns)
