@@ -32,7 +32,9 @@ function hway_ui.draw_menu()
 
   local hf = ui.hill_focus
   local h = hills[hf]
+  local _page = highway_ui.seq_page[hf]
   local _active = track[hf][h.screen_focus]
+  local _a = track[hf][h.screen_focus][_page]
   screen.level(15)
   screen.move(0,10)
   screen.aa(1)
@@ -84,7 +86,7 @@ function hway_ui.draw_menu()
         end
       end
 
-      local focused_set = _active.focus == "main" and _active or _active.fill
+      local focused_set = _active.focus == "main" and _a or _a.fill
       screen.move(0,10)
       screen.level(3)
       screen.level(_hui.focus == "seq" and 8 or 0)
@@ -93,16 +95,16 @@ function hway_ui.draw_menu()
       screen.fill()
       local lvl = 5
       screen.font_face(2)
-      for i = steps_min_max[_hui.seq_page[hf]][1], steps_min_max[_hui.seq_page[hf]][2] do
+      for i = 1,16 do
         if e_pos == i then
-          if _active.step == i and _active.playing then
+          if _active.step == i and _active.playing and highway_ui.seq_page[hf] == _active.page then
             lvl = _hui.focus == "seq" and 5 or 4
           else
             lvl = _hui.focus == "seq" and 0 or 2
           end
         else
-          if i <= _active.end_point and i >= _active.start_point then
-            if _active.step == i then
+          if i <= _a.end_point and i >= _a.start_point then
+            if _active.step == i and highway_ui.seq_page[hf] == _active.page then
               lvl = _hui.focus == "seq" and 15 or 4
             else
               lvl = _hui.focus == "seq" and 5 or 2
@@ -248,9 +250,6 @@ function hway_ui.draw_menu()
           screen.rect(113 + (util.wrap(i-1,0,3) * 4),i <= 4 and 56 or 60,3,3)
           screen.fill()
         end
-        -- screen.move(128,64)
-        -- screen.level(3)
-        -- screen.text_right(track[hf][h.screen_focus].ui_position..' / '..steps_min_max[_hui.seq_page[hf]][1]..'-'..steps_min_max[_hui.seq_page[hf]][2])
       end
 
       if ui.menu_focus == 1 then
@@ -277,20 +276,18 @@ function hway_ui.draw_menu()
           screen.level(s_c["bounds"]["focus"] == 1 and 15 or 3)
         end
         screen.move(32,10)
-        screen.text("min: "..track[hf][h.screen_focus].start_point)
+        screen.text("min: "..track[hf][h.screen_focus][_page].start_point)
         if ui.control_set == 'play' then
           screen.level(3)
         else
           screen.level(s_c["bounds"]["focus"] == 1 and 3 or 15)
         end
         screen.move(128,10)
-        screen.text_right("max: "..track[hf][h.screen_focus].end_point)
+        screen.text_right("max: "..track[hf][h.screen_focus][_page].end_point)
       elseif ui.menu_focus == 3 then
         if ui.control_set == 'edit' then
-          local _active = track[hf][h.screen_focus]
           local pos = _active.ui_position
           local display_text = ''
-          local focused_set = _active.focus == "main" and _active or _active.fill
           screen.level(3)
           if focused_set.trigs[pos] == false then
             display_text = 'set note adds trig'
@@ -353,7 +350,7 @@ function hway_ui.draw_menu()
         screen.level(_s.popup_focus.tracks[hf][1] == 3 and lvl_sel or lvl_other)
         screen.text('RETRIG: '..focused_set.conditional.retrig_count[current_step]..'x')
         screen.level(_s.popup_focus.tracks[hf][1] == 4 and lvl_sel or lvl_other)
-        local get_string = _active.focus == 'main' and ('track_retrig_time_'..hf..'_'..h.screen_focus..'_'..current_step) or ('track_fill_retrig_time_'..hf..'_'..h.screen_focus..'_'..current_step)
+        local get_string = _active.focus == 'main' and ('track_retrig_time_'..hf..'_'..h.screen_focus..'_'.._page..'_'..current_step) or ('track_fill_retrig_time_'..hf..'_'..h.screen_focus..'_'.._page..'_'..current_step)
         screen.move(84,52)
         screen.text('RATE: '..track_paramset:string(get_string))
         screen.level(_s.popup_focus.tracks[hf][1] == 5 and lvl_sel or lvl_other)
@@ -416,11 +413,12 @@ local conditional_modes = {"NOT NEI","NEI","NOT PRE","PRE","A:B"}
 
 function hway_ui.cycle_conditional(i,j,step,d)
   local _active = track[i][j]
+  local _a = _active[highway_ui.seq_page[i]] -- here, we want the UI page, not the tracked page
   local send_to_many = false
   if grid_conditional_entry and #conditional_entry_steps.focus[i] > 1 then
     step = conditional_entry_steps.focus[i][#conditional_entry_steps.focus[i]]
   end
-  local focused_set = _active.focus == 'main' and _active or _active.fill
+  local focused_set = _active.focus == 'main' and _a or _a.fill
   if d > 0 then
     if focused_set.conditional.mode[step] == "A:B" then
       local current_B = focused_set.conditional.B[step]
@@ -480,7 +478,8 @@ end
 
 function hway_ui.cycle_prob(i,j,step,d)
   local _active = track[i][j]
-  local focused_set = _active.focus == 'main' and _active or _active.fill
+  local _a = _active[highway_ui.seq_page[i]]
+  local focused_set = _active.focus == 'main' and _a or _a.fill
   if grid_conditional_entry and #conditional_entry_steps.focus[i] > 1 then
     step = conditional_entry_steps.focus[i][#conditional_entry_steps.focus[i]]
   end
@@ -492,25 +491,28 @@ end
 
 function hway_ui.cycle_retrig_count(i,j,step,d)
   local _active = track[i][j]
-  local focused_set = _active.focus == 'main' and _active or _active.fill
+  local _a = _active[highway_ui.seq_page[i]]
+  local focused_set = _active.focus == 'main' and _a or _a.fill
   focused_set.conditional.retrig_count[step] = util.clamp(focused_set.conditional.retrig_count[step]+d, 0, 128)
 end
 
 function hway_ui.cycle_retrig_time(i,j,step,d)
   local _active = track[i][j]
-  local focused_set = _active.focus == 'main' and ('track_retrig_time_'..i..'_'..j..'_'..step) or ('track_fill_retrig_time_'..i..'_'..j..'_'..step)
+  local focused_set = _active.focus == 'main' and ('track_retrig_time_'..i..'_'..j..'_'.._active.page..'_'..step) or ('track_fill_retrig_time_'..i..'_'..j..'_'.._active.page..'_'..step)
   track_paramset:delta(focused_set,d)
 end
 
 function hway_ui.cycle_retrig_vel(i,j,step,d)
   local _active = track[i][j]
-  local focused_set = _active.focus == 'main' and _active or _active.fill
+  local _a = _active[highway_ui.seq_page[i]]
+  local focused_set = _active.focus == 'main' and _a or _a.fill
   focused_set.conditional.retrig_slope[step] = util.clamp(focused_set.conditional.retrig_slope[step]+d, -128, 128)
 end
 
 function hway_ui.cycle_er_param(prm,i,j,d)
   local _active = track[i][j]
-  local focused_set = _active.focus == 'main' and _active or _active.fill
+  local _a = _active[highway_ui.seq_page[i]]
+  local focused_set = _active.focus == 'main' and _a or _a.fill
   if prm == 'pulses' then
     focused_set.er[prm] = util.clamp(focused_set.er[prm] + d, 0, focused_set.er.steps)
   elseif prm == 'steps' then
@@ -522,26 +524,9 @@ end
 
 function hway_ui.cycle_chord_degrees(i,j,step,d)
   local _active = track[i][j]
-  local focused_set = _active.focus == 'main' and _active or _active.fill
+  local _a = _active[highway_ui.seq_page[i]]
+  local focused_set = _active.focus == 'main' and _a or _a.fill
   focused_set.chord_degrees[step] = util.clamp(focused_set.chord_degrees[step] + d, 1, 7)
-end
-
-function hway_ui.check_for_first_touch()
-  -- local _active = track[_hui.sel][track[_hui.sel].active_hill]
-  local hf = ui.hill_focus
-  local h = hills[hf]
-  local _active = track[hf][h.screen_focus]
-  local focused_set = _active.focus == "main" and track[_hui.sel] or _active.fill
-  if tab.count(focused_set.base_note) == 1
-  and not _active.playing
-  and not _active.pause
-  and not _active.enabled
-  then
-    step.enable(_hui.sel,true)
-    _active.pause = true
-    _active.hold = true
-    grid_dirty = true
-  end
 end
 
 function hway_ui.index_to_grid_pos(val,columns)

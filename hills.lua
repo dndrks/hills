@@ -68,10 +68,6 @@ hill_names = {
 }
 
 number_of_step_pages = 8
-steps_min_max = {}
-for i = 1,number_of_step_pages do
-  steps_min_max[i] = {1+(16 * (i-1)), (16 * i)}
-end
 
 pre_step_page = 'play'
 
@@ -895,8 +891,9 @@ end
 
 local function check_subtables(i,j,index)
   local target_trig;
+  local _page = track[i][j].page
   if hills[i].highway == true then
-    if track[i][j].trigs[index] then
+    if track[i][j][_page].trigs[index] then
       target_trig = _fkprm.adjusted_params
     else
       target_trig = _fkprm.adjusted_params_lock_trigs
@@ -906,13 +903,11 @@ local function check_subtables(i,j,index)
   end
   if target_trig[i] ~= nil
   and target_trig[i][j] ~= nil
-  and target_trig[i][j][index] ~= nil
-  and target_trig[i][j][index].params ~= nil
+  and target_trig[i][j][_page][index] ~= nil
+  and target_trig[i][j][_page][index].params ~= nil
   then
-    -- print('yep')
     return true
   else
-    -- print('nope')
     return false
   end
 end
@@ -928,16 +923,18 @@ local non_indexed_voices = {'delay', 'feedback', 'main'}
 
 function fkmap(i,j,index,p)
   local target_trig;
+  local _page = track[i][j].page
   if hills[i].highway == true then
-    if track[i][j].trigs[index] then
+    if track[i][j][_page].trigs[index] then
       target_trig = _fkprm.adjusted_params
     else
       target_trig = _fkprm.adjusted_params_lock_trigs
     end
   else
+    print('230520: when is this true???')
     target_trig = _fkprm.adjusted_params
   end
-  local value = target_trig[i][j][index].params[p]
+  local value = target_trig[i][j][_page][index].params[p]
   local clamped = util.clamp(value, 0, 1)
   local cs = params:lookup_param(p).controlspec
   local rounded = util_round(cs.warp.map(cs, clamped), cs.step)
@@ -978,31 +975,31 @@ local function process_params_per_step(parent,i,j,k,index)
   end
 end
 
-function play_chord(i,j,index)
-  local chord_target = hills[i].highway == false and hills[i][j].note_num.chord_degree[index] or track[i][j].chord_degrees[index]
-  local base_note;
-  if params:string('hill_'..i..'_mode') == 'highway' then
-    if track[i][j].focus == 'main' then
-      base_note = track[i][j].base_note[index]
-    else
-      base_note = track[i][j].fill.base_note[index]
-    end
-    if base_note == -1 then
-      base_note = params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
-    end
-  else
-    base_note = params:get('hill '..i..' base note')
-  end
-  -- print(index,base_note)
-  local shell_notes = mu.generate_chord_scale_degree(
-    base_note,
-    params:string('hill '..i..' scale'),
-    chord_target,
-    true
-  )
-  -- engine.set_voice_param(i,"carHzThird",midi_to_hz(shell_notes[2]))
-  -- engine.set_voice_param(i,"carHzSeventh",midi_to_hz(shell_notes[4]))
-end
+-- function play_chord(i,j,index)
+--   local chord_target = hills[i].highway == false and hills[i][j].note_num.chord_degree[index] or track[i][j].chord_degrees[index]
+--   local base_note;
+--   if params:string('hill_'..i..'_mode') == 'highway' then
+--     if track[i][j].focus == 'main' then
+--       base_note = track[i][j].base_note[index]
+--     else
+--       base_note = track[i][j].fill.base_note[index]
+--     end
+--     if base_note == -1 then
+--       base_note = params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+--     end
+--   else
+--     base_note = params:get('hill '..i..' base note')
+--   end
+--   -- print(index,base_note)
+--   local shell_notes = mu.generate_chord_scale_degree(
+--     base_note,
+--     params:string('hill '..i..' scale'),
+--     chord_target,
+--     true
+--   )
+--   -- engine.set_voice_param(i,"carHzThird",midi_to_hz(shell_notes[2]))
+--   -- engine.set_voice_param(i,"carHzSeventh",midi_to_hz(shell_notes[4]))
+-- end
 
 local function play_linked_sample(i, j, played_note, vel_target, retrig_index, force)
   if params:string("hill "..i.." sample output") == "yes" then
@@ -1010,7 +1007,8 @@ local function play_linked_sample(i, j, played_note, vel_target, retrig_index, f
       local should_play;
       if hills[i].highway then
         local index = track[i][j].step
-        if track[i][j].trigs[index] or force then
+        local _page = track[i][j].page
+        if track[i][j][_page].trigs[index] or force then
           should_play = true
         end
       else
@@ -1039,7 +1037,6 @@ local function play_linked_sample(i, j, played_note, vel_target, retrig_index, f
 end
 
 force_note = function(i,j,played_note)
-  print('note happening')
   local vel_target = params:get('hill_'..i..'_iso_velocity')
   local retrig_index = 0
   if params:string('voice_model_'..i) ~= 'sample' then
@@ -1068,8 +1065,9 @@ local function trigger_notes(i,j,index,velocity,retrigger_bool,played_note)
       send_note_data(i,j,index,played_note)
     end
     if hills[i].highway then
-      local focused_notes = track[i][j].focus == 'main' and track[i][j].base_note[index] or track[i][j].fill.base_note[index]
-      local focused_chords = track[i][j].focus == 'main' and track[i][j].chord_notes[index] or track[i][j].fill.chord_notes[index]
+      local _page = track[i][j].page
+      local focused_notes = track[i][j].focus == 'main' and track[i][j][_page].base_note[index] or track[i][j][_page].fill.base_note[index]
+      local focused_chords = track[i][j].focus == 'main' and track[i][j][_page].chord_notes[index] or track[i][j][_page].fill.chord_notes[index]
       local note_check;
       if params:string('voice_model_'..i) ~= 'sample' and params:string('voice_model_'..i) ~= 'input' then
         note_check = params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
@@ -1091,7 +1089,6 @@ send_note_data = function(i,j,index,played_note)
 end
 
 pass_note = function(i,j,seg,note_val,index,retrig_index)
-  -- print(clock.get_beats(), track[i][j].swing)
   local midi_notes = hills[i].note_ocean
   local played_note;
   if hills[i].highway == true then
@@ -1099,19 +1096,18 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
   else
     played_note = get_random_offset(i,midi_notes[note_val])
   end
-  -- print(note_val, played_note)
   local _active = track[i][j]
+  local _page = _active.page
+  local _a = _active[_page]
   local focused_set;
   if hills[i].highway == true then
-    focused_set = _active.focus == 'main' and _active or _active.fill
+    focused_set = _active.focus == 'main' and _a or _a.fill
   end
   if (played_note ~= nil and hills[i].highway == false and hills[i][j].note_num.active[index]) or
     (played_note ~= nil and hills[i].highway == true and not focused_set.muted_trigs[index]) then
     -- per-step params //
     if i <= number_of_hills then
-      -- print(i,j,index,check_subtables(i,j,index),retrig_index)
       if check_subtables(i,j,index) then
-        -- tab.print(per_step_params_adjusted[i].param)
         -- step to step params resets:
         local target_trig;
         if hills[i].highway == true then
@@ -1126,28 +1122,22 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
         if target_trig == _fkprm.adjusted_params then
           for k = 1,#per_step_params_adjusted[i].param do
             local check_prm = per_step_params_adjusted[i].param[k]
-            print('>S>S>S'..check_prm)
-            if _fkprm.adjusted_params[i][j][index].params[check_prm] == nil then
-              local lock_trig = track[i][j].focus == 'main' and track[i][j].lock_trigs[index] or track[i][j].fill.lock_trigs[index]
+            -- print('>S>S>S'..check_prm)
+            if _fkprm.adjusted_params[i][j][_page][index].params[check_prm] == nil then
+              local lock_trig = track[i][j].focus == 'main' and track[i][j][_page].lock_trigs[index] or track[i][j][_page].fill.lock_trigs[index]
               local is_drum_voice = params.lookup[check_prm] <= last_voice_param
               local id = check_prm
               if is_drum_voice and i <= number_of_hills then
-                -- local target_voice = string.match(params:get_id(id),"%d+")
                 local target_voice = string.match(id,"%d+")
-                -- local target_drum = params:get_id(id):match('(.*_)')
                 local target_drum = id:match('(.*_)')
                 target_drum = string.gsub(target_drum, target_voice..'_', '')
                 target_drum = string.gsub(target_drum, '_', '')
-                -- local p_name = string.gsub(params:get_id(id),target_voice..'_'..target_drum..'_','')
                 local p_name = string.gsub(id,target_voice..'_'..target_drum..'_','')
                 prms.send_to_engine(target_voice,p_name,params:get(id))
-                print('reseeding non-adjusted value for voice', target_voice, j, index, id, p_name)
+                -- print('reseeding non-adjusted value for voice', target_voice, j, index, id, p_name)
               else
-                -- local p_name = extract_voice_from_string(params:get_id(id))
                 local p_name = extract_voice_from_string(id)
-                -- local sc_target = string.gsub(params:get_id(id),p_name..'_','')
                 local sc_target = string.gsub(id,p_name..'_','')
-                -- print('reseeding non-adjusted value for fx', i, j, index, id)
                 engine['set_'..p_name..'_param'](sc_target,params:get(id))
               end
             end
@@ -1156,18 +1146,16 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
         end
         -- this step's entry handling:
         -- per_step_params_adjusted[i] = {param = {}, value = {}}
-        -- for k,v in next,_fkprm.adjusted_params[i][j][index].params do
-        for k,v in next,target_trig[i][j][index].params do
-          -- local is_drum_voice = k <= last_voice_param
-          print('this is ahppening!!')
+        for k,v in next,target_trig[i][j][_page][index].params do
+          -- print('this is ahppening!!')
           local param_id = k
-          print(k, last_voice_param)
+          -- print(k, last_voice_param)
           k = params.lookup[k]
-          print(k, last_voice_param)
+          -- print(k, last_voice_param)
           local is_drum_voice = k <= last_voice_param
           local drum_target = param_id:match('(.+)_(.+)_(.+)')
           drum_target = tonumber(drum_target)
-          print('huh! '..drum_target, k, params:get_id(k), param_id)
+          -- print('huh! '..drum_target, k, params:get_id(k), param_id)
           if is_drum_voice and type(drum_target) == 'number' and drum_target <= number_of_hills then
             if retrig_index == 0 then
               local target_voice = drum_target
@@ -1175,7 +1163,7 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
               target_drum = string.gsub(target_drum, target_voice..'_', '')
               target_drum = string.gsub(target_drum, '_', '')
               local p_name = string.gsub(param_id,target_voice..'_'..target_drum..'_','')
-              print('sending voice param',target_voice,p_name,fkmap(i,j,index,param_id))
+              -- print('sending voice param',target_voice,p_name,fkmap(i,j,index,param_id))
               if target_voice ~= i then
                 if not tab.contains(track[target_voice].external_prm_change,param_id) then
                   track[target_voice].external_prm_change[#track[target_voice].external_prm_change+1] = param_id
@@ -1193,8 +1181,6 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
           per_step_params_adjusted[i].value[#per_step_params_adjusted[i].value+1] = v
         
         end
-
-        -- print(i,j,index)
       else
         -- restore default param value:
         for k = 1,#per_step_params_adjusted[i].param do
@@ -1214,7 +1200,7 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
       and hills[i][j].note_velocity[index]
       or (focused_set.velocities[index] * (focused_set.accented_trigs[index] and accent_vel or 1))
     if hills[i].highway then
-      local lock_trig = track[i][j].focus == 'main' and track[i][j].lock_trigs[index] or track[i][j].fill.lock_trigs[index]
+      local lock_trig = track[i][j].focus == 'main' and track[i][j][_page].lock_trigs[index] or track[i][j][_page].fill.lock_trigs[index]
       if focused_set.trigs[index] and not focused_set.muted_trigs[index] then
         if retrig_index == nil then
           if params:string('voice_model_'..i) ~= 'sample' then

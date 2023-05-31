@@ -1,8 +1,21 @@
 local enc_actions = {}
 
 function enc_actions.delta_track_pos(i,j,d)
-  track[i][j].ui_position = util.clamp(track[i][j].ui_position + d, 1, 128)
-  highway_ui.seq_page[i] = math.ceil(track[i][j].ui_position/16)
+  if track[i][j].ui_position + d < 1 then
+    local pre_change = highway_ui.seq_page[i]
+    highway_ui.seq_page[i] = util.clamp(highway_ui.seq_page[i]-1,1,8)
+    if pre_change ~= highway_ui.seq_page[i] then
+      track[i][j].ui_position = 16
+    end
+  elseif track[i][j].ui_position + d > 16 then
+    local pre_change = highway_ui.seq_page[i]
+    highway_ui.seq_page[i] = util.clamp(highway_ui.seq_page[i]+1,1,8)
+    if pre_change ~= highway_ui.seq_page[i] then
+      track[i][j].ui_position = 1
+    end
+  else
+    track[i][j].ui_position = util.clamp(track[i][j].ui_position + d, 1, 16)
+  end
 end
 
 local function check_for_menu_condition(i)
@@ -38,11 +51,6 @@ function enc_actions.parse(n,d)
         if hills[i].highway and key1_hold then
           enc_actions.delta_track_pos(i,j,d)
         else
-          -- hills[i].screen_focus = util.clamp(j+d,1,8)
-          -- if mods["hill"] then
-          --   grid_dirty = true
-          -- end
-          -- highway_ui.seq_page[i] = math.ceil(track[i][hills[i].screen_focus].ui_position/32)
           ui.hill_focus = util.clamp(ui.hill_focus+d,1,number_of_hills)
           if ui.hill_focus < 8 then
             if ui.menu_focus == 5 then
@@ -222,22 +230,21 @@ function enc_actions.parse(n,d)
                 end
               else
                 local _active = track[i][j]
-                local focused_set = _active.focus == 'main' and _active or _active.fill
+                local _a = _active[highway_ui.seq_page[i]]
+                local focused_set = _active.focus == 'main' and _a or _a.fill
                 if d > 0 then
                   if focused_set.trigs[_pos] == false then
-                    -- focused_set.trigs[_pos] = true
-                    _htracks.change_trig_state(focused_set,_pos,true,i,j)
+                    _htracks.change_trig_state(focused_set,_pos,true,i,j,highway_ui.seq_page[i])
                   end
                 else
                   if focused_set.trigs[_pos] == true then
-                    -- focused_set.trigs[_pos] = false
-                    _htracks.change_trig_state(focused_set,_pos,false,i,j)
+                    _htracks.change_trig_state(focused_set,_pos,false,i,j,highway_ui.seq_page[i])
                   end
                 end
               end
             elseif ui.control_set == 'play' then
               hills[i].screen_focus = util.clamp(j+d,1,#track[i])
-              highway_ui.seq_page[i] = math.ceil(track[i][hills[i].screen_focus].ui_position/32)
+              -- highway_ui.seq_page[i] = math.ceil(track[i][hills[i].screen_focus].ui_position/16)
               if mods["hill"] then
                 grid_dirty = true
               end
@@ -252,10 +259,11 @@ function enc_actions.parse(n,d)
                 _hsteps.cycle_er_param('shift',i,j,d)
               end
             else
+              local _page = track[i][j].page
               if s_c["bounds"]["focus"] == 1 then
-                track[i][j].start_point = util.clamp(track[i][j].start_point + d, 1, track[i][j].end_point)
+                track[i][j][_page].start_point = util.clamp(track[i][j][_page].start_point + d, 1, track[i][j][_page].end_point)
               elseif s_c["bounds"]["focus"] == 2 then
-                track[i][j].end_point = util.clamp(track[i][j].end_point + d, track[i][j].start_point, 128)
+                track[i][j][_page].end_point = util.clamp(track[i][j][_page].end_point + d, track[i][j][_page].start_point, 16)
               end
             end
           elseif ui.menu_focus == 3 and ui.control_set == 'edit' then
@@ -265,7 +273,7 @@ function enc_actions.parse(n,d)
                 _hsteps.cycle_chord_degrees(i,j,_pos,d)
               end
             else
-              _t.track_transpose(i,j,track[i][j].ui_position,d)
+              _t.track_transpose(i,j,highway_ui.seq_page[i],track[i][j].ui_position,d)
             end
           end
         end
