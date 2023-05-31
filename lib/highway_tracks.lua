@@ -329,7 +329,7 @@ end
 
 function track_actions.check_page_probability(n,i,j)
   local _page = track[i][j].page
-  if math.random(0,100) <= track[i][j].page_probability[n] then
+  if math.random(1,100) <= track[i][j].page_probability[n] then
     if i == 1 then
       print("page "..n)
     end
@@ -342,8 +342,8 @@ function track_actions.check_page_probability(n,i,j)
   end
 end
 
-function track_actions.change_page_probability(i,j,d)
-  track[i][j].page_probability = util.clamp(track[i][j].page_probability+d,0,100)
+function track_actions.change_page_probability(i,j,n,d)
+  track[i][j].page_probability[n] = util.clamp(track[i][j].page_probability[n]+d,1,100)
   track[i][j].page_chain:map(track_actions.check_page_probability,i,j)
 end
 
