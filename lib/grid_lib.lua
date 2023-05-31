@@ -989,15 +989,15 @@ function grid_lib.highway_press(x,y,z)
       end
     end
   -- grid lock mode:
-  elseif (y == 5 or y == 6) and (x >=5 and x <= 8) then
-    highway_ui.seq_page[i] = x-4 + (y == 5 and 0 or 4)
-    -- track[i][j].ui_position = ((highway_ui.seq_page[i] - 1) * 16) + 1
-  elseif y <= 6 and z == 0 and (x >= 1 and x <= 8) then
+  elseif y <= 4 and z == 0 and (x >= 1 and x <= 8) then
     if grid_conditional_entry then
       conditional_entry_steps.held[i] = util.clamp(conditional_entry_steps.held[i] - 1,0,128)
     elseif grid_data_entry then
       data_entry_steps.held[i] = util.clamp(data_entry_steps.held[i] - 1,0,128)
     end
+  elseif (y == 5 or y == 6) and (x >=5 and x <= 8) then
+    highway_ui.seq_page[i] = x-4 + (y == 5 and 0 or 4)
+    -- track[i][j].ui_position = ((highway_ui.seq_page[i] - 1) * 16) + 1
   elseif y == 7 and x == 1 then
     highway_mod_copy.state = z == 1
   elseif y == 5 and x == 1 then
@@ -1682,7 +1682,7 @@ function grid_lib.draw_highway()
       lvl = 10
     else
       if _active.playing then
-        if math.ceil(_active.step/16) == j then
+        if _active.page == j then
           lvl = 5
         else
           lvl = 2

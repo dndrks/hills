@@ -244,7 +244,7 @@ function enc_actions.parse(n,d)
               end
             elseif ui.control_set == 'play' then
               hills[i].screen_focus = util.clamp(j+d,1,#track[i])
-              highway_ui.seq_page[i] = math.ceil(track[i][hills[i].screen_focus].ui_position/16)
+              -- highway_ui.seq_page[i] = math.ceil(track[i][hills[i].screen_focus].ui_position/16)
               if mods["hill"] then
                 grid_dirty = true
               end

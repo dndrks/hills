@@ -87,6 +87,7 @@ song.check_step = function(i)
 end
 
 song.start = function()
+  print('song starting! TODO: fix double trigger')
   if song_atoms.clock ~= nil then
     clock.cancel(song_atoms.clock)
   end
@@ -173,6 +174,7 @@ function song.toggle_transport()
         clock.cancel(track_clock[i])
       end
       if params:string('hill_'..i..'_iterator') == 'norns' then
+        if i == 1 then print('starting') end
         _htracks.start_playback(i, track[i].active_hill)
         track_clock[i] = clock.run(_htracks.iterate,i)
       end
