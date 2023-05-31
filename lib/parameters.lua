@@ -59,8 +59,7 @@ function parameters.init()
       if x == 1 then
         if hills[i].highway then
           if not clock.threads[track_clock[i]] then
-            local _page = track[i][track[i].active_hill].page
-            track[i][track[i].active_hill][_page].micro[0] = track[i][track[i].active_hill][_page].micro[1]
+            track[i][track[i].active_hill].micro[0] = track[i][track[i].active_hill].micro[1]
             _htracks.start_playback(i,track[i].active_hill)
             track_clock[i] = clock.run(_htracks.iterate,i)
           end
