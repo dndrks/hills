@@ -413,7 +413,7 @@ local conditional_modes = {"NOT NEI","NEI","NOT PRE","PRE","A:B"}
 
 function hway_ui.cycle_conditional(i,j,step,d)
   local _active = track[i][j]
-  local _a = _active[_active.page]
+  local _a = _active[highway_ui.seq_page[i]] -- here, we want the UI page, not the tracked page
   local send_to_many = false
   if grid_conditional_entry and #conditional_entry_steps.focus[i] > 1 then
     step = conditional_entry_steps.focus[i][#conditional_entry_steps.focus[i]]
@@ -478,7 +478,7 @@ end
 
 function hway_ui.cycle_prob(i,j,step,d)
   local _active = track[i][j]
-  local _a = _active[_active.page]
+  local _a = _active[highway_ui.seq_page[i]]
   local focused_set = _active.focus == 'main' and _a or _a.fill
   if grid_conditional_entry and #conditional_entry_steps.focus[i] > 1 then
     step = conditional_entry_steps.focus[i][#conditional_entry_steps.focus[i]]
@@ -491,7 +491,7 @@ end
 
 function hway_ui.cycle_retrig_count(i,j,step,d)
   local _active = track[i][j]
-  local _a = _active[_active.page]
+  local _a = _active[highway_ui.seq_page[i]]
   local focused_set = _active.focus == 'main' and _a or _a.fill
   focused_set.conditional.retrig_count[step] = util.clamp(focused_set.conditional.retrig_count[step]+d, 0, 128)
 end
@@ -504,14 +504,14 @@ end
 
 function hway_ui.cycle_retrig_vel(i,j,step,d)
   local _active = track[i][j]
-  local _a = _active[_active.page]
+  local _a = _active[highway_ui.seq_page[i]]
   local focused_set = _active.focus == 'main' and _a or _a.fill
   focused_set.conditional.retrig_slope[step] = util.clamp(focused_set.conditional.retrig_slope[step]+d, -128, 128)
 end
 
 function hway_ui.cycle_er_param(prm,i,j,d)
   local _active = track[i][j]
-  local _a = _active[_active.page]
+  local _a = _active[highway_ui.seq_page[i]]
   local focused_set = _active.focus == 'main' and _a or _a.fill
   if prm == 'pulses' then
     focused_set.er[prm] = util.clamp(focused_set.er[prm] + d, 0, focused_set.er.steps)
@@ -524,7 +524,7 @@ end
 
 function hway_ui.cycle_chord_degrees(i,j,step,d)
   local _active = track[i][j]
-  local _a = _active[_active.page]
+  local _a = _active[highway_ui.seq_page[i]]
   local focused_set = _active.focus == 'main' and _a or _a.fill
   focused_set.chord_degrees[step] = util.clamp(focused_set.chord_degrees[step] + d, 1, 7)
 end

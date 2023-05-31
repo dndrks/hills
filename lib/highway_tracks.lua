@@ -200,6 +200,16 @@ function track_actions.init(target, hill_number, clear_reset)
     false,
     false
   }
+  track[target][hill_number].page_probability = {
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100
+  }
   track[target][hill_number].swing = 50
   track[target][hill_number].mode = "fwd"
   track[target][hill_number].loop = true
@@ -317,14 +327,37 @@ function track_actions.change_pattern(i,j,source)
   track_actions.start_playback(i,j)
 end
 
+function track_actions.check_page_probability(n,i,j)
+  local _page = track[i][j].page
+  if math.random(0,100) <= track[i][j].page_probability[n] then
+    if i == 1 then
+      print("page "..n)
+    end
+    return n
+  else
+    if i == 1 then
+      print("skip page "..n)
+    end
+    return track[i][j].page_chain()
+  end
+end
+
+function track_actions.change_page_probability(i,j,d)
+  track[i][j].page_probability = util.clamp(track[i][j].page_probability+d,0,100)
+  track[i][j].page_chain:map(track_actions.check_page_probability,i,j)
+end
+
 function track_actions.start_playback(i,j)
   local _page;
-  for p = 1,8 do
-    if track[i][j].page_active[p] then
-      _page = p
-      break
-    end
-  end
+  -- for p = 1,8 do
+  --   if track[i][j].page_active[p] then
+  --     _page = p
+  --     break
+  --   end
+  -- end
+  track[i][j].page_chain:map(track_actions.check_page_probability,i,j)
+  track[i][j].page_chain:reset()
+  _page = track[i][j].page_chain()
   track[i][j][_page].micro[0] = track[i][j][_page].micro[1]
   local track_start =
   {
