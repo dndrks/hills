@@ -24,32 +24,35 @@ m.transpose = function(i,j,pos,delta)
   hills[i][j].note_num.chord_degree[pos] = util.wrap(hills[i][j].note_num.pool[pos], 1, 7)
 end
 
-m.track_transpose = function(i,j,_page,pos,delta)
+m.track_transpose = function(i,j,pos,delta)
   local _active = track[i][j]
-  local _a = _active[_active.page]
   local focused_set = {}
   if _active.focus == "main" then
     focused_set = _active.base_note
-    if _a.trigs[pos] == false then
+    if _active.trigs[pos] == false then
       if delta > 0 then
-        _htracks.change_trig_state(_a,pos, true, i, j, _page)
+        -- _active.trigs[pos] = true
+        _htracks.change_trig_state(_active,pos, true, i, j)
       end
       goto finished
     end
   else
-    focused_set = _a.fill.base_note
-    if _a.fill.trigs[pos] == false then
+    focused_set = _active.fill.base_note
+    if _active.fill.trigs[pos] == false then
       if delta > 0 then
-        _htracks.change_trig_state(_a.fill,pos, true, i, j, _page)
+        -- _active.fill.trigs[pos] = true
+        _htracks.change_trig_state(_active.fill,pos, true, i, j)
       end
       goto finished
     end
   end
   if focused_set[pos] == 0 and delta < 1 then
     if focused_set == _active.base_note then
-      _htracks.change_trig_state(_a,pos, false, i, j, _page)
+      -- _active.trigs[pos] = false
+      _htracks.change_trig_state(_active,pos, false, i, j)
     else
-      _htracks.change_trig_state(_a.fill,pos, true, i, j, _page)
+      -- _active.fill.trigs[pos] = false
+      _htracks.change_trig_state(_active.fill,pos, true, i, j)
     end
     local note_check;
     if params:string('voice_model_'..i) ~= 'sample' and params:string('voice_model_'..i) ~= 'input' then
@@ -137,12 +140,11 @@ m['rotate notes'] = function(i,j,start_point,end_point,focus,sc)
 end
 
 m['rotate track notes'] = function(i,j)
-  local _page = track[i][j].page
-  local target = track[i][j].focus == 'main' and track[i][j][_page].base_note or track[i][j][_page].fill.base_note
+  local target = track[i][j].focus == 'main' and track[i][j].base_note or track[i][j].fill.base_note
   local originals = {}
   local steps_with_trigs
-  for k = track[i][j][_page].start_point, track[i][j][_page].end_point do
-    if track[i][j][_page].trigs[k] then
+  for k = track[i][j].start_point, track[i][j].end_point do
+    if track[i][j].trigs[k] then
       originals[k] = target[k]
     else
       originals[k] = 'none'
@@ -151,8 +153,8 @@ m['rotate track notes'] = function(i,j)
   tab.print(originals)
   for k = 1,#originals do
     if originals[k] ~= 'none' then
-      print('rotate track notes: '..util.wrap(track[i][j][_page].start_point+k, track[i][j][_page].start_point, track[i][j][_page].end_point), originals[k])
-      target[util.wrap(track[i][j][_page].start_point+k, track[i][j][_page].start_point, track[i][j][_page].end_point)] = originals[k]
+      print('rotate track notes: '..util.wrap(track[i][j].start_point+k, track[i][j].start_point, track[i][j].end_point), originals[k])
+      target[util.wrap(track[i][j].start_point+k, track[i][j].start_point, track[i][j].end_point)] = originals[k]
     end
   end
 end

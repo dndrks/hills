@@ -200,18 +200,18 @@ function m:force(index, voice, alloc)
 end
 
 function m:unpack_pad(voice,pad)
-  print("230520: WHEN DOES THIS HAPPEN? UNCOMMENT IF IT DOES")
-  -- for i = 6,#kildare_drum_params.sample do
-  --   if kildare_drum_params.sample[i].type ~= 'separator' then
-  --     local id = voice..'_sample_'..kildare_drum_params.sample[i].id
-  --     params:lookup_param(id):bang()
-  --     -- TODO: this doesn't respect polyphony...
-  --   end
-  -- end
-  -- print(voice, pad)
-  -- for prm,val in pairs(m.adjusted_params[voice][pad].params) do
-  --   params:lookup_param(prm).action(params:lookup_param(prm):map_value(val))
-  -- end
+  for i = 6,#kildare_drum_params.sample do
+    if kildare_drum_params.sample[i].type ~= 'separator' then
+      local id = voice..'_sample_'..kildare_drum_params.sample[i].id
+      params:lookup_param(id):bang()
+      -- TODO: this doesn't respect polyphony...
+    end
+  end
+  print(voice, pad)
+  for prm,val in pairs(m.adjusted_params[voice][pad].params) do
+    -- print(prm,val)
+    params:lookup_param(prm).action(params:lookup_param(prm):map_value(val))
+  end
 end
 
 function m:delta(index, d, voice, alloc)
