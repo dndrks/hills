@@ -254,16 +254,16 @@ function hway_ui.draw_menu()
 
       if ui.menu_focus == 1 then
         screen.level(15)
-        screen.move(31,10)
+        screen.move(128,10)
         if grid_mute then
-          screen.text("STEP MUTE")
+          screen.text_right("[STEP MUTE]")
         elseif grid_accent then
-          screen.text("STEP ACCENT")
+          screen.text_right("[STEP ACCENT]")
         elseif grid_loop_modifier then
           if get_loop_modifier_stage() == 'define start' then
-            screen.text('SET LOOP START')
+            screen.text_right('[SET LOOP START]')
           elseif get_loop_modifier_stage() == 'define end' then
-            screen.text('SET LOOP END')
+            screen.text_right('[SET LOOP END]')
           end
         end
         screen.move(128,10)

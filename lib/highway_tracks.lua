@@ -403,6 +403,7 @@ function track_actions.sync_playheads()
 end
 
 function track_actions.iterate(target)
+  -- TODO: should this sync before advancing or after??? does anything get fucked up?
   while true do
     local i,j = target, track[target].active_hill
     clock.sync(
@@ -413,34 +414,34 @@ function track_actions.iterate(target)
   end
 end
 
-function track_actions.tick(target) -- FIXME: shouldn't just trigger all voices all the time...
-  if song_atoms.transport_active or params:string('hill_'..target..'_iterator') ~= 'norns' then
-    local _active = track[target][track[target].active_hill]
-    local _a = _active[_active.page]
-    if _active.pause == false or params:string('hill_'..target..'_iterator') ~= 'norns' then
-      if _active.step == _a.end_point and not _active.loop then
-        track_actions.stop_playback(target)
-      else
-        if _active.swing > 50 and _active.step % 2 == 1 then
-          local base_time = (clock.get_beat_sec() * _active.time)
-          local swung_time =  base_time*util.linlin(50,100,0,1,_active.swing)
-          clock.run(function()
-            clock.sleep(swung_time)
-            track_actions.process(target)
-          end)
-        else
-          track_actions.process(target)
-        end
-        _active.playing = true
-      end
+function track_actions.tick(target)
+  -- if song_atoms.transport_active
+  -- or params:string('hill_'..target..'_iterator') ~= 'norns'
+  -- then
+  local _active = track[target][track[target].active_hill]
+  local _a = _active[_active.page]
+  -- if _active.pause == false or params:string('hill_'..target..'_iterator') ~= 'norns' then
+  if _active.pause == false then
+    if _active.step == _a.end_point and not _active.loop then
+      track_actions.stop_playback(target)
     else
-      _active.playing = false
+      if _active.swing > 50 and _active.step % 2 == 1 then
+        local base_time = (clock.get_beat_sec() * _active.time)
+        local swung_time =  base_time*util.linlin(50,100,0,1,_active.swing)
+        clock.run(function()
+          clock.sleep(swung_time)
+          track_actions.process(target)
+        end)
+      else
+        track_actions.process(target)
+      end
+      _active.playing = true
     end
-    -- else
-    --   _active.playing = false
-    -- end
-    grid_dirty = true
+  else
+    _active.playing = false
   end
+  grid_dirty = true
+  -- end
 end
 
 -- 230520 TODO: evaluate necessity of these (probably would be cool tho!):
@@ -492,101 +493,6 @@ function track_actions.change_trig_state(target_track,target_step,state, i, j, _
   end
 end
 
-function track_actions.copy(target,pattern)
-  -- 230520: TODO fix indexing for 'pages'
-  local _active = track[target][pattern]
-  if track_clipboard == nil then
-    track_clipboard = _t.deep_copy(_active)
-
-    track_clipboard.playing = false
-    track_clipboard.pause = false
-    track_clipboard.step = 1
-
-    track_clipboard_bank_source = target
-    track_clipboard_pattern_source = pattern
-    -- track_clipboard_pad_source = page.tracks.seq_position[target]
-    track_clipboard_layer_source = _active.focus
-  end
-  if fkprm_clipboard == nil then
-    fkprm_clipboard = _t.deep_copy(_fkprm.adjusted_params[target][pattern])
-  end
-end
-
-function track_actions.paste_new(target,pattern)
-  track[target][pattern] = _t.deep_copy(track_clipboard)
-  track_clipboard = nil
-  _fkprm.adjusted_params[target][pattern] = _t.deep_copy(fkprm_clipboard)
-  fkprm_clipboard = nil
-end
-
-function track_actions.paste(target,style)
-  -- 230520: needs to consider new data structure
-  local _active = track[target][track[target].active_hill]
-  if track_clipboard ~= nil then
-    if style == 1 then -- paste all
-      for i = 1,128 do
-        _active.base_note[i] = track_clipboard.base_note[i]
-        _active.prob[i] = track_clipboard.prob[i]
-        _active.conditional.A[i] = track_clipboard.conditional.A[i]
-        _active.conditional.B[i] = track_clipboard.conditional.B[i]
-        _active.conditional.mode[i] = track_clipboard.conditional.mode[i]
-        _active.conditional.retrig_count[i] = track_clipboard.conditional.retrig_count[i]
-        track_paramset:set("track_retrig_time_"..target.."_"..i,tab.key(track_retrig_lookup,track_clipboard.conditional.retrig_time[i]))
-        _active.fill.base_note[i] = track_clipboard.fill.base_note[i]
-        _active.fill.prob[i] = track_clipboard.fill.prob[i]
-        _active.fill.conditional.A[i] = track_clipboard.fill.conditional.A[i]
-        _active.fill.conditional.B[i] = track_clipboard.fill.conditional.B[i]
-        _active.fill.conditional.mode[i] = track_clipboard.fill.conditional.mode[i]
-        _active.fill.conditional.retrig_count[i] = track_clipboard.fill.conditional.retrig_count[i]
-        track_paramset:set("track_fill_retrig_time_"..target.."_"..track[target].active_hill..'_'..i,tab.key(track_retrig_lookup,track_clipboard.fill.conditional.retrig_time[i]))
-        _active.swing = track_clipboard.swing
-        _active.mode = track_clipboard.mode
-        _active.start_point = track_clipboard.start_point
-        _active.end_point = track_clipboard.end_point
-        _active.loop = track_clipboard.loop
-      end
-    elseif style == 2 then -- paste individual
-      local i = page.tracks.seq_position[target]
-      _active.base_note[i] = track_clipboard.base_note[track_clipboard_pad_source]
-      _active.prob[i] = track_clipboard.prob[track_clipboard_pad_source]
-      _active.conditional.A[i] = track_clipboard.conditional.A[track_clipboard_pad_source]
-      _active.conditional.B[i] = track_clipboard.conditional.B[track_clipboard_pad_source]
-      _active.conditional.mode[i] = track_clipboard.conditional.mode[track_clipboard_pad_source]
-      _active.conditional.retrig_count[i] = track_clipboard.conditional.retrig_count[track_clipboard_pad_source]
-      track_paramset:set("track_retrig_time_"..target.."_"..track[target].active_hill..'_'..i,tab.key(track_retrig_lookup,track_clipboard.conditional.retrig_time[track_clipboard_pad_source]))
-      _active.fill.base_note[i] = track_clipboard.fill.base_note[track_clipboard_pad_source]
-      _active.fill.prob[i] = track_clipboard.fill.prob[track_clipboard_pad_source]
-      _active.fill.conditional.A[i] = track_clipboard.fill.conditional.A[track_clipboard_pad_source]
-      _active.fill.conditional.B[i] = track_clipboard.fill.conditional.B[track_clipboard_pad_source]
-      _active.fill.conditional.mode[i] = track_clipboard.fill.conditional.mode[track_clipboard_pad_source]
-      _active.fill.conditional.retrig_count[i] = track_clipboard.fill.conditional.retrig_count[track_clipboard_pad_source]
-      track_paramset:set("track_fill_retrig_time_"..target.."_"..track[target].active_hill..'_'..i,tab.key(track_retrig_lookup,track_clipboard.fill.conditional.retrig_time[track_clipboard_pad_source]))
-    elseif style == 3 then -- paste specific layer
-      local destination = _active.focus == "main" and _active or _active.fill
-      local source = track_clipboard_layer_source == "main" and track_clipboard or track_clipboard.fill
-      for i = 1,128 do
-        destination.base_note[i] = source.base_note[i]
-        destination.prob[i] = source.prob[i]
-        destination.conditional.A[i] = source.conditional.A[i]
-        destination.conditional.B[i] = source.conditional.B[i]
-        destination.conditional.mode[i] = source.conditional.mode[i]
-        destination.conditional.retrig_count[i] = source.conditional.retrig_count[i]
-        track_paramset:set(
-          (_active.focus == "main" and "track_retrig_time_" or "track_fill_retrig_time_")
-          ..target.."_"..track[target].active_hill..'_'..i,tab.key(track_retrig_lookup,track_clipboard.conditional.retrig_time[i]))
-        _active.swing = track_clipboard.swing
-        _active.mode = track_clipboard.mode
-        _active.start_point = track_clipboard.start_point
-        _active.end_point = track_clipboard.end_point
-        _active.loop = track_clipboard.loop
-      end
-    end
-    track_clipboard = nil
-    track_clipboard_pad_source = nil
-    track_clipboard_bank_source = nil
-  end
-end
-
 function track_actions.process(target)
   local _active = track[target][track[target].active_hill]
   local _a = _active[_active.page]
@@ -602,6 +508,8 @@ function track_actions.process(target)
     track_actions.pendulum(target)
   elseif _active.mode == "rnd" then
     track_actions.random(target)
+  elseif _active.mode == "drunk" then
+    -- TODO: drunk walk!
   end
   screen_dirty = true
   track_actions.run(target,_active.step)
@@ -616,14 +524,7 @@ function track_actions.forward(target)
     _a = _active[_active.page]
     _active.step = _a.start_point
     _a.conditional.cycle = _a.conditional.cycle + 1
-    -- if _active.step == _a.start_point then
-    --   _a.conditional.cycle = _a.conditional.cycle + 1
-    -- end
   end
-  -- _active.step = wrap(_active.step + 1,_a.start_point,_a.end_point)
-  -- if _active.step == _a.start_point then
-  --   _a.conditional.cycle = _a.conditional.cycle + 1
-  -- end
 end
 
 function track_actions.backward(target)
@@ -650,7 +551,6 @@ function track_actions.generate_er(i,j, _page)
   local focused_set = _active.focus == "main" and _a or _a.fill
   local generated = euclid.gen(focused_set.er.pulses, focused_set.er.steps, focused_set.er.shift)
   for length = focused_set.start_point, focused_set.end_point do
-    -- focused_set.trigs[length] = generated[length-(focused_set.start_point-1)]
     _htracks.change_trig_state(focused_set,length, generated[length-(focused_set.start_point-1)], i, j, _page)
   end
 end
