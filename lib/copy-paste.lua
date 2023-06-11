@@ -56,22 +56,24 @@ target_parameters = {
   }
 }
 
+function cp.erase_clipboard(i)
+  copied_data[i] = nil
+end
+
 function cp.clipboard(i,j,page,modifier,action)
+  if action == nil then
+    if copied_data[i] == nil then
+      action = "copy"
+    else
+      action = "paste"
+    end
+  end
   if action == "copy" then
     copied_data[i] = {}
     for prm = 1,#target_parameters[modifier] do
       local id = target_parameters[modifier][prm]
       copied_data[i][id] = _t.deep_copy(track[i][j][page][id])
     end
-    -- if modifier == "page: trigs" then
-    --   copied_data[i][j][page].start_point = _t.deep_copy(track[i][j][page].start_point)
-    --   copied_data[i][j][page].end_point = _t.deep_copy(track[i][j][page].end_point)
-    --   copied_data[i][j][page].base_note = _t.deep_copy(track[i][j][page].base_note)
-    --   copied_data[i][j][page].accented_trigs = _t.deep_copy(track[i][j][page].accented_trigs)
-    --   copied_data[i][j][page].legato_trigs = _t.deep_copy(track[i][j][page].legato_trigs)
-    --   copied_data[i][j][page].muted_trigs = _t.deep_copy(track[i][j][page].muted_trigs)
-    --   copied_data[i][j][page].trigs = _t.deep_copy(track[i][j][page].trigs)
-    -- end
   elseif action == "paste" then
     if modifier == "page: trigs" then
       if copied_data[i] ~= nil then
@@ -88,20 +90,6 @@ function cp.clipboard(i,j,page,modifier,action)
           ['modifier'] = modifier
         }
       end
-      -- original_data[page].start_point = _t.deep_copy(track[i][j][page].start_point)
-      -- original_data[page].end_point = _t.deep_copy(track[i][j][page].end_point)
-      -- original_data[page].base_note = _t.deep_copy(track[i][j][page].base_note)
-      -- original_data[page].accented_trigs = _t.deep_copy(track[i][j][page].accented_trigs)
-      -- original_data[page].legato_trigs = _t.deep_copy(track[i][j][page].legato_trigs)
-      -- original_data[page].muted_trigs = _t.deep_copy(track[i][j][page].muted_trigs)
-      -- original_data[page].trigs = _t.deep_copy(track[i][j][page].trigs)
-      -- track[i][j][page].start_point = _t.deep_copy(copied_data[i][j][page].start_point)
-      -- track[i][j][page].end_point = _t.deep_copy(copied_data[i][j][page].end_point)
-      -- track[i][j][page].base_note = _t.deep_copy(copied_data[i][j][page].base_note)
-      -- track[i][j][page].accented_trigs = _t.deep_copy(copied_data[i][j][page].accented_trigs)
-      -- track[i][j][page].legato_trigs = _t.deep_copy(copied_data[i][j][page].legato_trigs)
-      -- track[i][j][page].muted_trigs = _t.deep_copy(copied_data[i][j][page].muted_trigs)
-      -- track[i][j][page].trigs = _t.deep_copy(copied_data[i][j][page].trigs)
     end
   elseif action == "undo" then
     local _u = undo_data[i].header
@@ -114,6 +102,7 @@ function cp.clipboard(i,j,page,modifier,action)
         track[i][_j][_page][id] = _t.deep_copy(undo_data[i][_j][_page][id])
       end
     end
+    undo_data[i] = {}
   end
 end
 

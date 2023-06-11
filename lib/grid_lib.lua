@@ -391,59 +391,38 @@ function g.key(x,y,z)
   if x == 1 and y == 1 and z == 1 and mods.alt then
     _song.toggle_transport()
   else
-    if x == 1 and (not mods['hill'] and not mods['bound'] and not mods['notes'] and not mods['loop']) then
-      if y >= 1 and y <= 4 and z == 1 then
-        for i = 1,#modkeys do
-          if i ~= y then
-            mods[modkeys[i]] = false
-          else
-            mods[modkeys[y]] = not mods[modkeys[y]]
-            mod_held = mods[modkeys[y]]
-          end
-        end
-        if mod_held then
-          if ui.control_set ~= "song" then
-            ui.control_set = "edit"
-          end
-          ui.menu_focus = y
-        else
-          if ui.control_set ~= "song" then
-            ui.control_set = "play"
-          end
-        end
-      elseif (y == 5 or y == 6) and z == 1 then
-        for i = 1,#modkeys do
-          if i ~= y then
-            mods[modkeys[i]] = false
-          else
-            mods[modkeys[y]] = not mods[modkeys[y]]
-            mod_held = mods[modkeys[y]]
-            if mods['playmode'] == false then
-              mods['playmode_extended'] = false
-            end
-          end
-        end
-        -- if ui.control_set ~= "song" then
-        --   ui.control_set = "play"
-        -- end
-        if not mods["copy"] and clipboard then
-          clipboard = nil
-          copied = nil
-        end
-      elseif y == 7 and z == 1 then
-        if not mods['alt'] then
+    if _surveyor.grid_takeover then
+      _surveyor.process_key(x,y,z)
+    else
+      if x == 1 and (not mods['hill'] and not mods['bound'] and not mods['notes'] and not mods['loop']) then
+        if y >= 1 and y <= 4 and z == 1 then
           for i = 1,#modkeys do
             if i ~= y then
-              if modkeys[i] ~= "alt" then
-                mods[modkeys[i]] = false
-              end
+              mods[modkeys[i]] = false
             else
               mods[modkeys[y]] = not mods[modkeys[y]]
-              if not mods["alt"] then
-                mod_held = mods[modkeys[y]]
-                if mods['snapshots'] == false then
-                  mods['snapshots_extended'] = false
-                end
+              mod_held = mods[modkeys[y]]
+            end
+          end
+          if mod_held then
+            if ui.control_set ~= "song" then
+              ui.control_set = "edit"
+            end
+            ui.menu_focus = y
+          else
+            if ui.control_set ~= "song" then
+              ui.control_set = "play"
+            end
+          end
+        elseif (y == 5 or y == 6) and z == 1 then
+          for i = 1,#modkeys do
+            if i ~= y then
+              mods[modkeys[i]] = false
+            else
+              mods[modkeys[y]] = not mods[modkeys[y]]
+              mod_held = mods[modkeys[y]]
+              if mods['playmode'] == false then
+                mods['playmode_extended'] = false
               end
             end
           end
@@ -454,356 +433,381 @@ function g.key(x,y,z)
             clipboard = nil
             copied = nil
           end
-
-        else
-
-        end
-      end
-      if y == 8 then
-        for i = 1,#modkeys do
-          if i ~= y then
-            if modkeys[i] ~= "snapshots"
-            and modkeys[i] ~= "playmode"
-            and modkeys[i] ~= "copy" then
-              mods[modkeys[i]] = false
+        elseif y == 7 and z == 1 then
+          if not mods['alt'] then
+            for i = 1,#modkeys do
+              if i ~= y then
+                if modkeys[i] ~= "alt" then
+                  mods[modkeys[i]] = false
+                end
+              else
+                mods[modkeys[y]] = not mods[modkeys[y]]
+                if not mods["alt"] then
+                  mod_held = mods[modkeys[y]]
+                  if mods['snapshots'] == false then
+                    mods['snapshots_extended'] = false
+                  end
+                end
+              end
             end
+            -- if ui.control_set ~= "song" then
+            --   ui.control_set = "play"
+            -- end
+            if not mods["copy"] and clipboard then
+              clipboard = nil
+              copied = nil
+            end
+
           else
-            mods[modkeys[y]] = z == 1
-            -- mods[modkeys[y]] = not mods[modkeys[y]]
-            if not mods["snapshots"] and not mods['playmode'] and not mods['copy'] then
-              mod_held = mods[modkeys[y]]
+
+          end
+        end
+        if y == 8 then
+          for i = 1,#modkeys do
+            if i ~= y then
+              if modkeys[i] ~= "snapshots"
+              and modkeys[i] ~= "playmode"
+              and modkeys[i] ~= "copy" then
+                mods[modkeys[i]] = false
+              end
+            else
+              mods[modkeys[y]] = z == 1
+              -- mods[modkeys[y]] = not mods[modkeys[y]]
+              if not mods["snapshots"] and not mods['playmode'] and not mods['copy'] then
+                mod_held = mods[modkeys[y]]
+              end
             end
           end
-        end
-        -- if ui.control_set ~= "song" then
-        --   ui.control_set = "play"
-        -- end
-        if not mods["copy"] and clipboard then
-          clipboard = nil
-          copied = nil
-        end
-      end
-    elseif x == 1 and mods['hill'] then
-      if y == 1 and z == 1 then
-        mods['hill'] = not mods['hill']
-        exit_mod(mods['hill'])
-      elseif y >= 2 and y <= 7 then
-        grid_lib.highway_press(x,y,z)
-      elseif y == 8 then
-        mods['alt'] = z == 1
-      end
-    elseif x == 1 and mods['bound'] then
-      if y == 2 and z == 1 then
-        mods['bound'] = not mods['bound']
-        exit_mod(mods['bound'])
-      elseif y >= 2 and y <= 7 then
-        -- grid_lib.highway_press(x,y,z)
-      elseif y == 8 then
-        mods['alt'] = z == 1
-      end
-    elseif x == 1 and mods['notes'] then
-      if y == 3 and z == 1 then
-        mods['notes'] = not mods['notes']
-        exit_mod(mods['notes'])
-      elseif y == 2 then
-        if params:string('voice_model_'..ui.hill_focus) == 'sample' then
-          grid_lib.cc_press(x,y,z)
-        else
-          grid_lib.earthsea_press(x,y,z)
-        end
-      elseif y == 8 then
-        mods['alt'] = z == 1
-      end
-    elseif x == 1 and mods['loop'] then
-      if y == 4 and z == 1 then
-        mods['loop'] = not mods['loop']
-        exit_mod(mods['loop'])
-      elseif y >= 2 and y <= 7 then
-        -- grid_lib.highway_press(x,y,z)
-      elseif y == 8 then
-        mods['alt'] = z == 1
-      end
-    end
-    if x > 1 and x <= number_of_hills+1 and not mod_held then
-      if z == 1 then
-        if hills[x-1].highway == false then
-          if params:string('hill_'..(x-1)..'_iterator') == 'norns' then
-            _a.start(x-1,y,true)
-          else
-            hills[x-1].segment = y
-          end
-          hills[x-1].screen_focus = y
-        else
-          if params:string('hill_'..(x-1)..'_iterator') == 'norns' and #track[x-1] >= y then
-            _htracks.stop_playback(x-1)
-            track[x-1].active_hill = y
-            _htracks.start_playback(x-1,y)
-            print('start and stop')
-            hills[x-1].screen_focus = y
-          elseif #track[x-1] >= y then
-            -- track[x-1].active_hill = y
-            _htracks.change_pattern(x-1,y)
-            hills[x-1].screen_focus = y
-          end
-        end
-        hills[x-1][y].perf_led = true
-        for i = 1,16 do
-          local table_to_record =
-          {
-            ["event"] = "start",
-            ["x"] = x-1,
-            ["y"] = y,
-            ["id"] = i
-          }
-          write_pattern_data(i,table_to_record,true)
-        end
-      end
-      if z == 0 then
-        if hills[x-1].highway == false and hills[x-1][y].playmode == "momentary" and hills[x-1].segment == y then
-          if params:string('hill_'..(x-1)..'_iterator') == 'norns' then
-            stop(x-1,true)
-          end
-        elseif hills[x-1].highway and hills[x-1][y].playmode == "momentary" then
-          -- TODO: add this in later
-          -- print(x-1,y,#track[x-1] >= y)
-          -- if params:string('hill_'..(x-1)..'_iterator') == 'norns' and #track[x-1] >= y  then
-          --   _htracks.stop_playback(x-1)
+          -- if ui.control_set ~= "song" then
+          --   ui.control_set = "play"
           -- end
+          if not mods["copy"] and clipboard then
+            clipboard = nil
+            copied = nil
+          end
         end
-        hills[x-1][y].perf_led = false
-        if params:string("hill "..(x-1).." sample momentary") == "yes" then
-          _ca.stop_sample(params:get("hill "..(x-1).." sample slot"))
+      elseif x == 1 and mods['hill'] then
+        if y == 1 and z == 1 then
+          mods['hill'] = not mods['hill']
+          exit_mod(mods['hill'])
+        elseif y >= 2 and y <= 7 then
+          grid_lib.highway_press(x,y,z)
+        elseif y == 8 then
+          mods['alt'] = z == 1
         end
-        for i = 1,16 do
-          grid_pattern[i]:watch(
+      elseif x == 1 and mods['bound'] then
+        if y == 2 and z == 1 then
+          mods['bound'] = not mods['bound']
+          exit_mod(mods['bound'])
+        elseif y >= 2 and y <= 7 then
+          -- grid_lib.highway_press(x,y,z)
+        elseif y == 8 then
+          mods['alt'] = z == 1
+        end
+      elseif x == 1 and mods['notes'] then
+        if y == 3 and z == 1 then
+          mods['notes'] = not mods['notes']
+          exit_mod(mods['notes'])
+        elseif y == 2 then
+          if params:string('voice_model_'..ui.hill_focus) == 'sample' then
+            grid_lib.cc_press(x,y,z)
+          else
+            grid_lib.earthsea_press(x,y,z)
+          end
+        elseif y == 8 then
+          mods['alt'] = z == 1
+        end
+      elseif x == 1 and mods['loop'] then
+        if y == 4 and z == 1 then
+          mods['loop'] = not mods['loop']
+          exit_mod(mods['loop'])
+        elseif y >= 2 and y <= 7 then
+          -- grid_lib.highway_press(x,y,z)
+        elseif y == 8 then
+          mods['alt'] = z == 1
+        end
+      end
+      if x > 1 and x <= number_of_hills+1 and not mod_held then
+        if z == 1 then
+          if hills[x-1].highway == false then
+            if params:string('hill_'..(x-1)..'_iterator') == 'norns' then
+              _a.start(x-1,y,true)
+            else
+              hills[x-1].segment = y
+            end
+            hills[x-1].screen_focus = y
+          else
+            if params:string('hill_'..(x-1)..'_iterator') == 'norns' and #track[x-1] >= y then
+              _htracks.stop_playback(x-1)
+              track[x-1].active_hill = y
+              _htracks.start_playback(x-1,y)
+              print('start and stop')
+              hills[x-1].screen_focus = y
+            elseif #track[x-1] >= y then
+              -- track[x-1].active_hill = y
+              _htracks.change_pattern(x-1,y)
+              hills[x-1].screen_focus = y
+            end
+          end
+          hills[x-1][y].perf_led = true
+          for i = 1,16 do
+            local table_to_record =
             {
-              ["event"] = "stop",
+              ["event"] = "start",
               ["x"] = x-1,
               ["y"] = y,
               ["id"] = i
             }
-          )
-        end
-      end
-    elseif x > 1 and x <= number_of_hills+1 and mod_held then
-      if mods['alt'] and mods['notes'] then
-        if x == 7 and y == 6 then
-          if z == 1 and track[ui.hill_focus].manual_note_entry then
-            track[ui.hill_focus].mute_during_note_entry = not track[ui.hill_focus].mute_during_note_entry
+            write_pattern_data(i,table_to_record,true)
           end
         end
-      end
-      if mods["alt"] and z == 1 and not mods.snapshots and not mods.playmode and not mods.hill then
-        if hills[x-1][y].highway == false then
-          if hills[x-1][y].playmode == 'latch' then
-            stop(x-1,true)
-          elseif params:string('hill '..(x-1)..' reset at stop') == 'no' then
-            hills[x-1][y].index = hills[x-1][y].low_bound.note
-            hills[x-1][y].step = hills[x-1][y].note_timestamp[hills[x-1][y].index] -- reset
-            _a.start(x-1,y,true)
-            hills[x-1].screen_focus = y
-            screen_dirty = true
-            hills[x-1][y].perf_led = true
-            grid_dirty = true
-            for i = 1,16 do
-              local table_to_record =
+        if z == 0 then
+          if hills[x-1].highway == false and hills[x-1][y].playmode == "momentary" and hills[x-1].segment == y then
+            if params:string('hill_'..(x-1)..'_iterator') == 'norns' then
+              stop(x-1,true)
+            end
+          elseif hills[x-1].highway and hills[x-1][y].playmode == "momentary" then
+            -- TODO: add this in later
+            -- print(x-1,y,#track[x-1] >= y)
+            -- if params:string('hill_'..(x-1)..'_iterator') == 'norns' and #track[x-1] >= y  then
+            --   _htracks.stop_playback(x-1)
+            -- end
+          end
+          hills[x-1][y].perf_led = false
+          if params:string("hill "..(x-1).." sample momentary") == "yes" then
+            _ca.stop_sample(params:get("hill "..(x-1).." sample slot"))
+          end
+          for i = 1,16 do
+            grid_pattern[i]:watch(
               {
-                ["event"] = "start with reset",
+                ["event"] = "stop",
                 ["x"] = x-1,
                 ["y"] = y,
                 ["id"] = i
               }
-              write_pattern_data(i,table_to_record,true)
+            )
+          end
+        end
+      elseif x > 1 and x <= number_of_hills+1 and mod_held then
+        if mods['alt'] and mods['notes'] then
+          if x == 7 and y == 6 then
+            if z == 1 and track[ui.hill_focus].manual_note_entry then
+              track[ui.hill_focus].mute_during_note_entry = not track[ui.hill_focus].mute_during_note_entry
             end
           end
-        else
-          _htracks.stop_playback(x-1)
         end
-      elseif mods["alt"] and z == 0 and not mods.snapshots and not mods.playmode and not mods.hill then
-        stop(x-1,true)
-        if params:string("hill "..(x-1).." sample momentary") == "yes" then
-          _ca.stop_sample(params:get("hill "..(x-1).." sample slot"))
-        end
-        for i = 1,16 do
-          grid_pattern[i]:watch(
-            {
-              ["event"] = "stop",
-              ["x"] = x-1,
-              ["y"] = y,
-              ["id"] = i
-            }
-          )
-        end
-      elseif mods["bound"] or mods["loop"] then
-        ui.hill_focus = x-1
-        hills[ui.hill_focus].screen_focus = y
-      elseif mods['hill'] then
-        grid_lib.highway_press(x,y,z)
-      elseif mods['notes'] then
-        if params:string('voice_model_'..ui.hill_focus) == 'sample' then
-          grid_lib.cc_press(x,y,z)
-        else
-          grid_lib.earthsea_press(x,y,z)
-        end
-      elseif mods["playmode"] and z == 1 then
-        if mods['playmode_extended'] then
-          if #iter_link_source == 0 then
-            iter_link_source[1] = x-1
-            iter_link_source[2] = y
-            iter_link_held[1] = x-1
-            iter_link_held[2] = y
+        if mods["alt"] and z == 1 and not mods.snapshots and not mods.playmode and not mods.hill then
+          if hills[x-1][y].highway == false then
+            if hills[x-1][y].playmode == 'latch' then
+              stop(x-1,true)
+            elseif params:string('hill '..(x-1)..' reset at stop') == 'no' then
+              hills[x-1][y].index = hills[x-1][y].low_bound.note
+              hills[x-1][y].step = hills[x-1][y].note_timestamp[hills[x-1][y].index] -- reset
+              _a.start(x-1,y,true)
+              hills[x-1].screen_focus = y
+              screen_dirty = true
+              hills[x-1][y].perf_led = true
+              grid_dirty = true
+              for i = 1,16 do
+                local table_to_record =
+                {
+                  ["event"] = "start with reset",
+                  ["x"] = x-1,
+                  ["y"] = y,
+                  ["id"] = i
+                }
+                write_pattern_data(i,table_to_record,true)
+              end
+            end
           else
-            iter_link(iter_link_source[1],iter_link_source[2],x-1,y)
+            _htracks.stop_playback(x-1)
           end
-        else
-          if mods['alt'] then
-            hills[x-1][y].playmode = hills[x-1][y].playmode == "momentary" and "latch" or "momentary"
+        elseif mods["alt"] and z == 0 and not mods.snapshots and not mods.playmode and not mods.hill then
+          stop(x-1,true)
+          if params:string("hill "..(x-1).." sample momentary") == "yes" then
+            _ca.stop_sample(params:get("hill "..(x-1).." sample slot"))
+          end
+          for i = 1,16 do
+            grid_pattern[i]:watch(
+              {
+                ["event"] = "stop",
+                ["x"] = x-1,
+                ["y"] = y,
+                ["id"] = i
+              }
+            )
+          end
+        elseif mods["bound"] or mods["loop"] then
+          ui.hill_focus = x-1
+          hills[ui.hill_focus].screen_focus = y
+        elseif mods['hill'] then
+          grid_lib.highway_press(x,y,z)
+        elseif mods['notes'] then
+          if params:string('voice_model_'..ui.hill_focus) == 'sample' then
+            grid_lib.cc_press(x,y,z)
           else
-            hills[x-1][y].mute = not hills[x-1][y].mute
+            grid_lib.earthsea_press(x,y,z)
           end
-        end
-      elseif mods['playmode'] and z == 0 then
-        if mods['playmode_extended'] then
-          if x-1 == iter_link_held[1] then
-            iter_link_held = {0,0}
+        elseif mods["playmode"] and z == 1 then
+          if mods['playmode_extended'] then
+            if #iter_link_source == 0 then
+              iter_link_source[1] = x-1
+              iter_link_source[2] = y
+              iter_link_held[1] = x-1
+              iter_link_held[2] = y
+            else
+              iter_link(iter_link_source[1],iter_link_source[2],x-1,y)
+            end
+          else
+            if mods['alt'] then
+              hills[x-1][y].playmode = hills[x-1][y].playmode == "momentary" and "latch" or "momentary"
+            else
+              hills[x-1][y].mute = not hills[x-1][y].mute
+            end
           end
-          if #iter_link_source ~= 0 and iter_link_held[1] == 0 then
-            iter_link_source = {}
+        elseif mods['playmode'] and z == 0 then
+          if mods['playmode_extended'] then
+            if x-1 == iter_link_held[1] then
+              iter_link_held = {0,0}
+            end
+            if #iter_link_source ~= 0 and iter_link_held[1] == 0 then
+              iter_link_source = {}
+            end
           end
-        end
-      elseif mods["copy"] and z == 1 then
-        if not clipboard then
-          print("copied...")
-          clipboard = _t.deep_copy(hills[x-1][y])
-          copied = {x-1,y}
-        else
-          print("pasted!")
-          hills[x-1][y] = _t.deep_copy(clipboard)
-          copied = nil
-          clipboard = nil
-        end
-      elseif not snapshot_overwrite_mod then
-        if (mods["snapshots"] and not mods['snapshots_extended']) or (mods['snapshots'] and mods['snapshots_extended']) then
+        elseif mods["copy"] and z == 1 then
+          if not clipboard then
+            print("copied...")
+            clipboard = _t.deep_copy(hills[x-1][y])
+            copied = {x-1,y}
+          else
+            print("pasted!")
+            hills[x-1][y] = _t.deep_copy(clipboard)
+            copied = nil
+            clipboard = nil
+          end
+        elseif not snapshot_overwrite_mod then
+          if (mods["snapshots"] and not mods['snapshots_extended']) or (mods['snapshots'] and mods['snapshots_extended']) then
+            local fx = {'delay','feedback','main'}
+            local which_focus = (mods["snapshots"] and not mods['snapshots_extended']) and 'snapshots' or 'snapshots_extended'
+            x = x - 1
+            
+            local _snap;
+            if x <= number_of_hills and which_focus ~= 'snapshots_extended' then
+              local d_voice = params:string('voice_model_'..x)
+              _snap = snapshots[x][d_voice]
+            elseif which_focus == 'snapshots_extended' then
+              _snap = snapshots[fx[x]]
+            end
+
+            local x = which_focus == 'snapshots_extended' and fx[x] or x
+            local which_type = which_focus == 'snapshots' and hills[x].snapshot or snapshots[x]
+            
+            if z == 1 then
+              if tab.count(_snap[y]) == 0 then
+                which_type.saver_clock = clock.run(_snapshots.save_to_slot,x,y)
+                which_type.focus = y
+              elseif not mods.alt then
+                _snapshots.route_funnel(x,y,snapshots.mod.index)
+                which_type.focus = y
+              else
+                which_type.saver_clock = clock.run(_snapshots.save_to_slot,x,y)
+              end
+            else
+              if which_type.saver_clock ~= nil then
+                clock.cancel(which_type.saver_clock)
+              end
+            end
+            if z == 1 and tab.count(_snap[y]) > 0 then
+              for i = 1,16 do
+                local table_to_record =
+                {
+                  ["event"] = "snapshot_restore",
+                  ["x"] = x,
+                  ["y"] = y,
+                  ["id"] = i,
+                  ['mod_index'] = snapshots.mod.index
+                }
+                write_pattern_data(i,table_to_record,false)
+              end
+            end
+          end
+        elseif snapshot_overwrite_mod then
           local fx = {'delay','feedback','main'}
           local which_focus = (mods["snapshots"] and not mods['snapshots_extended']) and 'snapshots' or 'snapshots_extended'
           x = x - 1
-          
-          local _snap;
-          if x <= number_of_hills and which_focus ~= 'snapshots_extended' then
+          local _snap, _snapover;
+          if  x <= number_of_hills and which_focus ~= 'snapshots_extended' then
             local d_voice = params:string('voice_model_'..x)
             _snap = snapshots[x][d_voice]
+            _snapover = snapshot_overwrite[x][d_voice]
           elseif which_focus == 'snapshots_extended' then
             _snap = snapshots[fx[x]]
+            _snapover = snapshot_overwrite[fx[x]]
           end
-
-          local x = which_focus == 'snapshots_extended' and fx[x] or x
-          local which_type = which_focus == 'snapshots' and hills[x].snapshot or snapshots[x]
-          
           if z == 1 then
-            if tab.count(_snap[y]) == 0 then
-              which_type.saver_clock = clock.run(_snapshots.save_to_slot,x,y)
-              which_type.focus = y
-            elseif not mods.alt then
-              _snapshots.route_funnel(x,y,snapshots.mod.index)
-              which_type.focus = y
+            if tab.count(_snap[y]) ~= 0 then
+              _snapover[y] = not _snapover[y]
+            end
+          end
+        end
+      elseif x>=13 and y<=4 then
+        local target = (x-12)+(4*(y-1))
+        if grid_pattern[target].count == 0 then
+          if z == 0 then
+            grid_lib.handle_grid_pat(target,mods.alt)
+          end
+        else
+          if z == 1 then
+            grid_lib.handle_grid_pat(target,mods.alt)
+          end
+        end
+        if z == 1 and toggles.link then
+          if pattern_link_source == 0 then
+            pattern_link_source = target
+          else
+            if params:string('pattern_'..pattern_link_source..'_link_'..target) == 'no' then
+              params:set('pattern_'..pattern_link_source..'_link_'..target,2)
             else
-              which_type.saver_clock = clock.run(_snapshots.save_to_slot,x,y)
-            end
-          else
-            if which_type.saver_clock ~= nil then
-              clock.cancel(which_type.saver_clock)
+              params:set('pattern_'..pattern_link_source..'_link_'..target,1)
             end
           end
-          if z == 1 and tab.count(_snap[y]) > 0 then
-            for i = 1,16 do
-              local table_to_record =
-              {
-                ["event"] = "snapshot_restore",
-                ["x"] = x,
-                ["y"] = y,
-                ["id"] = i,
-                ['mod_index'] = snapshots.mod.index
-              }
-              write_pattern_data(i,table_to_record,false)
-            end
+        elseif z == 0 and toggles.link then
+          if pattern_link_source == target then
+            pattern_link_source = 0
           end
         end
-      elseif snapshot_overwrite_mod then
-        local fx = {'delay','feedback','main'}
-        local which_focus = (mods["snapshots"] and not mods['snapshots_extended']) and 'snapshots' or 'snapshots_extended'
-        x = x - 1
-        local _snap, _snapover;
-        if  x <= number_of_hills and which_focus ~= 'snapshots_extended' then
-          local d_voice = params:string('voice_model_'..x)
-          _snap = snapshots[x][d_voice]
-          _snapover = snapshot_overwrite[x][d_voice]
-        elseif which_focus == 'snapshots_extended' then
-          _snap = snapshots[fx[x]]
-          _snapover = snapshot_overwrite[fx[x]]
-        end
-        if z == 1 then
-          if tab.count(_snap[y]) ~= 0 then
-            _snapover[y] = not _snapover[y]
-          end
-        end
-      end
-    elseif x>=13 and y<=4 then
-      local target = (x-12)+(4*(y-1))
-      if grid_pattern[target].count == 0 then
-        if z == 0 then
-          grid_lib.handle_grid_pat(target,mods.alt)
-        end
-      else
-        if z == 1 then
-          grid_lib.handle_grid_pat(target,mods.alt)
-        end
-      end
-      if z == 1 and toggles.link then
-        if pattern_link_source == 0 then
-          pattern_link_source = target
-        else
-          if params:string('pattern_'..pattern_link_source..'_link_'..target) == 'no' then
-            params:set('pattern_'..pattern_link_source..'_link_'..target,2)
-          else
-            params:set('pattern_'..pattern_link_source..'_link_'..target,1)
-          end
-        end
-      elseif z == 0 and toggles.link then
-        if pattern_link_source == target then
-          pattern_link_source = 0
-        end
-      end
 
-    elseif x == 12 and y == 5 and z == 1 then
-      enable_toggle('overdub')
-    elseif x == 12 and y == 6 and z == 1 then
-      enable_toggle('loop')
-    elseif x == 12 and y == 7 and z == 1 then
-      enable_toggle('duplicate')
-    elseif x == 12 and y == 8 and z == 1 then
-      enable_toggle('copy')
-    elseif x == 13 and y == 8 and z == 1 then
-      enable_toggle('link')
-      pattern_link_source = 0
-    elseif x == 12 and y == 2 and z == 1 and (mods["snapshots"] or mods["snapshots_extended"]) then
-      snapshot_overwrite_mod = not snapshot_overwrite_mod
-    elseif x == 12 and y == 1 and z == 1 and mods['snapshots'] then
-      mods["snapshots_extended"] = not mods["snapshots_extended"]
-    elseif x == 16 and y == 8 and z == 1 and mods['playmode'] then
-      mods['playmode_extended'] = not mods['playmode_extended']
-    end
-    if mod_held and mods["snapshots"] and is_toggle_state_off() then
-      if x == 9 or x == 10 then
-        if z == 1 then
-          if y == 6 then
-            snapshots.mod.index = x - 8
-          elseif y == 7 then
-            snapshots.mod.index = (x + 2) - 8
-          elseif y == 8 then
-            snapshots.mod.index = (x + 4) - 8
+      elseif x == 12 and y == 5 and z == 1 then
+        enable_toggle('overdub')
+      elseif x == 12 and y == 6 and z == 1 then
+        enable_toggle('loop')
+      elseif x == 12 and y == 7 and z == 1 then
+        enable_toggle('duplicate')
+      elseif x == 12 and y == 8 and z == 1 then
+        enable_toggle('copy')
+      elseif x == 13 and y == 8 and z == 1 then
+        enable_toggle('link')
+        pattern_link_source = 0
+      elseif x == 12 and y == 2 and z == 1 and (mods["snapshots"] or mods["snapshots_extended"]) then
+        snapshot_overwrite_mod = not snapshot_overwrite_mod
+      elseif x == 12 and y == 1 and z == 1 and mods['snapshots'] then
+        mods["snapshots_extended"] = not mods["snapshots_extended"]
+      elseif x == 16 and y == 8 and z == 1 and mods['playmode'] then
+        mods['playmode_extended'] = not mods['playmode_extended']
+      end
+      if mod_held and mods["snapshots"] and is_toggle_state_off() then
+        if x == 9 or x == 10 then
+          if z == 1 then
+            if y == 6 then
+              snapshots.mod.index = x - 8
+            elseif y == 7 then
+              snapshots.mod.index = (x + 2) - 8
+            elseif y == 8 then
+              snapshots.mod.index = (x + 4) - 8
+            end
+          else
+            snapshots.mod.index = 0
           end
-        else
-          snapshots.mod.index = 0
         end
       end
     end
@@ -1005,10 +1009,21 @@ function grid_lib.highway_press(x,y,z)
     if not highway_mod_copy.state then
       highway_ui.seq_page[i] = x-4 + (y == 5 and 0 or 4)
     else
-      print('would copy/paste page data')
+      -- print('would copy/paste page data')
+      print('copy/paste page data')
+      local _page = x-4 + (y == 5 and 0 or 4)
+      _cp.clipboard(i,j,_page,"page: trigs")
     end
   elseif y == 7 and x == 1 then
-    highway_mod_copy.state = z == 1
+    if mods.alt and z == 1 then
+      _cp.erase_clipboard(i)
+    else
+      highway_mod_copy.state = z == 1
+    end
+  elseif y == 7 and x == 2 then
+    if mods.alt and z == 1 then
+      _cp.clipboard(i,nil,nil,nil,"undo")
+    end
   elseif y == 5 and x == 1 then
     if not highway_mod_copy.state then
       if z == 1 then
@@ -1566,6 +1581,10 @@ function grid_redraw()
     g:led(12,1,mods['snapshots_extended'] and 15 or 6)
     g:led(12,2,snapshot_overwrite_mod and 15 or 6)
   end
+
+  if _surveyor.grid_takeover then -- TODO: clean this up...don't just inject at the end
+    _surveyor.draw_grid()
+  end
   
   g:refresh()
 end
@@ -1681,7 +1700,11 @@ function grid_lib.draw_highway()
             if focused_set.muted_trigs[display_step] then
               lvl = 8
             else
-              lvl = 15
+              if display_step == _active.step then
+                lvl = 15
+              else
+                lvl = 10
+              end
             end
           end
         end
@@ -1709,11 +1732,14 @@ function grid_lib.draw_highway()
 
   -- draw grid_lock:
   if highway_mod_copy.state then
-    g:led(1,7,5)
-  elseif #highway_mod_copy.clipboard > 0 then
     g:led(1,7,10)
+  elseif copied_data[ui.hill_focus] ~= nil then
+    g:led(1,7,5)
   elseif not highway_mod_copy.state then
     g:led(1,7,2)
+  end
+  if mods.alt and undo_data[i].header ~= nil then
+    g:led(2,7,10)
   end
   g:led(1,5,grid_loop_modifier and 5 or 2)
   g:led(2,8,grid_conditional_entry and 15 or 5)
