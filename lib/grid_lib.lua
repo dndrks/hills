@@ -1259,80 +1259,17 @@ end
 
 function grid_redraw()
   g:all(0)
-  for i = 1,8 do
-    g:led(1,i,mods[modkeys[i]] and 15 or 0)
-  end
-  for i = 1+1,number_of_hills+1 do
-    for j = 1,8 do
-      if mod_held then
-        if not mods["playmode"] and not mods["copy"] and not mods["snapshots"]
-        and not mods['hill'] and not mods['notes'] then
-          if i-1 == ui.hill_focus and hills[ui.hill_focus].screen_focus == j then
-            g:led(i,j,15)
-          else
-            if hills[i-1].segment == j then
-              g:led(i,j,hills[i-1][j].perf_led and 10 or (hills[i-1][j].iterated and 6 or 8))
-            else
-              g:led(i,j,0)
-            end
-          end
-          if mods["alt"] then
-            if hills[i-1].highway == false then
-              if hills[i-1].segment == j then
-                g:led(i,j,hills[i-1][j].perf_led and 15 or (hills[i-1][j].iterated and 6 or 15))
-              else
-                g:led(i,j,0)
-              end
-            else
-              if track[i-1].active_hill == j then
-                g:led(i,j,track[i-1][j].playing and 15 or 10)
-              else
-                g:led(i,j,#track[i-1] >= j and 6 or 0)
-              end
-            end
-            -- g:led(i,j,hills[i-1].screen_focus == j and 15 or 4)
-          end
-        elseif mods["copy"] then
-          if hills[i-1].segment == j then
-            g:led(i,j,10)
-          end
-          if copied ~= nil then
-            if copied[1] == i-1 and copied[2] == j then
-              g:led(i,j,15)
-            end
-          end
-        elseif mods["playmode"] then
-          local display_level;
-          if mods['playmode_extended'] then
-            if iter_link_held[1] == i-1 then
-              g:led(i,iter_link_held[2],15)
-              for k = 1,#hills[iter_link_held[1]].iter_links[iter_link_held[2]] do
-                if hills[iter_link_held[1]].iter_links[iter_link_held[2]][k] ~= 0 then
-                  g:led(k+1,hills[iter_link_held[1]].iter_links[iter_link_held[2]][k],10)
-                end
-              end
-            elseif iter_link_held[1] == 0 then
-              for k = 1,#hills[i-1].iter_links[j] do
-                if hills[i-1].iter_links[j][k] ~= 0 then
-                  g:led(i,j,6)
-                  break
-                end
-              end
-            end
-          else
-            if mods['alt'] then
-              if hills[i-1][j].playmode == "momentary" then
-                display_level = 4
-              else
-                display_level = 15
-              end
-            else
-              display_level = hills[i-1][j].mute and 2 or 10
-            end
-            g:led(i,j,display_level)
-          end
-        elseif mods['hill'] then
-          if not hills[i-1].highway then
+  if _surveyor.grid_takeover then -- TODO: clean this up, maybe?
+    _surveyor.draw_grid()
+  else
+    for i = 1,8 do
+      g:led(1,i,mods[modkeys[i]] and 15 or 0)
+    end
+    for i = 1+1,number_of_hills+1 do
+      for j = 1,8 do
+        if mod_held then
+          if not mods["playmode"] and not mods["copy"] and not mods["snapshots"]
+          and not mods['hill'] and not mods['notes'] then
             if i-1 == ui.hill_focus and hills[ui.hill_focus].screen_focus == j then
               g:led(i,j,15)
             else
@@ -1343,247 +1280,310 @@ function grid_redraw()
               end
             end
             if mods["alt"] then
-              if hills[i-1].segment == j then
-                g:led(i,j,hills[i-1][j].perf_led and 15 or (hills[i-1][j].iterated and 6 or 15))
+              if hills[i-1].highway == false then
+                if hills[i-1].segment == j then
+                  g:led(i,j,hills[i-1][j].perf_led and 15 or (hills[i-1][j].iterated and 6 or 15))
+                else
+                  g:led(i,j,0)
+                end
               else
-                g:led(i,j,0)
+                if track[i-1].active_hill == j then
+                  g:led(i,j,track[i-1][j].playing and 15 or 10)
+                else
+                  g:led(i,j,#track[i-1] >= j and 6 or 0)
+                end
+              end
+              -- g:led(i,j,hills[i-1].screen_focus == j and 15 or 4)
+            end
+          elseif mods["copy"] then
+            if hills[i-1].segment == j then
+              g:led(i,j,10)
+            end
+            if copied ~= nil then
+              if copied[1] == i-1 and copied[2] == j then
+                g:led(i,j,15)
               end
             end
-          else
-            -- FIXED: was drawing highways on a constant loop...
-          end
-        elseif mods['notes'] then
-        elseif snapshot_overwrite_mod then
-
-          if mods["snapshots"] then
+          elseif mods["playmode"] then
             local display_level;
-            local fx = {'delay','feedback','main'}
-            local extension_limit = mods['snapshots_extended'] and 4 or number_of_hills+1
-            local _snap, _snapover;
-
-            if i-1 <= 10 then
-              local d_voice = params:string('voice_model_'..i-1)
-              _snap = snapshots[i-1][d_voice]
-              _snapover = snapshot_overwrite[i-1][d_voice]
-            else
-              print('else2?')
-              _snap = snapshots[i-1]
-              _snapover = snapshot_overwrite[i-1]
-            end
-            if i-1 < extension_limit then
-              if mods['snapshots_extended'] and snapshot_overwrite[fx[i-1]][j] or _snapover[j] then
-                display_level = 15
-              else
-                if tab.count(mods['snapshots_extended'] and snapshots[fx[i-1]][j] or _snap[j]) ~= 0 then
-                  if (mods['snapshots_extended'] and snapshots[fx[i-1]].focus or hills[i-1].snapshot.focus) == j then
-                    display_level = 8
-                  else
-                    display_level = 5
+            if mods['playmode_extended'] then
+              if iter_link_held[1] == i-1 then
+                g:led(i,iter_link_held[2],15)
+                for k = 1,#hills[iter_link_held[1]].iter_links[iter_link_held[2]] do
+                  if hills[iter_link_held[1]].iter_links[iter_link_held[2]][k] ~= 0 then
+                    g:led(k+1,hills[iter_link_held[1]].iter_links[iter_link_held[2]][k],10)
                   end
-                else
-                  display_level = 1
                 end
+              elseif iter_link_held[1] == 0 then
+                for k = 1,#hills[i-1].iter_links[j] do
+                  if hills[i-1].iter_links[j][k] ~= 0 then
+                    g:led(i,j,6)
+                    break
+                  end
+                end
+              end
+            else
+              if mods['alt'] then
+                if hills[i-1][j].playmode == "momentary" then
+                  display_level = 4
+                else
+                  display_level = 15
+                end
+              else
+                display_level = hills[i-1][j].mute and 2 or 10
               end
               g:led(i,j,display_level)
             end
-          end
+          elseif mods['hill'] then
+            if not hills[i-1].highway then
+              if i-1 == ui.hill_focus and hills[ui.hill_focus].screen_focus == j then
+                g:led(i,j,15)
+              else
+                if hills[i-1].segment == j then
+                  g:led(i,j,hills[i-1][j].perf_led and 10 or (hills[i-1][j].iterated and 6 or 8))
+                else
+                  g:led(i,j,0)
+                end
+              end
+              if mods["alt"] then
+                if hills[i-1].segment == j then
+                  g:led(i,j,hills[i-1][j].perf_led and 15 or (hills[i-1][j].iterated and 6 or 15))
+                else
+                  g:led(i,j,0)
+                end
+              end
+            else
+              -- FIXED: was drawing highways on a constant loop...
+            end
+          elseif mods['notes'] then
+          elseif snapshot_overwrite_mod then
 
-        elseif not snapshot_overwrite_mod then
-          if mods["snapshots"] then
-            local display_level;
-            local fx = {'delay','feedback','main'}
-            local extension_limit = mods['snapshots_extended'] and 4 or number_of_hills+1
-            if i-1 < extension_limit then
-              local _snap,d_voice;
+            if mods["snapshots"] then
+              local display_level;
+              local fx = {'delay','feedback','main'}
+              local extension_limit = mods['snapshots_extended'] and 4 or number_of_hills+1
+              local _snap, _snapover;
+
               if i-1 <= 10 then
-                d_voice = params:string('voice_model_'..i-1)
+                local d_voice = params:string('voice_model_'..i-1)
                 _snap = snapshots[i-1][d_voice]
+                _snapover = snapshot_overwrite[i-1][d_voice]
               else
-                print('else?')
+                print('else2?')
                 _snap = snapshots[i-1]
+                _snapover = snapshot_overwrite[i-1]
               end
-              if tab.count(mods['snapshots_extended'] and snapshots[fx[i-1]][j] or _snap[j]) == 0 then
-                display_level = 3
-              else
-                if (mods['snapshots_extended'] and snapshots[fx[i-1]].focus or hills[i-1].snapshot.focus) == j then
-                  display_level = 12
+              if i-1 < extension_limit then
+                if mods['snapshots_extended'] and snapshot_overwrite[fx[i-1]][j] or _snapover[j] then
+                  display_level = 15
                 else
-                  display_level = 6
+                  if tab.count(mods['snapshots_extended'] and snapshots[fx[i-1]][j] or _snap[j]) ~= 0 then
+                    if (mods['snapshots_extended'] and snapshots[fx[i-1]].focus or hills[i-1].snapshot.focus) == j then
+                      display_level = 8
+                    else
+                      display_level = 5
+                    end
+                  else
+                    display_level = 1
+                  end
                 end
+                g:led(i,j,display_level)
               end
-              g:led(i,j,display_level)
+            end
+
+          elseif not snapshot_overwrite_mod then
+            if mods["snapshots"] then
+              local display_level;
+              local fx = {'delay','feedback','main'}
+              local extension_limit = mods['snapshots_extended'] and 4 or number_of_hills+1
+              if i-1 < extension_limit then
+                local _snap,d_voice;
+                if i-1 <= 10 then
+                  d_voice = params:string('voice_model_'..i-1)
+                  _snap = snapshots[i-1][d_voice]
+                else
+                  print('else?')
+                  _snap = snapshots[i-1]
+                end
+                if tab.count(mods['snapshots_extended'] and snapshots[fx[i-1]][j] or _snap[j]) == 0 then
+                  display_level = 3
+                else
+                  if (mods['snapshots_extended'] and snapshots[fx[i-1]].focus or hills[i-1].snapshot.focus) == j then
+                    display_level = 12
+                  else
+                    display_level = 6
+                  end
+                end
+                g:led(i,j,display_level)
+              end
+            end
+          end
+        else
+          if not hills[i-1].highway and hills[i-1].segment == j then
+            g:led(i,j,hills[i-1][j].perf_led and 15 or (hills[i-1][j].iterated and 6 or 8))
+          elseif hills[i-1].highway and track[i-1].active_hill == j then
+            g:led(i,j,track[i-1][j].playing and 15 or 10)
+          else
+            if hills[i-1].highway then
+              g:led(i,j,#track[i-1] >= j and 6 or 0)
+            else
+              g:led(i,j,0)
             end
           end
         end
+      end
+    end
+    if mods.hill and hills[ui.hill_focus].highway then
+      grid_lib.draw_highway()
+    elseif mods['notes'] then
+      local i = ui.hill_focus
+      if params:string('voice_model_'..i) == 'sample' then
+        grid_lib.draw_cc()
       else
-        if not hills[i-1].highway and hills[i-1].segment == j then
-          g:led(i,j,hills[i-1][j].perf_led and 15 or (hills[i-1][j].iterated and 6 or 8))
-        elseif hills[i-1].highway and track[i-1].active_hill == j then
-          g:led(i,j,track[i-1][j].playing and 15 or 10)
-        else
-          if hills[i-1].highway then
-            g:led(i,j,#track[i-1] >= j and 6 or 0)
+        grid_lib.draw_es()
+      end
+    end
+    if mod_held and mods["snapshots"] and is_toggle_state_off() then
+      for i = 9,10 do
+        g:led(i,6,snapshots.mod.index == (i - 8) and 15 or 6)
+        g:led(i,7,snapshots.mod.index == (i - 6) and 15 or 6)
+        g:led(i,8,snapshots.mod.index == (i - 4) and 15 or 6)
+      end
+    end
+    
+    g:led(12,5,toggles.overdub and 15 or 6)
+    g:led(12,6,toggles.loop and 15 or 6)
+    g:led(12,7,toggles.duplicate and 15 or 6)
+    g:led(12,8,toggles.copy and 15 or 6)
+    g:led(13,8,toggles.link and 15 or 6)
+
+    if mod_held and mods["copy"] then
+      if not clipboard then
+        for i = 12,14 do
+          for j = 5,8 do
+            if j == 5 or j == 8 then
+              g:led(i,j,15)
+            elseif (j == 6 or j == 7) and i == 12 then
+              g:led(i,j,15)
+            end
+          end
+        end
+      elseif clipboard then
+        for i = 12,14 do
+          for j = 5,8 do
+            if j == 5 or j == 7 then
+              g:led(i,j,15)
+            elseif j == 6 and (i == 12 or i == 14) then
+              g:led(i,j,15)
+            elseif j == 8 and i == 12 then
+              g:led(i,j,15)
+            end
+          end
+        end
+      end
+    end
+
+    if toggles.copy then
+      if #pattern_clipboard.event == 0 then
+        for i = 14,16 do
+          for j = 5,8 do
+            if j == 5 or j == 8 then
+              g:led(i,j,15)
+            elseif (j == 6 or j == 7) and i == 14 then
+              g:led(i,j,15)
+            end
+          end
+        end
+      elseif #pattern_clipboard.event > 0 then
+        for i = 14,16 do
+          for j = 5,8 do
+            if j == 5 or j == 7 then
+              g:led(i,j,15)
+            elseif j == 6 and (i == 14 or i == 16) then
+              g:led(i,j,15)
+            elseif j == 8 and i == 14 then
+              g:led(i,j,15)
+            end
+          end
+        end
+      end
+    elseif toggles.duplicate then
+      for i = 14,16 do
+        for j = 5,8 do
+          if (j == 5 and (i == 14 or i == 15)) or (j == 8 and (i == 14 or i == 15)) then
+            g:led(i,j,15)
+          elseif (j == 6 or j == 7) then
+            if i == 14 or i == 16 then
+              g:led(i,j,15)
+            end
+          end
+        end
+      end
+    elseif toggles.overdub then
+      for i = 14,16 do
+        for j = 5,8 do
+          if j == 5 or j == 8 then
+            g:led(i,j,15)
+          elseif (j == 6 or j == 7) then
+            if i == 14 or i == 16 then
+              g:led(i,j,15)
+            end
+          end
+        end
+      end
+    elseif toggles.loop then
+      for i = 14,16 do
+        for j = 5,8 do
+          if j == 8 then
+            g:led(i,j,15)
           else
-            g:led(i,j,0)
+            if i == 14 then
+              g:led(i,j,15)
+            end
           end
         end
       end
+    elseif toggles.link then
+      g:led(14,5,15)
+      g:led(16,6,15)
+      g:led(14,7,15)
+      g:led(16,8,15)
     end
-  end
-  if mods.hill and hills[ui.hill_focus].highway then
-    grid_lib.draw_highway()
-  elseif mods['notes'] then
-    local i = ui.hill_focus
-    if params:string('voice_model_'..i) == 'sample' then
-      grid_lib.draw_cc()
-    else
-      grid_lib.draw_es()
-    end
-  end
-  if mod_held and mods["snapshots"] and is_toggle_state_off() then
-    for i = 9,10 do
-      g:led(i,6,snapshots.mod.index == (i - 8) and 15 or 6)
-      g:led(i,7,snapshots.mod.index == (i - 6) and 15 or 6)
-      g:led(i,8,snapshots.mod.index == (i - 4) and 15 or 6)
-    end
-  end
-  
-  g:led(12,5,toggles.overdub and 15 or 6)
-  g:led(12,6,toggles.loop and 15 or 6)
-  g:led(12,7,toggles.duplicate and 15 or 6)
-  g:led(12,8,toggles.copy and 15 or 6)
-  g:led(13,8,toggles.link and 15 or 6)
 
-  if mod_held and mods["copy"] then
-    if not clipboard then
-      for i = 12,14 do
-        for j = 5,8 do
-          if j == 5 or j == 8 then
-            g:led(i,j,15)
-          elseif (j == 6 or j == 7) and i == 12 then
-            g:led(i,j,15)
-          end
-        end
-      end
-    elseif clipboard then
-      for i = 12,14 do
-        for j = 5,8 do
-          if j == 5 or j == 7 then
-            g:led(i,j,15)
-          elseif j == 6 and (i == 12 or i == 14) then
-            g:led(i,j,15)
-          elseif j == 8 and i == 12 then
-            g:led(i,j,15)
-          end
-        end
-      end
+    if mods['playmode'] then
+      g:led(16,8,mods['playmode_extended'] and 15 or 4)
     end
-  end
 
-  if toggles.copy then
-    if #pattern_clipboard.event == 0 then
-      for i = 14,16 do
-        for j = 5,8 do
-          if j == 5 or j == 8 then
-            g:led(i,j,15)
-          elseif (j == 6 or j == 7) and i == 14 then
-            g:led(i,j,15)
-          end
-        end
-      end
-    elseif #pattern_clipboard.event > 0 then
-      for i = 14,16 do
-        for j = 5,8 do
-          if j == 5 or j == 7 then
-            g:led(i,j,15)
-          elseif j == 6 and (i == 14 or i == 16) then
-            g:led(i,j,15)
-          elseif j == 8 and i == 14 then
-            g:led(i,j,15)
-          end
-        end
-      end
-    end
-  elseif toggles.duplicate then
-    for i = 14,16 do
-      for j = 5,8 do
-        if (j == 5 and (i == 14 or i == 15)) or (j == 8 and (i == 14 or i == 15)) then
-          g:led(i,j,15)
-        elseif (j == 6 or j == 7) then
-          if i == 14 or i == 16 then
-            g:led(i,j,15)
-          end
-        end
-      end
-    end
-  elseif toggles.overdub then
-    for i = 14,16 do
-      for j = 5,8 do
-        if j == 5 or j == 8 then
-          g:led(i,j,15)
-        elseif (j == 6 or j == 7) then
-          if i == 14 or i == 16 then
-            g:led(i,j,15)
-          end
-        end
-      end
-    end
-  elseif toggles.loop then
-    for i = 14,16 do
-      for j = 5,8 do
-        if j == 8 then
-          g:led(i,j,15)
-        else
-          if i == 14 then
-            g:led(i,j,15)
-          end
-        end
-      end
-    end
-  elseif toggles.link then
-    g:led(14,5,15)
-    g:led(16,6,15)
-    g:led(14,7,15)
-    g:led(16,8,15)
-  end
-
-  if mods['playmode'] then
-    g:led(16,8,mods['playmode_extended'] and 15 or 4)
-  end
-
-  for i = 1,16 do
-    local led_level
-    if grid_pattern[i].count == 0 and grid_pattern[i].rec == 0 then
-      led_level = 3
-    elseif grid_pattern[i].rec == 1 then
-      led_level = 10
-    elseif grid_pattern[i].play == 1 and grid_pattern[i].overdub == 0 then
-      led_level = 15
-    else
-      if grid_pattern[i].overdub == 1 then
-        -- led_level = 15 - (util.round(clock.get_beats() % 4)*3)
-        led_level = 15 - util.round((util.round(clock.get_beats() % 4,0.5) * 3))
+    for i = 1,16 do
+      local led_level
+      if grid_pattern[i].count == 0 and grid_pattern[i].rec == 0 then
+        led_level = 3
+      elseif grid_pattern[i].rec == 1 then
+        led_level = 10
+      elseif grid_pattern[i].play == 1 and grid_pattern[i].overdub == 0 then
+        led_level = 15
       else
-        led_level = 8
+        if grid_pattern[i].overdub == 1 then
+          -- led_level = 15 - (util.round(clock.get_beats() % 4)*3)
+          led_level = 15 - util.round((util.round(clock.get_beats() % 4,0.5) * 3))
+        else
+          led_level = 8
+        end
       end
+      if toggles.loop then
+        led_level = grid_pattern[i].loop == 1 and 12 or 3
+      elseif toggles.link and pattern_link_source > 0 then
+        led_level = pattern_links[pattern_link_source][i] and 12 or 3
+      end
+      g:led(index_to_grid_pos(i,4)[1]+12,index_to_grid_pos(i,4)[2],led_level)
     end
-    if toggles.loop then
-      led_level = grid_pattern[i].loop == 1 and 12 or 3
-    elseif toggles.link and pattern_link_source > 0 then
-      led_level = pattern_links[pattern_link_source][i] and 12 or 3
+
+    -- g:led(index_to_grid_pos(pattern_link_source,4)[1]+12,index_to_grid_pos(pattern_link_source,4)[2],15)
+
+    if mods['snapshots'] or mods['snapshots_extended'] then
+      g:led(12,1,mods['snapshots_extended'] and 15 or 6)
+      g:led(12,2,snapshot_overwrite_mod and 15 or 6)
     end
-    g:led(index_to_grid_pos(i,4)[1]+12,index_to_grid_pos(i,4)[2],led_level)
-  end
-
-  -- g:led(index_to_grid_pos(pattern_link_source,4)[1]+12,index_to_grid_pos(pattern_link_source,4)[2],15)
-
-  if mods['snapshots'] or mods['snapshots_extended'] then
-    g:led(12,1,mods['snapshots_extended'] and 15 or 6)
-    g:led(12,2,snapshot_overwrite_mod and 15 or 6)
-  end
-
-  if _surveyor.grid_takeover then -- TODO: clean this up...don't just inject at the end
-    _surveyor.draw_grid()
   end
   
   g:refresh()

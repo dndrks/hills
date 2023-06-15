@@ -1,5 +1,4 @@
 local track_actions = {}
-local s = require 'sequins'
 
 track = {}
 
@@ -214,7 +213,7 @@ function track_actions.init(target, hill_number, clear_reset)
   track[target][hill_number].mode = "fwd"
   track[target][hill_number].loop = true
   track[target][hill_number].focus = "main"
-  track[target][hill_number].page_chain = s{1}
+  track[target][hill_number].page_chain = _sequins{1}
   
   for pages = 1,8 do
     track[target][hill_number][pages] = {}

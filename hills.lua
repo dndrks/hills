@@ -12,7 +12,9 @@
 -- osc_echo = "224.0.0.1"
 -- osc_echo = "169.254.202.238"
 -- osc_echo = "192.168.0.137"
--- osc_echo = "10.42.0.212"
+-- osc_echo = "169.254.111.133"
+osc_echo = "192.168.2.1"
+
 
 function full_PSET_swap()
   clock.run(
@@ -51,7 +53,8 @@ end
 
 engine.name = "Kildare"
 if osc_echo ~= nil then
-  osc.send({osc_echo,57120},"/command",{'establish_engine'})
+  -- osc.send({osc_echo,57120},"/command",{'establish_engine'})
+  osc.send({osc_echo,57120},"/engine/load/name",{'Kildare'})
 end
 
 number_of_hills = 7
@@ -125,6 +128,9 @@ osc.event=function(path,args,from)
   params:delta(path, args[1])
 end
 
+_sequins = require 'sequins'
+mu = require 'musicutil'
+euclid = require 'er'
 pt = include 'lib/hills_new_pt'
 curves = include 'lib/easing'
 _midi = include 'lib/midi'
@@ -146,8 +152,6 @@ _polyparams = include 'lib/polyparams'
 _ccparams = include 'lib/ccparams'
 _hsteps = include 'lib/highway_steps'
 _htracks = include 'lib/highway_tracks'
-mu = require 'musicutil'
-euclid = require 'er'
 
 r = function()
   norns.script.load("code/hills/hills.lua")
@@ -488,6 +492,13 @@ function init()
     end
     for j = 1,number_of_hills do
       track[j] = tab.load(this_filepath.."track/"..j..".txt")
+      for subs = 1,#track[j] do
+        local collect_sequins = {}
+        for data_steps = 1,track[j][subs].page_chain.length do
+          collect_sequins[data_steps] = track[j][subs].page_chain.data[data_steps]
+        end
+        track[j][subs].page_chain = _sequins{table.unpack(collect_sequins)}
+      end
     end
     -- params:bang() -- TODO VERIFY IF THIS IS OKAY TO LEAVE OUT
     grid_dirty = true

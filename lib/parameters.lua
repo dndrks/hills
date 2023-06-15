@@ -28,10 +28,8 @@ end
 
 function parameters.send_to_engine(voice,param,value)
   if param == 'carHz' then
-    -- engine.set_voice_param(voice, param, mu.note_num_to_freq(value))
     send_to_engine('set_voice_param',{voice, param, mu.note_num_to_freq(value)})
   else
-    -- engine.set_voice_param(voice, param, value)
     send_to_engine('set_voice_param',{voice, param, value})
   end
 end
