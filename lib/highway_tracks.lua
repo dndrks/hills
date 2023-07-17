@@ -180,7 +180,6 @@ function track_actions.init(target, hill_number, clear_reset)
 
   track[target][hill_number] = {}
   track[target][hill_number].playing = false
-  track[target][hill_number].pause = false
   track[target][hill_number].time = 1/4
   if not clear_reset or (clear_reset and track[target].active_hill ~= hill_number) then
     track[target][hill_number].step = 1
@@ -329,9 +328,9 @@ end
 function track_actions.check_page_probability(n,i,j)
   local _page = track[i][j].page
   if math.random(1,100) <= track[i][j].page_probability[n] then
-    if i == 1 then
-      print("page "..n)
-    end
+    -- if i == 1 then
+    --   print("page "..n)
+    -- end
     return n
   else
     if i == 1 then
@@ -366,7 +365,6 @@ function track_actions.start_playback(i,j)
   , ["rnd"] = track[i][j][_page].start_point - 1
   }
   track[i][j].step = track_start[track[i][j].mode]
-  track[i][j].pause = false
   track[i][j].playing = true
   if track[i][j].mode == "pend" then
     track_direction[i] = "negative"
@@ -376,7 +374,9 @@ end
 function track_actions.stop_playback(i)
   local j = track[i].active_hill
   local _page = track[i][j].page
-  track[i][j].pause = true
+  if clock.threads[track_clock[i]] then
+    clock.cancel(track_clock[i])
+  end
   track[i][j].playing = false
   track[i][j][_page].conditional.cycle = 1
   for p = 1,8 do
@@ -401,6 +401,13 @@ function track_actions.sync_playheads()
   end
 end
 
+function track_actions.jump_page(target,new_page,restart)
+  track[target][track[target].active_hill].page = new_page
+  if restart == true then
+    track[target][track[target].active_hill].step = track[target][track[target].active_hill][new_page].start_point
+  end
+end
+
 function track_actions.iterate(target)
   -- TODO: should this sync before advancing or after??? does anything get fucked up?
   while true do
@@ -419,25 +426,20 @@ function track_actions.tick(target)
   -- then
   local _active = track[target][track[target].active_hill]
   local _a = _active[_active.page]
-  -- if _active.pause == false or params:string('hill_'..target..'_iterator') ~= 'norns' then
-  if _active.pause == false then
-    if _active.step == _a.end_point and not _active.loop then
-      track_actions.stop_playback(target)
-    else
-      if _active.swing > 50 and _active.step % 2 == 1 then
-        local base_time = (clock.get_beat_sec() * _active.time)
-        local swung_time =  base_time*util.linlin(50,100,0,1,_active.swing)
-        clock.run(function()
-          clock.sleep(swung_time)
-          track_actions.process(target)
-        end)
-      else
-        track_actions.process(target)
-      end
-      _active.playing = true
-    end
+  if _active.step == _a.end_point and not _active.loop then
+    track_actions.stop_playback(target)
   else
-    _active.playing = false
+    if _active.swing > 50 and _active.step % 2 == 1 then
+      local base_time = (clock.get_beat_sec() * _active.time)
+      local swung_time =  base_time*util.linlin(50,100,0,1,_active.swing)
+      clock.run(function()
+        clock.sleep(swung_time)
+        track_actions.process(target)
+      end)
+    else
+      track_actions.process(target)
+    end
+    _active.playing = true
   end
   grid_dirty = true
   -- end
@@ -499,22 +501,13 @@ function track_actions.process(target)
     print("how is track step nil???")
     _active.step = _a.start_point
   end
-  if _active.mode == "fwd" then
-    track_actions.forward(target)
-  elseif _active.mode == "bkwd" then
-    track_actions.backward(target)
-  elseif _active.mode == "pend" then
-    track_actions.pendulum(target)
-  elseif _active.mode == "rnd" then
-    track_actions.random(target)
-  elseif _active.mode == "drunk" then
-    -- TODO: drunk walk!
-  end
+  -- TODO: drunk walk!
+  track_actions[_active.mode](target)
   screen_dirty = true
   track_actions.run(target,_active.step)
 end
 
-function track_actions.forward(target)
+function track_actions.fwd(target)
   local _active = track[target][track[target].active_hill]
   local _a = _active[_active.page]
   _active.step = _active.step + 1
@@ -526,7 +519,7 @@ function track_actions.forward(target)
   end
 end
 
-function track_actions.backward(target)
+function track_actions.bkwd(target)
   local _active = track[target][track[target].active_hill]
   local _a = _active[_active.page]
   _active.step = wrap(_active.step - 1,_a.start_point,_a.end_point)
@@ -535,7 +528,7 @@ function track_actions.backward(target)
   end
 end
 
-function track_actions.random(target)
+function track_actions.rnd(target)
   local _active = track[target][track[target].active_hill]
   local _a = _active[_active.page]
   _active.step = math.random(_a.start_point,_a.end_point)
@@ -560,7 +553,7 @@ for i = 1,number_of_patterns do
   track_direction[i] = "positive"
 end
 
-function track_actions.pendulum(target)
+function track_actions.pend(target)
   local _active = track[target][track[target].active_hill]
   local _a = _active[_active.page]
   if track_direction[target] == "positive" then
@@ -584,24 +577,14 @@ end
 function track_actions.check_prob(target,step)
   local _active = track[target][track[target].active_hill]
   local _a = _active[_active.page]
-  if _active.focus == "main" then
-    if _a.prob[step] == 0 then
-      return false
-    elseif _a.prob[step] >= math.random(1,100) then
-      return true
-    else
-      return false
-    end
+  local _f = _active.focus == 'main' and _a.prob[step] or _a.fill.prob[step]
+  if _f == 0 then
+    return false
+  elseif _f >= math.random(1,100) then
+    return true
   else
-    if _a.fill.prob[step] == 0 then
-      return false
-    elseif _a.fill.prob[step] >= math.random(1,100) then
-      return true
-    else
-      return false
-    end
+    return false
   end
-  
 end
 
 function track_actions.run(target,step)
@@ -615,15 +598,9 @@ function track_actions.run(target,step)
     local should_happen = track_actions.check_prob(target,step)
     -- if target == 1 then print(should_happen) end
     if should_happen then
-      local A_step, B_step
-      if _active.focus == "main" then
-        A_step = _a.conditional.A[step]
-        B_step = _a.conditional.B[step]
-      else
-        A_step = _a.fill.conditional.A[step]
-        B_step = _a.fill.conditional.B[step]
-      end
-
+      local A_step = _active.focus == 'main' and _a.conditional.A[step] or _a.fill.conditional.A[step]
+      local B_step = _active.focus == 'main' and _a.conditional.B[step] or _a.fill.conditional.B[step]
+      
       if _a.conditional.mode[step] == "A:B" then
         if _a.conditional.cycle < A_step then
           _a.last_condition = false
@@ -706,8 +683,8 @@ function track_actions.execute_step(target, step)
     send_note_data(i,j,step,focused_notes)
   else
     local note_check;
-    if params:string('voice_model_'..i) ~= 'sample' and params:string('voice_model_'..i) ~= 'input' then
-      note_check = params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+    if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' then
+      note_check = params:get(i..'_'..selectedVoiceModels[i]..'_carHz')
     else
       note_check = params:get('hill '..i..' base note')
     end
@@ -755,8 +732,8 @@ function track_actions.retrig_step(target,step)
         for retrigs = 1,focused_set.retrig_count[step] do
           clock.sleep(((clock.get_beat_sec() * _active.time)*focused_set.retrig_time[step])+swung_time)
           local note_check;
-          if params:string('voice_model_'..i) ~= 'sample' and params:string('voice_model_'..i) ~= 'input' then
-            note_check = params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+          if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' then
+            note_check = params:get(i..'_'..selectedVoiceModels[i]..'_carHz')
           else
             note_check = params:get('hill '..i..' base note')
           end
@@ -783,8 +760,8 @@ function track_actions.reset_note_to_default(i,j)
   local _a = _active[_active.page]
   local focused_set = _active.focus == 'main' and _a or _a.fill
   local note_check;
-  if params:string('voice_model_'..i) ~= 'sample' and params:string('voice_model_'..i) ~= 'input' then
-    note_check = params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+  if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' then
+    note_check = params:get(i..'_'..selectedVoiceModels[i]..'_carHz')
   else
     note_check = params:get('hill '..i..' base note')
   end

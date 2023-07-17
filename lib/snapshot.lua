@@ -47,7 +47,7 @@ function snapshot.pack(voice,coll)
    
     local d_voice, d_string;
     if voice <= 10 then
-      d_voice = params:string('voice_model_'..voice)
+      d_voice = selectedVoiceModels[voice]
       d_string = voice..'_'..d_voice..'_'
     end
 
@@ -84,7 +84,7 @@ function snapshot.unpack(voice, coll)
 
     local d_voice, d_string;
     if voice <= 10 then
-      d_voice = params:string('voice_model_'..voice)
+      d_voice = selectedVoiceModels[voice]
       d_string = voice..'_'..d_voice..'_'
     end
 
@@ -188,7 +188,7 @@ function snapshot.crossfade(voice,scene_a,scene_b,val)
 
   local d_voice, d_string, original_srcs, focus;
   if voice <= 10 then
-    d_voice = params:string('voice_model_'..voice)
+    d_voice = selectedVoiceModels[voice]
     d_string = voice..'_'..d_voice..'_'
     focus = snapshots[voice][d_voice]
     -- original_srcs = _t.deep_copy(snapshots[voice][d_voice][coll])
@@ -249,7 +249,7 @@ function snapshot.route_funnel(voice,coll,mod_idx)
 
     local d_voice, d_string, original_srcs;
     if type(voice) ~= 'string' and voice <= 10 then
-      d_voice = params:string('voice_model_'..voice)
+      d_voice = selectedVoiceModels[voice]
       d_string = voice..'_'..d_voice..'_'
       original_srcs = _t.deep_copy(snapshots[voice][d_voice][coll])
     else

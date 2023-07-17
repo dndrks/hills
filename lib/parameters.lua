@@ -154,7 +154,7 @@ function parameters.init()
     end
 
     params:add_separator('hill_'..i..'_note_header', "note management "..hill_names[i])
-    params:add_binary('hill_'..i..'_flatten', 'flatten to carrier freq', 'toggle', 0)
+    params:add_binary('hill_'..i..'_flatten', 'flatten to carrier freq', 'toggle', 1)
     params:set_action('hill_'..i..'_flatten', function(x)
       if x == 1 then
         params:hide("hill "..i.." scale")
@@ -252,8 +252,8 @@ function parameters.init()
       function(x)
         if x == 1 then
           local note_check;
-          if params:string('voice_model_'..i) ~= 'sample' and params:string('voice_model_'..i) ~= 'input' then
-            note_check = params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+          if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' then
+            note_check = params:get(i..'_'..selectedVoiceModels[i]..'_carHz')
           else
             note_check = params:get('hill '..i..' base note')
           end
@@ -274,8 +274,8 @@ function parameters.init()
       function(x)
         if x == 1 then
           local note_check;
-          if params:string('voice_model_'..i) ~= 'sample' and params:string('voice_model_'..i) ~= 'input' then
-            note_check = params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+          if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' then
+            note_check = params:get(i..'_'..selectedVoiceModels[i]..'_carHz')
           else
             note_check = params:get('hill '..i..' base note')
           end
@@ -398,7 +398,7 @@ function parameters.init()
         hills[i][j].shape = curves.easingNames[x]
       end)
       params:hide("hill ["..i.."]["..j.."] shape")
-      params:add_number("hill ["..i.."]["..j.."] population","hill ["..i.."]["..j.."] population",10,100,50)
+      params:add_number("hill ["..i.."]["..j.."] population","hill ["..i.."]["..j.."] population",40,100,math.random(40,100))
       params:set_action("hill ["..i.."]["..j.."] population",
       function(x)
         hills[i][j].population = x/100

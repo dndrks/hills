@@ -218,11 +218,11 @@ function ca.play_slice(target,slice,velocity,i,j, played_note, retrig_index)
     end
     -- TODO: confirm this is still useful...230312
     if params:get(i..'_poly_voice_count') ~= 1 then
-      local check_rate_change = _polyparams.adjusted_params[i][loop_voice].params[i..'_sample_playbackRateBase']
+      local check_rate_change = _polyparams.adjusted_params[i][kildare.allocVoice[i]].params[i..'_sample_playbackRateBase']
       if check_rate_change ~= nil then
         local rate = params:lookup_param(i..'_sample_playbackRateBase'):map_value(check_rate_change)
         rate = sample_speedlist[rate]
-        send_to_engine('set_poly_voice_param',{i, loop_voice, 'rate', rate})
+        send_to_engine('set_poly_voice_param',{i, kildare.allocVoice[i], 'rate', rate})
       end
     end
   end

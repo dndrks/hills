@@ -57,7 +57,7 @@ function key_actions.parse(n,z)
               elseif key1_hold and not key2_hold then
                 if ui.menu_focus == 1 then
                   if _s.popup_focus[1] == 1 then
-                    _t.reseed(i,j,0.1)
+                    _t.reseed(i,j)
                   elseif _s.popup_focus[1] == 2 then
                     _t.quantize(i,j,params:string("hill "..i.." quant value"),hills[i][j].low_bound.note,hills[i][j].high_bound.note)
                   end

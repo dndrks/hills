@@ -52,8 +52,8 @@ m.track_transpose = function(i,j,_page,pos,delta)
       _htracks.change_trig_state(_a.fill,pos, true, i, j, _page)
     end
     local note_check;
-    if params:string('voice_model_'..i) ~= 'sample' and params:string('voice_model_'..i) ~= 'input' then
-      note_check = params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+    if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' then
+      note_check = params:get(i..'_'..selectedVoiceModels[i]..'_carHz')
     else
       note_check = params:get('hill '..i..' base note')
     end
@@ -61,8 +61,8 @@ m.track_transpose = function(i,j,_page,pos,delta)
   else
     if focused_set[pos] == -1 then
       local note_check;
-      if params:string('voice_model_'..i) ~= 'sample' and params:string('voice_model_'..i) ~= 'input' then
-        note_check = params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+      if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' then
+        note_check = params:get(i..'_'..selectedVoiceModels[i]..'_carHz')
       else
         note_check = params:get('hill '..i..' base note')
       end
@@ -553,7 +553,8 @@ m.reseed = function(i,j)
     ["active"] = {}, -- tracks whether the note should play
     ["chord_degree"] = {}, -- defines the shell voicing chord degree
   }
-  construct(i,j)
+  hodgepodge(i,j,true)
+  print('reseeding')
 end
 
 return m

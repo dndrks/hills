@@ -229,7 +229,7 @@ function m:delta(index, d, voice, alloc)
   local paramValue = m.adjusted_params[voice][alloc].params[index]
   local paramKey = string.gsub(
     index,
-    voice..'_'..params:string('voice_model_'..voice)..'_',
+    voice..'_'..selectedVoiceModels[voice]..'_',
     ""
   )
   paramValue = params:lookup_param(index):map_value(paramValue)

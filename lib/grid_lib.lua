@@ -3,6 +3,8 @@ local grid = util.file_exists(_path.code.."midigrid") and include "midigrid/lib/
 
 g = grid.connect()
 
+is_256 = g.cols * g.rows == 256
+
 active_voices = {}
 for i = 1,16 do
   active_voices[i] = {}
@@ -1437,7 +1439,7 @@ function grid_redraw()
       grid_lib.draw_highway()
     elseif mods['notes'] then
       local i = ui.hill_focus
-      if params:string('voice_model_'..i) == 'sample' then
+      if selectedVoiceModels[i] == 'sample' then
         grid_lib.draw_cc()
       else
         grid_lib.draw_es()

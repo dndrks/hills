@@ -46,7 +46,9 @@ function enc_actions.parse(n,d)
             ui.menu_focus = 4
           end
         end
-        highway_ui.seq_page[ui.hill_focus] = math.ceil(track[ui.hill_focus][j].ui_position/32)
+        if hills[i].highway then
+          highway_ui.seq_page[ui.hill_focus] = math.ceil(track[ui.hill_focus][j].ui_position/32)
+        end
       elseif ui.control_set == 'edit' then
         if hills[i].highway and key1_hold then
           enc_actions.delta_track_pos(i,j,d)

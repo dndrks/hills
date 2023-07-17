@@ -13,8 +13,7 @@
 -- osc_echo = "169.254.202.238"
 -- osc_echo = "192.168.0.137"
 -- osc_echo = "169.254.111.133"
-osc_echo = "192.168.2.1"
-
+-- osc_echo = "192.168.2.1"
 
 function full_PSET_swap()
   clock.run(
@@ -160,13 +159,14 @@ end
 development_state = function()
   -- song_atoms.transport_active = true
   for i = 1,number_of_hills do
-    if i ~= 2 then
-      params:set('hill_'..i..'_mode', 2)
-    end
-    params:set('hill_'..i..'_iterator_midi_record',2)
+    -- DIAMOND HOLLOW/
+    -- params:set('hill_'..i..'_mode', 2)
+    -- params:set('hill_'..i..'_iterator',2)
+    -- params:set('hill_'..i..'_iterator_midi_device',6)
+    -- params:set('hill_'..i..'_iterator_midi_note',35+util.wrap(i,1,4))
+    -- -- /DIAMOND HOLLOW
+    -- params:set('hill_'..i..'_iterator_midi_record',2)
   end
-  -- params:set('hill_1_iterator',3)
-  -- params:set('hill_1_iterator_hill_2',2)
   _htracks.sync_playheads()
   screen_dirty = true
 end
@@ -345,7 +345,6 @@ function init()
       hills[i][j].index = 1
       hills[i][j].timing = {}
       hills[i][j].shape =  params:string("hill ["..i.."]["..j.."] shape")
-      hills[i][j].constructed = false
       hills[i][j].low_bound = {}
       hills[i][j].low_bound.note = 1
       hills[i][j].high_bound = {}
@@ -384,7 +383,7 @@ function init()
       hills[i][j].note_timedelta = {}
       hills[i][j].mute = false
 
-      construct(i,j,true)
+      -- construct(i,j,true)
 
       ui.edit_note[i][j] = 1
       ui.screen_controls[i][j] =
@@ -584,7 +583,7 @@ function init()
 
   function kildare.voice_param_callback(voice, param, val)
     if snapshot_overwrite_mod then
-      local d_voice = type(voice) ~= 'string' and params:string('voice_model_'..voice) or voice
+      local d_voice = type(voice) ~= 'string' and selectedVoiceModels[voice] or voice
       if util.string_starts(voice, 'sample') then
         voice = tonumber(string.sub(voice,-1)) + 7 -- TODO: CONFIRM CPU OKAY
       end
@@ -604,7 +603,7 @@ function init()
             ['voice'] = voice,
             ['param'] = param,
             ['value'] = val,
-            ['model'] = params:string('voice_model_'..voice),
+            ['model'] = selectedVoiceModels[voice],
             ['id'] = i
           }
         )
@@ -615,7 +614,7 @@ function init()
             ['voice'] = voice,
             ['param'] = param,
             ['value'] = val,
-            ['model'] = params:string('voice_model_'..voice),
+            ['model'] = selectedVoiceModels[voice],
             ['id'] = i
           }
         )
@@ -667,14 +666,24 @@ function init()
     end
   )
 
+  for i = 1,number_of_hills do
+    for j = 1, number_of_patterns do
+      hodgepodge(i,j)
+    end
+  end
+
   print('done: '..util.time())
 
   last_voice_param = params.lookup[number_of_hills..'_sample_feedbackSend']
-
 end
 
-local function pass_data_into_storage(i,j,index,data)
-  hills[i][j].note_num.pool[index] = data[1]
+function pass_data_into_storage(i,j,index,data)
+  if data[1] ~= data[1] then
+    print('woulda been nan', i,j, index)
+    hills[i][j].note_num.pool[index] = math.random(hills[i][j].note_num.min, hills[i][j].note_num.max)
+  else
+    hills[i][j].note_num.pool[index] = data[1]
+  end
   hills[i][j].note_timestamp[index] = data[2]
   hills[i][j].high_bound.note = #hills[i][j].note_num.pool
   hills[i][j].note_num.active[index] = true
@@ -685,27 +694,175 @@ local function pass_data_into_storage(i,j,index,data)
   hills[i][j].sample_controls.rate[index] = 9
 end
 
-construct = function(i,j,shuffle)
+-- construct = function(i,j,shuffle)
+--   local h = hills[i]
+--   local seg = h[j]
+--   local total_notes = util_round(#h.note_ocean*seg.population)
+--   local index = 0
+--   local reasonable_max = seg.note_num.min ~= seg.note_num.max and seg.note_num.max or seg.note_num.min+1
+--   for k = 0,seg.duration*100 do
+--     local last_val = seg.current_val
+--     seg.current_val = math.floor(util.wrap(curves[seg.shape](k/100,1,total_notes-1,seg.duration),seg.note_num.min,reasonable_max))
+--     local note_num = seg.note_num.min ~= seg.note_num.max and seg.current_val or seg.note_num.min
+--     if util_round(last_val) ~= util_round(seg.current_val) then
+--       if i == 1 and j == 1 then print(k/100) end
+--       index = index + 1
+--       pass_data_into_storage(i,j,index,{note_num,k/100})
+--     end
+--   end
+--   calculate_timedeltas(i,j)
+--   if shuffle then
+--     _t['shuffle notes'](i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
+--   end
+--   -- TODO: redraws for every construct
+--   screen_dirty = true
+-- end
+
+stepOffset = 0
+
+hodgepodge = function(i,j)
   local h = hills[i]
   local seg = h[j]
-  local total_notes = util_round(#h.note_ocean*seg.population)
+  local populous = params:get("hill ["..i.."]["..j.."] population")/100
+  local total_notes = util.clamp(util_round(48*populous),10,inf)
+  print(i,j,params:get("hill ["..i.."]["..j.."] population")/100)
   local index = 0
   local reasonable_max = seg.note_num.min ~= seg.note_num.max and seg.note_num.max or seg.note_num.min+1
-  for k = 0,seg.duration*100 do
-    local last_val = seg.current_val
-    seg.current_val = math.floor(util.wrap(curves[seg.shape](k/100,1,total_notes-1,seg.duration),seg.note_num.min,reasonable_max))
-    local note_num = seg.note_num.min ~= seg.note_num.max and seg.current_val or seg.note_num.min
-    if util_round(last_val) ~= util_round(seg.current_val) then
-      index = index + 1
-      pass_data_into_storage(i,j,index,{note_num,k/100})
+
+  -- just generate times
+
+  local splitter = {}
+  local splits = 5
+  local tests = {}
+  for stuff = 1,splits do
+    splitter[stuff] = math.floor(total_notes / splits)
+  end
+  for stuff = 1,total_notes % splits do
+    splitter[stuff] = splitter[stuff] + 1
+  end
+  -- splitter[1] = math.floor(total_notes/3)
+  -- local nt = (total_notes - splitter[1])
+  -- splitter[2] = math.floor(nt/2)
+  -- splitter[3] = math.floor((nt - splitter[2]))
+
+  easedTimes = {}
+  easedNotes = {}
+  -- for steps = 1,total_notes do
+  for splitsteps = 1,#splitter do
+    seg.shape = easingNames[math.random(#easingNames)] -- change shape
+    easedTimes[splitsteps] = {}
+    easedNotes[splitsteps] = {}
+    for steps = 1,splitter[splitsteps] do
+      easedTimes[splitsteps][steps] = util.linlin(
+        curves[seg.shape](
+          util.clamp(stepOffset, 0, total_notes-1),
+          0,
+          seg.duration,
+          total_notes
+        ),
+        seg.duration,
+        0,
+        seg.duration/2,
+        curves[seg.shape](
+          util.clamp((steps-1) + stepOffset, 0, total_notes-1),
+          0,
+          seg.duration,
+          total_notes
+        )
+      )
+      easedNotes[splitsteps][steps] = math.floor(
+        util.wrap(
+          curves[seg.shape](
+            util.clamp((steps-1) + stepOffset, 0, total_notes-1),
+            1,
+            total_notes-1,
+            seg.duration
+          ),
+          seg.note_num.min,
+          reasonable_max
+        )
+      )
+      easedNotes[splitsteps][steps] = seg.note_num.min ~= seg.note_num.max and easedNotes[splitsteps][steps] or seg.note_num.min
+      if steps > 1 then
+        if easedTimes[splitsteps][steps] < 0
+        or easedTimes[splitsteps][steps] <= easedTimes[splitsteps][steps-1]
+        or easedTimes[splitsteps][steps] - easedTimes[splitsteps][steps-1] < 0.01 then
+          easedTimes[splitsteps][steps] = easedTimes[splitsteps][steps-1] + (math.random(1,6)/100)
+        end
+      end
     end
+    -- print(seg.shape, seg.population)
+    -- tab.print(easedTimes[splitsteps])
   end
+
+  allTimes = {}
+  allNotes = {}
+
+  for times = 1,#easedTimes[1] do
+    allTimes[times] = easedTimes[1][times]
+    allNotes[times] = easedNotes[1][times]
+  end
+  local currentCount = #allTimes
+  for finalCount = 2,#easedTimes do
+
+    -- print('there are '..finalCount)
+
+    for times = 2,#easedTimes[finalCount] do
+      local thisLast = easedTimes[finalCount][#easedTimes[finalCount]]
+      local prevLast = allTimes[currentCount]
+      allTimes[#allTimes+1] = util.linlin(
+        0,
+        thisLast,
+        prevLast,
+        prevLast + thisLast,
+        easedTimes[finalCount][times]
+      )
+      allNotes[#allNotes+1] = easedNotes[finalCount][times]
+    end
+    currentCount = #allTimes
+
+  end
+  -- for times = 2,#easedTimes[2] do
+  --   -- allTimes[#allTimes+1] = easedTimes[2][times] +  allTimes[#allTimes]
+  --   local thisLast = easedTimes[2][#easedTimes[2]]
+  --   local prevLast = allTimes[currentCount]
+  --   allTimes[#allTimes+1] = util.linlin(
+  --     0,
+  --     thisLast,
+  --     prevLast,
+  --     prevLast + thisLast,
+  --     easedTimes[2][times]
+  --   )
+  --   allNotes[#allNotes+1] = easedNotes[2][times]
+  -- end
+  -- currentCount = #allTimes
+  -- for times = 2,#easedTimes[3] do
+  --   local thisLast = easedTimes[3][#easedTimes[3]]
+  --   local prevLast = allTimes[currentCount]
+  --   -- allTimes[#allTimes+1] = easedTimes[3][times] +  allTimes[#allTimes]
+  --   allTimes[#allTimes+1] = util.linlin(
+  --     0,
+  --     thisLast,
+  --     prevLast,
+  --     prevLast + thisLast,
+  --     easedTimes[3][times]
+  --   )
+  --   allNotes[#allNotes+1] = easedNotes[3][times]
+  -- end
+
+  -- tab.print(allTimes)
+
+  for index = 1,#allTimes do
+    if allTimes[index] < 0 then print('WOAHHH') end
+    pass_data_into_storage(i,j,index,{allNotes[index],allTimes[index]})
+  end
+  
   calculate_timedeltas(i,j)
-  if shuffle then
-    _t['shuffle notes'](i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
-  end
-  -- TODO: redraws for every construct
+
+  _t['shuffle notes'](i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
   screen_dirty = true
+
+  print(i,j,total_notes,populous, #allTimes)
 end
 
 reconstruct = function(i,j,new_shape)
@@ -728,9 +885,9 @@ end
 calculate_timedeltas = function(i,j)
   for k = 1,#hills[i][j].note_timestamp do
     if k < #hills[i][j].note_timestamp then
-      hills[i][j].note_timedelta[k] = hills[i][j].note_timestamp[k+1] - hills[i][j].note_timestamp[k]
+      hills[i][j].note_timedelta[k] = util.clamp(hills[i][j].note_timestamp[k+1] - hills[i][j].note_timestamp[k], 0.1, inf)
     else
-      hills[i][j].note_timedelta[k] = 0.01
+      hills[i][j].note_timedelta[k] = 0.06
     end
   end
 end
@@ -839,12 +996,12 @@ stop = function(i,clock_synced_loop)
   grid_dirty = true
 end
 
-local function inject_data_into_storage(i,j,index,data)
-  table.insert(hills[i][j].note_num.pool, index, data[1])
-  table.insert(hills[i][j].note_timestamp, index, data[2])
-  table.insert(hills[i][j].note_num.chord_degree, index, util.wrap(data[1], 1, 7))
-  hills[i][j].high_bound.note = #hills[i][j].note_num.pool
-end
+-- local function inject_data_into_storage(i,j,index,data)
+--   table.insert(hills[i][j].note_num.pool, index, data[1])
+--   table.insert(hills[i][j].note_timestamp, index, data[2])
+--   table.insert(hills[i][j].note_num.chord_degree, index, util.wrap(data[1], 1, 7))
+--   hills[i][j].high_bound.note = #hills[i][j].note_num.pool
+-- end
 
 local function adjust_timestamps_for_injection(i,j,index,duration)
   for k = index,#hills[i][j].note_timestamp do
@@ -854,24 +1011,24 @@ local function adjust_timestamps_for_injection(i,j,index,duration)
   calculate_timedeltas(i,j)
 end
 
-local function inject(shape,i,injection_point,duration)
-  local h = hills[i]
-  local seg = h[h.segment]
-  local total_notes = util_round(#h.note_ocean*seg.population)
-  local index = injection_point-1
-  local current_val = 0
-  local reasonable_max = seg.note_num.min ~= seg.note_num.max and seg.note_num.max or seg.note_num.min+1
-  for j = seg.note_timestamp[injection_point+1]*100,(seg.note_timestamp[injection_point]+duration)*100 do
-    local last_val = current_val
-    current_val = math.floor(util.wrap(curves[shape](j/100,1,total_notes-1,duration),seg.note_num.min,reasonable_max))
-    local note_num = seg.note_num.min ~= seg.note_num.max and current_val or seg.note_num.min
-    if util_round(last_val) ~= util_round(current_val) then
-      index = index + 1
-      inject_data_into_storage(i,h.segment,index,{note_num,j/100})
-    end
-  end
-  adjust_timestamps_for_injection(i,h.segment,index+1,duration)
-end
+-- local function inject(shape,i,injection_point,duration)
+--   local h = hills[i]
+--   local seg = h[h.segment]
+--   local total_notes = util_round(#h.note_ocean*seg.population)
+--   local index = injection_point-1
+--   local current_val = 0
+--   local reasonable_max = seg.note_num.min ~= seg.note_num.max and seg.note_num.max or seg.note_num.min+1
+--   for j = seg.note_timestamp[injection_point+1]*100,(seg.note_timestamp[injection_point]+duration)*100 do
+--     local last_val = current_val
+--     current_val = math.floor(util.wrap(curves[shape](j/100,1,total_notes-1,duration),seg.note_num.min,reasonable_max))
+--     local note_num = seg.note_num.min ~= seg.note_num.max and current_val or seg.note_num.min
+--     if util_round(last_val) ~= util_round(current_val) then
+--       index = index + 1
+--       inject_data_into_storage(i,h.segment,index,{note_num,j/100})
+--     end
+--   end
+--   adjust_timestamps_for_injection(i,h.segment,index+1,duration)
+-- end
 
 local function get_random_offset(i,note)
   if params:get("hill "..i.." random offset probability") == 0 then
@@ -971,7 +1128,7 @@ local function process_params_per_step(parent,i,j,k,index)
   local value = params:get(id)
 
   if is_drum_voice and type(drum_target) == 'number' and drum_target == i then
-    local p_name = string.gsub(params:get_id(id),drum_target..'_'..params:string('voice_model_'..drum_target)..'_','')
+    local p_name = string.gsub(params:get_id(id),drum_target..'_'..selectedVoiceModels[drum_target]..'_','')
     -- print('reseeding default value for voice', drum_target, p_name, value)
     prms.send_to_engine(drum_target,p_name,value)
   elseif is_drum_voice and type(drum_target) == 'string' then
@@ -998,7 +1155,7 @@ end
 --       base_note = track[i][j].fill.base_note[index]
 --     end
 --     if base_note == -1 then
---       base_note = params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+--       base_note = params:get(i..'_'..selectedVoiceModels[i]..'_carHz')
 --     end
 --   else
 --     base_note = params:get('hill '..i..' base note')
@@ -1052,7 +1209,7 @@ end
 force_note = function(i,j,played_note)
   local vel_target = params:get('hill_'..i..'_iso_velocity')
   local retrig_index = 0
-  if params:string('voice_model_'..i) ~= 'sample' then
+  if selectedVoiceModels[i] ~= 'sample' then
     if params:get('hill_'..i..'_legato') == 0 then
       kildare.allocVoice[i] = util.wrap(kildare.allocVoice[i]+1, 1, params:get(i..'_poly_voice_count'))
       -- engine.trig(i,vel_target,'false',kildare.allocVoice[i])
@@ -1070,9 +1227,10 @@ local function trigger_notes(i,j,index,velocity,retrigger_bool,played_note)
   if params:get('hill_'..i..'_legato') == 0 then
     kildare.allocVoice[i] = util.wrap(kildare.allocVoice[i]+1, 1, params:get(i..'_poly_voice_count'))
     send_to_engine('trig',{i,velocity,retrigger_bool,kildare.allocVoice[i]})
+    print(clock.get_beats())
   end
   if params:get('hill_'..i..'_flatten') == 1 then
-    send_note_data(i,j,index,params:get(i..'_'..params:string('voice_model_'..i)..'_carHz'))
+    send_note_data(i,j,index,params:get(i..'_'..selectedVoiceModels[i]..'_carHz'))
   else
     if params:string("hill "..i.." kildare_notes") == "yes" then
       send_note_data(i,j,index,played_note)
@@ -1082,8 +1240,8 @@ local function trigger_notes(i,j,index,velocity,retrigger_bool,played_note)
       local focused_notes = track[i][j].focus == 'main' and track[i][j][_page].base_note[index] or track[i][j][_page].fill.base_note[index]
       local focused_chords = track[i][j].focus == 'main' and track[i][j][_page].chord_notes[index] or track[i][j][_page].fill.chord_notes[index]
       local note_check;
-      if params:string('voice_model_'..i) ~= 'sample' and params:string('voice_model_'..i) ~= 'input' then
-        note_check = params:get(i..'_'..params:string('voice_model_'..i)..'_carHz')
+      if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' then
+        note_check = params:get(i..'_'..selectedVoiceModels[i]..'_carHz')
       else
         note_check = params:get('hill '..i..' base note')
       end
@@ -1109,17 +1267,22 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
   else
     played_note = get_random_offset(i,midi_notes[note_val])
   end
-  local _active = track[i][j]
-  local _page = _active.page
-  local _a = _active[_page]
-  local focused_set;
+  local _active, _page, _a, focused_set;
+  -- local _active = track[i][j]
+  -- local _page = _active.page
+  -- local _a = _active[_page]
   if hills[i].highway == true then
+    _active = track[i][j]
+    _page = _active.page
+    _a = _active[_page]
     focused_set = _active.focus == 'main' and _a or _a.fill
   end
   if (played_note ~= nil and hills[i].highway == false and hills[i][j].note_num.active[index]) or
     (played_note ~= nil and hills[i].highway == true and not focused_set.muted_trigs[index]) then
     -- per-step params //
-    if i <= number_of_hills then
+    -- TODO / FIXME: 230615, added to highway check in next line to avoid errors with hills:
+    -- if i <= number_of_hills then
+    if i <= number_of_hills and hills[i].highway == true then
       if check_subtables(i,j,index) then
         -- step to step params resets:
         local target_trig;
@@ -1216,7 +1379,7 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
       local lock_trig = track[i][j].focus == 'main' and track[i][j][_page].lock_trigs[index] or track[i][j][_page].fill.lock_trigs[index]
       if focused_set.trigs[index] and not focused_set.muted_trigs[index] then
         if retrig_index == nil then
-          if params:string('voice_model_'..i) ~= 'sample' then
+          if selectedVoiceModels[i] ~= 'sample' then
             trigger_notes(i,j,index,vel_target,'false',played_note)
           end
           play_linked_sample(i, j, played_note, vel_target, retrig_index)
@@ -1234,14 +1397,14 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
           else
             retrig_vel = destination_vel
           end
-          if params:string('voice_model_'..i) ~= 'sample' then
+          if selectedVoiceModels[i] ~= 'sample' then
             trigger_notes(i,j,index,retrig_vel,'true',played_note)
           end
           play_linked_sample(i, j, played_note, retrig_vel, retrig_index)
         end
       end
     else
-      if params:string('voice_model_'..i) ~= 'sample' then
+      if selectedVoiceModels[i] ~= 'sample' then
         trigger_notes(i,j,index,vel_target,'false',played_note)
       end
       play_linked_sample(i, j, played_note, vel_target, retrig_index)
@@ -1457,8 +1620,8 @@ end
 
 function cleanup ()
   print("cleanup")
-  if osc_echo ~= nil then
-    osc.send({osc_echo,57120},"/command",{'cleanup'})
-  end
+  -- if osc_echo ~= nil then
+  --   osc.send({osc_echo,57120},"/cleanup",{})
+  -- end
   metro.free_all()
 end
