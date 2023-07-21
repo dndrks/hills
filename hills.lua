@@ -258,7 +258,7 @@ function init()
             else
               local k = hills[j].segment
               if hills[j][k].note_num.pool[hills[j][k].index] ~= nil then
-                pass_note(j,k,hills[j][k],hills[j][k].note_num.pool[hills[j][k].index],hills[j][k].index)
+                pass_note(j,k,hills[j][k],hills[j][k].note_num.pool[hills[j][k].index],hills[j][k].index,0)
               end
               hills[j][k].index = util.wrap(hills[j][k].index + 1, hills[j][k].low_bound.note,hills[j][k].high_bound.note)
             end
@@ -902,7 +902,7 @@ iterate = function(i)
         if seg.high_bound.note ~= seg.low_bound.note then
           if seg.note_timestamp[seg.index] ~= nil then
             if util_round(seg.note_timestamp[seg.index],0.01) == util_round(seg.step,0.01) then
-              pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index)
+              pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index,0)
               seg.index = seg.index + 1
               seg.perf_led = true
             end
@@ -919,7 +919,7 @@ iterate = function(i)
           end
         else
           if util_round(seg.note_timestamp[seg.index+1],0.01) == util_round(seg.step,0.01) then
-            pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index)
+            pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index,0)
             seg.step = seg.note_timestamp[seg.index]
             seg.perf_led = true
           else
@@ -931,7 +931,7 @@ iterate = function(i)
         seg.iterated = false
         if seg.index <= seg.high_bound.note then
           if util_round(seg.note_timestamp[seg.index],0.01) == util_round(seg.step,0.01) then
-            pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index)
+            pass_note(i,hills[i].segment,seg,seg.note_num.pool[seg.index],seg.index,0)
             seg.index = seg.index + 1
             seg.perf_led = true
           end
@@ -1101,7 +1101,7 @@ function fkmap(i,j,index,p)
       target_trig = _fkprm.adjusted_params_lock_trigs
     end
   else
-    print('230520: when is this true???')
+    -- print('230520: when is this true???') -- true when doing hills with step params!
     target_trig = _fkprm.adjusted_params
   end
   local value = target_trig[i][j][_page][index].params[p]
@@ -1267,22 +1267,25 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
   else
     played_note = get_random_offset(i,midi_notes[note_val])
   end
-  local _active, _page, _a, focused_set;
+  local _active, _page, _ap, focused_set;
   -- local _active = track[i][j]
   -- local _page = _active.page
   -- local _a = _active[_page]
   if hills[i].highway == true then
     _active = track[i][j]
     _page = _active.page
-    _a = _active[_page]
-    focused_set = _active.focus == 'main' and _a or _a.fill
+    _ap = _active[_page]
+    focused_set = _active.focus == 'main' and _ap or _ap.fill
+  else
+    _page = 1
   end
   if (played_note ~= nil and hills[i].highway == false and hills[i][j].note_num.active[index]) or
     (played_note ~= nil and hills[i].highway == true and not focused_set.muted_trigs[index]) then
     -- per-step params //
     -- TODO / FIXME: 230615, added to highway check in next line to avoid errors with hills:
     -- if i <= number_of_hills then
-    if i <= number_of_hills and hills[i].highway == true then
+    -- if i <= number_of_hills and hills[i].highway == true then
+    if i <= number_of_hills then
       if check_subtables(i,j,index) then
         -- step to step params resets:
         local target_trig;
@@ -1491,7 +1494,7 @@ function manual_iter(i,j)
           _htracks.tick(idx)
         else
           if hills[idx][c_hill].note_num.pool[hills[idx][c_hill].index] ~= nil then
-            pass_note(idx,c_hill,hills[idx][c_hill],hills[idx][c_hill].note_num.pool[hills[idx][c_hill].index],hills[idx][c_hill].index)
+            pass_note(idx,c_hill,hills[idx][c_hill],hills[idx][c_hill].note_num.pool[hills[idx][c_hill].index],hills[idx][c_hill].index,0)
           end
           hills[idx][c_hill].index = util.wrap(hills[idx][c_hill].index + 1, hills[idx][c_hill].low_bound.note,hills[idx][c_hill].high_bound.note)
         end

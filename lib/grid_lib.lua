@@ -108,7 +108,7 @@ function grid_lib.pattern_execute(data)
       local j = data.hill
       local k = data.segment
       if hills[j][k].note_num.pool[hills[j][k].index] ~= nil then
-        pass_note(j,k,hills[j][k],hills[j][k].note_num.pool[hills[j][k].index],hills[j][k].index)
+        pass_note(j,k,hills[j][k],hills[j][k].note_num.pool[hills[j][k].index],hills[j][k].index,0)
       end
       hills[j][k].index = util.wrap(hills[j][k].index + 1, hills[j][k].low_bound.note,hills[j][k].high_bound.note)
     end
