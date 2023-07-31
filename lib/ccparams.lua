@@ -376,7 +376,7 @@ m.init = function()
   m.adjusted_params = {}
   for i = 1,number_of_hills do
     m.adjusted_params[i] = {}
-    for j = 1,16 do
+    for j = 1,128 do
       m.adjusted_params[i][j] = {params = {}}
     end
   end

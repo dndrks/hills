@@ -437,7 +437,7 @@ m.init = function()
       for pages = 1,8 do
         m.adjusted_params[i][j][pages] = {}
         m.adjusted_params_lock_trigs[i][j][pages] = {}
-        for steps = 1,16 do
+        for steps = 1,128 do
           m.adjusted_params[i][j][pages][steps] = {['params'] = {}}
           m.adjusted_params_lock_trigs[i][j][pages][steps] = {['params'] = {}}
         end

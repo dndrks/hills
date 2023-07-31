@@ -1090,7 +1090,7 @@ function grid_lib.highway_press(x,y,z)
 end
 
 local function process_ccES(i,j,played_note)
-  local _page = highway_ui.seq_page[i]
+  local _page = hills[i].highway and highway_ui.seq_page[i] or 1
   local focused_set = track[i][j].focus == 'main' and track[i][j][_page] or track[i][j][_page].fill
   if track[i].rec_note_entry then
     if params:string('hill '..i..' kildare_notes') == 'no' then

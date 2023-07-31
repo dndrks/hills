@@ -13,7 +13,7 @@
 -- osc_echo = "169.254.202.238"
 -- osc_echo = "192.168.0.137"
 -- osc_echo = "169.254.111.133"
--- osc_echo = "192.168.2.1"
+osc_echo = "192.168.2.1"
 
 function full_PSET_swap()
   clock.run(
@@ -69,8 +69,6 @@ hill_names = {
   "8: saw"
 }
 
-number_of_step_pages = 8
-
 pre_step_page = 'play'
 
 aubiodone=function(args)
@@ -112,6 +110,35 @@ osc_fun={
   end,
 }
 
+local make_sound = false
+
+function externalIterator(noteNum)
+  local j = noteNum - 35
+
+  if hills[j].highway then
+    _htracks.tick(j)
+  else
+    local k = hills[j].segment
+    if hills[j][k].note_num.pool[hills[j][k].index] ~= nil then
+      pass_note(j,k,hills[j][k],hills[j][k].note_num.pool[hills[j][k].index],hills[j][k].index,0)
+    end
+    hills[j][k].index = util.wrap(hills[j][k].index + 1, hills[j][k].low_bound.note,hills[j][k].high_bound.note)
+  end
+  if params:string('hill_'..j..'_iterator_midi_record') == 'yes' then
+    for k = 1,16 do
+      local table_to_record =
+        {
+          ["event"] = "midi_trig",
+          ["id"] = k,
+          ["hill"] = j,
+          ["segment"] = hills[j].segment,
+          ["legato"] = params:get('hill_'..j..'_legato') == 1
+        }
+      write_pattern_data(k,table_to_record,false)
+    end
+  end
+end
+
 osc.event=function(path,args,from)
   -- if string.sub(path,1,1)=="/" then
   --   path=string.sub(path,2)
@@ -123,8 +150,19 @@ osc.event=function(path,args,from)
   -- params:delta(path, args[1])
   -- print(args[1])
   -- local d = args[1] == 1 and 1 or -1
-  print(args[1])
-  params:delta(path, args[1])
+
+
+  -- if path == '/Velocity1' and args[1] > 0 then
+  --   make_sound = true
+  -- end
+  -- if path == '/Note1' and make_sound then
+  --   print(args[1])
+  --   externalIterator(args[1])
+  --   make_sound = false
+  -- end
+
+  
+  -- params:delta(path, args[1])
 end
 
 _sequins = require 'sequins'
@@ -166,6 +204,12 @@ development_state = function()
     -- params:set('hill_'..i..'_iterator_midi_note',35+util.wrap(i,1,4))
     -- -- /DIAMOND HOLLOW
     -- params:set('hill_'..i..'_iterator_midi_record',2)
+
+    -- BERLIN
+    params:set('hill_'..i..'_flatten',0)
+    params:set('voice_model_'..i, 14)
+    params:set('hill '..i..' MIDI output', 2)
+    --/BERLIN
   end
   _htracks.sync_playheads()
   screen_dirty = true
@@ -184,7 +228,7 @@ function midi_to_hz(note)
 end
 
 local pre_note = {}
-local midi_device = {}
+midi_device = {}
 
 local util_round = util.round
 local lin_lin = util.linlin
@@ -653,7 +697,7 @@ function init()
   print('wrapped with startup: '..util.time())
   clock.run(
     function()
-      clock.sleep(1)
+      clock.sleep(2)
       development_state()
       if kildare.queued_read_file ~= nil then
         print('!!!!!!!!!!!!!!!!!!!!!!!!queud read')
@@ -725,7 +769,7 @@ hodgepodge = function(i,j)
   local seg = h[j]
   local populous = params:get("hill ["..i.."]["..j.."] population")/100
   local total_notes = util.clamp(util_round(48*populous),10,inf)
-  print(i,j,params:get("hill ["..i.."]["..j.."] population")/100)
+  -- print(i,j,params:get("hill ["..i.."]["..j.."] population")/100)
   local index = 0
   local reasonable_max = seg.note_num.min ~= seg.note_num.max and seg.note_num.max or seg.note_num.min+1
 
@@ -862,7 +906,7 @@ hodgepodge = function(i,j)
   _t['shuffle notes'](i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
   screen_dirty = true
 
-  print(i,j,total_notes,populous, #allTimes)
+  -- print(i,j,total_notes,populous, #allTimes)
 end
 
 reconstruct = function(i,j,new_shape)
@@ -907,7 +951,8 @@ iterate = function(i)
               seg.perf_led = true
             end
             seg.step = util_round(seg.step + 0.01,0.01)
-            local reasonable_max = seg.note_timestamp[seg.high_bound.note+1] ~= nil and seg.note_timestamp[seg.high_bound.note+1] or seg.note_timestamp[seg.high_bound.note] + seg.note_timedelta[seg.high_bound.note]
+            -- local reasonable_max = seg.note_timestamp[seg.high_bound.note+1] ~= nil and seg.note_timestamp[seg.high_bound.note+1] or seg.note_timestamp[seg.high_bound.note] + seg.note_timedelta[seg.high_bound.note]
+            local reasonable_max = seg.note_timestamp[seg.high_bound.note]
             if util_round(seg.step,0.01) >= util_round(reasonable_max,0.01) then
               if seg.looper.mode == "phase" then
                 _a.start(i,h.segment)
@@ -972,7 +1017,7 @@ stop = function(i,clock_synced_loop)
         seg.perf_led = false
         grid_dirty = true
         if params:string("hill "..i.." MIDI output") == "yes" then
-          midi_device[dev]:note_off(pre_note[i],seg.note_velocity,ch)
+          midi_device[dev]:note_off(pre_note[i],0,ch)
         end
         if params:string("hill "..i.." JF output") == "yes" then
           local ch = params:get("hill "..i.." JF output id")
@@ -1060,26 +1105,27 @@ local function get_random_offset(i,note)
 end
 
 local function check_subtables(i,j,index)
-  local target_trig;
-  local _page = track[i][j].page
-  if hills[i].highway == true then
-    if track[i][j][_page].trigs[index] then
-      target_trig = _fkprm.adjusted_params
-    else
-      target_trig = _fkprm.adjusted_params_lock_trigs
-    end
-  else
-    target_trig = _fkprm.adjusted_params
-  end
-  if target_trig[i] ~= nil
-  and target_trig[i][j] ~= nil
-  and target_trig[i][j][_page][index] ~= nil
-  and target_trig[i][j][_page][index].params ~= nil
-  then
-    return true
-  else
-    return false
-  end
+  -- local target_trig;
+  -- local _page = track[i][j].page
+  -- if hills[i].highway == true then
+  --   if track[i][j][_page].trigs[index] then
+  --     target_trig = _fkprm.adjusted_params
+  --   else
+  --     target_trig = _fkprm.adjusted_params_lock_trigs
+  --   end
+  -- else
+  --   target_trig = _fkprm.adjusted_params
+  -- end
+  -- if target_trig[i] ~= nil
+  -- and target_trig[i][j] ~= nil
+  -- and target_trig[i][j][_page][index] ~= nil
+  -- and target_trig[i][j][_page][index].params ~= nil
+  -- then
+  --   return true
+  -- else
+  --   return false
+  -- end
+  return true -- 230725, this is always true
 end
 
 per_step_params_adjusted = {}
@@ -1220,7 +1266,17 @@ force_note = function(i,j,played_note)
     play_linked_sample(i, j, played_note, vel_target, retrig_index, true)
   end
 
+  if params:string("hill "..i.." MIDI output") == "yes" then
+    local ch = params:get("hill "..i.." MIDI note channel")
+    local dev = params:get("hill "..i.." MIDI device")
+    if pre_note[i] ~= nil and params:get('hill_'..i..'_legato') ~= 1 then
+      midi_device[dev]:note_off(pre_note[i],0,ch)
+    end
+    midi_device[dev]:note_on(played_note,127,ch)
+  end
+
   pre_note[i] = played_note
+
 end
 
 local function trigger_notes(i,j,index,velocity,retrigger_bool,played_note)
@@ -1417,9 +1473,9 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
       local ch = params:get("hill "..i.." MIDI note channel")
       local dev = params:get("hill "..i.." MIDI device")
       if pre_note[i] ~= nil and params:get('hill_'..i..'_legato') ~= 1 then
-        midi_device[dev]:note_off(pre_note[i],seg.note_velocity,ch)
+        midi_device[dev]:note_off(pre_note[i],0,ch)
       end
-      midi_device[dev]:note_on(played_note,seg.note_velocity,ch)
+      midi_device[dev]:note_on(played_note,seg.note_velocity[index],ch)
     end
     if params:string("hill "..i.." crow output") == "yes" then
       if params:string("hill "..i.." crow output style") == "osc" then
