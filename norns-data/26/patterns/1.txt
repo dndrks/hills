@@ -1,0 +1,71 @@
+return {
+-- Table: {1}
+{
+   ["play"]=0,
+   ["steps_with_mono_events"]={2},
+   ["rec"]=0,
+   ["name"]=1,
+   ["event"]={3},
+   ["loop"]=1,
+   ["clear_mono"]=0,
+   ["mono_event_idx"]=0,
+   ["overdub"]=0,
+   ["count"]=3,
+   ["step"]=0,
+   ["end_point"]=266,
+},
+-- Table: {2}
+{
+},
+-- Table: {3}
+{
+   {4},
+   [64]={5},
+   [134]={6},
+},
+-- Table: {4}
+{
+   {7},
+},
+-- Table: {5}
+{
+   {8},
+},
+-- Table: {6}
+{
+   {9},
+},
+-- Table: {7}
+{
+   ["legato"]=false,
+   ["id"]=1,
+   ["x"]=2,
+   ["y"]=4,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=1,
+   ["event"]="es",
+},
+-- Table: {8}
+{
+   ["legato"]=false,
+   ["id"]=1,
+   ["x"]=3,
+   ["y"]=4,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=1,
+   ["event"]="es",
+},
+-- Table: {9}
+{
+   ["legato"]=false,
+   ["id"]=1,
+   ["x"]=4,
+   ["y"]=4,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=1,
+   ["event"]="es",
+},
+}

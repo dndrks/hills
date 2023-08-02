@@ -1,0 +1,40 @@
+return {
+-- Table: {1}
+{
+   ["start_point"]=1,
+   ["active"]=true,
+   ["runner"]=0,
+   ["lane"]={2},
+   ["current"]=1,
+   ["end_point"]=1,
+},
+-- Table: {2}
+{
+   {3},
+},
+-- Table: {3}
+{
+   {4},
+   {5},
+   {6},
+   {7},
+   ["snapshot_restore_mod_index"]=0,
+   ["beats"]=16,
+},
+-- Table: {4}
+{
+   ["target"]=0,
+},
+-- Table: {5}
+{
+   ["target"]=0,
+},
+-- Table: {6}
+{
+   ["target"]=0,
+},
+-- Table: {7}
+{
+   ["target"]=0,
+},
+}

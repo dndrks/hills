@@ -1,0 +1,775 @@
+return {
+-- Table: {1}
+{
+   ["play"]=0,
+   ["steps_with_mono_events"]={2},
+   ["rec"]=0,
+   ["name"]=2,
+   ["event"]={3},
+   ["loop"]=1,
+   ["clear_mono"]=0,
+   ["mono_event_idx"]=0,
+   ["overdub"]=0,
+   ["count"]=47,
+   ["step"]=0,
+   ["end_point"]=1344,
+},
+-- Table: {2}
+{
+},
+-- Table: {3}
+{
+   {4},
+   [641]={5},
+   [451]={6},
+   [1092]={7},
+   [5]={8},
+   [70]={9},
+   [267]={10},
+   [526]={11},
+   [465]={12},
+   [19]={13},
+   [84]={14},
+   [405]={15},
+   [281]={16},
+   [1116]={17},
+   [862]={18},
+   [479]={19},
+   [672]={20},
+   [418]={21},
+   [1236]={22},
+   [1259]={23},
+   [549]={24},
+   [294]={25},
+   [935]={26},
+   [253]={27},
+   [1276]={28},
+   [170]={29},
+   [43]={30},
+   [321]={31},
+   [212]={32},
+   [907]={33},
+   [793]={34},
+   [880]={35},
+   [497]={36},
+   [691]={37},
+   [1139]={38},
+   [180]={39},
+   [437]={40},
+   [1078]={41},
+   [806]={42},
+   [1208]={43},
+   [825]={44},
+   [742]={45},
+   [659]={46},
+   [764]={47},
+   [189]={48},
+   [958]={49},
+   [358]={50},
+},
+-- Table: {4}
+{
+   {51},
+},
+-- Table: {5}
+{
+   {52},
+},
+-- Table: {6}
+{
+   {53},
+},
+-- Table: {7}
+{
+   {54},
+},
+-- Table: {8}
+{
+   {55},
+},
+-- Table: {9}
+{
+   {56},
+},
+-- Table: {10}
+{
+   {57},
+},
+-- Table: {11}
+{
+   {58},
+},
+-- Table: {12}
+{
+   {59},
+},
+-- Table: {13}
+{
+   {60},
+},
+-- Table: {14}
+{
+   {61},
+},
+-- Table: {15}
+{
+   {62},
+},
+-- Table: {16}
+{
+   {63},
+},
+-- Table: {17}
+{
+   {64},
+},
+-- Table: {18}
+{
+   {65},
+},
+-- Table: {19}
+{
+   {66},
+},
+-- Table: {20}
+{
+   {67},
+},
+-- Table: {21}
+{
+   {68},
+},
+-- Table: {22}
+{
+   {69},
+},
+-- Table: {23}
+{
+   {70},
+},
+-- Table: {24}
+{
+   {71},
+},
+-- Table: {25}
+{
+   {72},
+},
+-- Table: {26}
+{
+   {73},
+},
+-- Table: {27}
+{
+   {74},
+},
+-- Table: {28}
+{
+   {75},
+},
+-- Table: {29}
+{
+   {76},
+},
+-- Table: {30}
+{
+   {77},
+},
+-- Table: {31}
+{
+   {78},
+},
+-- Table: {32}
+{
+   {79},
+},
+-- Table: {33}
+{
+   {80},
+},
+-- Table: {34}
+{
+   {81},
+},
+-- Table: {35}
+{
+   {82},
+},
+-- Table: {36}
+{
+   {83},
+},
+-- Table: {37}
+{
+   {84},
+},
+-- Table: {38}
+{
+   {85},
+},
+-- Table: {39}
+{
+   {86},
+},
+-- Table: {40}
+{
+   {87},
+},
+-- Table: {41}
+{
+   {88},
+},
+-- Table: {42}
+{
+   {89},
+},
+-- Table: {43}
+{
+   {90},
+},
+-- Table: {44}
+{
+   {91},
+},
+-- Table: {45}
+{
+   {92},
+},
+-- Table: {46}
+{
+   {93},
+},
+-- Table: {47}
+{
+   {94},
+},
+-- Table: {48}
+{
+   {95},
+},
+-- Table: {49}
+{
+   {96},
+},
+-- Table: {50}
+{
+   {97},
+},
+-- Table: {51}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=3,
+   ["y"]=5,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {52}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=4,
+   ["y"]=5,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {53}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=6,
+   ["y"]=3,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {54}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=4,
+   ["y"]=5,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {55}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=4,
+   ["y"]=6,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {56}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=2,
+   ["y"]=7,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {57}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=6,
+   ["y"]=4,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {58}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=6,
+   ["y"]=5,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {59}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=6,
+   ["y"]=4,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {60}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=2,
+   ["y"]=6,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {61}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=6,
+   ["y"]=6,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {62}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=6,
+   ["y"]=3,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {63}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=4,
+   ["y"]=4,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {64}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=2,
+   ["y"]=6,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {65}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=3,
+   ["y"]=5,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {66}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=6,
+   ["y"]=4,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {67}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=4,
+   ["y"]=4,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {68}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=6,
+   ["y"]=3,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {69}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=2,
+   ["y"]=6,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {70}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=3,
+   ["y"]=6,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {71}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=6,
+   ["y"]=5,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {72}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=6,
+   ["y"]=3,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {73}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=4,
+   ["y"]=4,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {74}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=3,
+   ["y"]=4,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {75}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=2,
+   ["y"]=5,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {76}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=3,
+   ["y"]=5,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {77}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=4,
+   ["y"]=7,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {78}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=3,
+   ["y"]=3,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {79}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=4,
+   ["y"]=5,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {80}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=3,
+   ["y"]=4,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {81}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=4,
+   ["y"]=5,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {82}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=3,
+   ["y"]=5,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {83}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=6,
+   ["y"]=4,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {84}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=6,
+   ["y"]=4,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {85}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=4,
+   ["y"]=6,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {86}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=4,
+   ["y"]=6,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {87}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=6,
+   ["y"]=3,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {88}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=3,
+   ["y"]=5,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {89}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=4,
+   ["y"]=5,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {90}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=2,
+   ["y"]=6,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {91}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=4,
+   ["y"]=5,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {92}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=4,
+   ["y"]=5,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {93}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=6,
+   ["y"]=5,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {94}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=3,
+   ["y"]=4,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {95}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=6,
+   ["y"]=5,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {96}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=3,
+   ["y"]=4,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+-- Table: {97}
+{
+   ["legato"]=false,
+   ["id"]=2,
+   ["x"]=5,
+   ["y"]=3,
+   ["octave"]=0,
+   ["hill_j"]=1,
+   ["hill_i"]=2,
+   ["event"]="es",
+},
+}

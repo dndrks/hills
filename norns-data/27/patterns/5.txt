@@ -1,0 +1,23 @@
+return {
+-- Table: {1}
+{
+   ["steps_with_mono_events"]={2},
+   ["step"]=0,
+   ["name"]=5,
+   ["clear_mono"]=0,
+   ["end_point"]=0,
+   ["loop"]=1,
+   ["play"]=0,
+   ["rec"]=0,
+   ["count"]=0,
+   ["event"]={3},
+   ["overdub"]=0,
+   ["mono_event_idx"]=0,
+},
+-- Table: {2}
+{
+},
+-- Table: {3}
+{
+},
+}
