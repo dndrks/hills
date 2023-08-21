@@ -1,5 +1,4 @@
 local grid_lib = {}
-local grid = util.file_exists(_path.code.."midigrid") and include "midigrid/lib/midigrid" or grid
 
 g = grid.connect()
 
@@ -303,6 +302,9 @@ function grid_lib.init()
           end
         end
       else
+        if frames == nil then
+          frames = 0
+        end
         if frames > 94 then
           g:all(0)
           for i = 1,4 do
@@ -716,7 +718,10 @@ function g.key(x,y,z)
               end
             else
               if which_type.saver_clock ~= nil then
+                -- WEIRD, the saver_clock gets assigned the same number...
+                -- or more weird, that hills[1].snapshot.fnl gets assigned to it as well.
                 clock.cancel(which_type.saver_clock)
+                which_type.saver_clock = nil
               end
             end
             if z == 1 and tab.count(_snap[y]) > 0 then

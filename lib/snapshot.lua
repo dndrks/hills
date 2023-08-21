@@ -74,7 +74,7 @@ function snapshot.seed_restore_state_to_all(voice,coll,_p)
 end
 
 function snapshot.unpack(voice, coll)
-  print('snapshot unpack', voice,coll)
+  -- print('snapshot unpack', voice,coll)
   if type(voice) == "number" and voice <= 10 then
     
     if hills[voice].snapshot.partial_restore then
@@ -220,7 +220,7 @@ end
 
 
 function snapshot.route_funnel(voice,coll,mod_idx)
-  print('route funnel', voice, coll)
+  -- print('route funnel', voice, coll)
   local focus;
   if type(voice) == 'number' and voice <= 10 then
     focus = hills[voice].snapshot
@@ -292,7 +292,6 @@ function snapshot.route_funnel(voice,coll,mod_idx)
             end
           end
         end
-
         screen_dirty = true
         grid_dirty = true
         if focus.current_value ~= nil and util.round(focus.current_value,0.001) == 1 then

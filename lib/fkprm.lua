@@ -53,7 +53,8 @@ local function build_page()
   local i = params.lookup['kildare_1_group']
   repeat
     if params:visible(i)
-    and (i < ignore_range[1] or i > ignore_range[2]) then
+    -- and (i < ignore_range[1] or i > ignore_range[2])
+    then
       page[#page+1] = i
     end
     if params:t(i) == params.tGROUP then
@@ -339,11 +340,11 @@ m.redraw = function()
   local trig_type = track[m.voice_focus][m.hill_focus][m.page_focus].trigs[m.step_focus] and '' or ' (parameter lock)'
   local n = m.voice_focus..' / hill: '..m.hill_focus..trig_type
   screen.level(4)
-  screen.move(0,10)
+  _screenMove(0,10)
   screen.text(n)
   n = "STEP "..m.step_focus.." PARAMS"
   if m.group then n = n .. " / " .. m.groupname end
-  screen.move(0,20)
+  _screenMove(0,20)
   screen.text(n)
   for i=3,6 do
     if (i > 2 - m.pos) and (i < #page - m.pos + 3) then
@@ -365,13 +366,13 @@ m.redraw = function()
       local p = page[i+m.pos-2]
       local t = params:t(p)
       if t == params.tSEPARATOR then
-        screen.move(0,10*i+2.5)
+        _screenMove(0,10*i+2.5)
         screen.line_rel(127,0)
         screen.stroke()
-        screen.move(63,10*i)
+        _screenMove(63,10*i)
         screen.text_center(params:get_name(p))
       elseif t == params.tGROUP then
-        screen.move(0,10*i)
+        _screenMove(0,10*i)
         screen.text(params:get_name(p) .. " >")
       else
         if check_subtables(p) then
@@ -380,9 +381,9 @@ m.redraw = function()
           screen.stroke()
           screen.level(0)
         end
-        screen.move(2,10*i)
+        _screenMove(2,10*i)
         screen.text(params:get_name(p))
-        screen.move(125,10*i)
+        _screenMove(125,10*i)
         if check_subtables(p) then
           screen.text_right(m:string(p))
         else
@@ -393,29 +394,29 @@ m.redraw = function()
   end
   if key1_hold and params:lookup_param(page[m.pos+1]).t == 3 then
     draw_small_popup()
-    screen.move(4,52)
+    _screenMove(4,52)
     screen.level(15)
     screen.font_size(15)
     screen.text('K3')
     screen.font_size(8)
 
-    screen.move(28,45)
+    _screenMove(28,45)
     screen.level(m.alt_menu_focus == 1 and 15 or (m.alt_menu_focus == 4 and 15 or 4))
     screen.text('RESET')
-    screen.move(56,45)
+    _screenMove(56,45)
     screen.level(m.alt_menu_focus == 2 and 15 or (m.alt_menu_focus == 5 and 15 or 4))
     screen.text('FORCE')
-    screen.move(84,45)
+    _screenMove(84,45)
     screen.level(m.alt_menu_focus == 3 and 15 or (m.alt_menu_focus == 6 and 15 or 4))
     screen.text('RND@'..m.random_window..'%')
 
-    screen.move(32,53)
+    _screenMove(32,53)
     screen.level(m.alt_menu_focus == 4 and 15 or 1)
     screen.text('ALL')
-    screen.move(60,53)
+    _screenMove(60,53)
     screen.level(m.alt_menu_focus == 5 and 15 or 1)
     screen.text('ALL')
-    screen.move(94,53)
+    _screenMove(94,53)
     screen.level(m.alt_menu_focus == 6 and 15 or 1)
     screen.text('ALL')
   end

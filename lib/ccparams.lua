@@ -56,7 +56,8 @@ local function build_page()
   local i = params.lookup['kildare_1_group']
   repeat
     if params:visible(i)
-    and (i < ignore_range[1] or i > ignore_range[2]) then
+    -- and (i < ignore_range[1] or i > ignore_range[2])
+    then
       page[#page+1] = i
     end
     if params:t(i) == params.tGROUP then
@@ -300,14 +301,14 @@ m.redraw = function()
   screen.font_size(8)
   local n = m.groupname
   screen.level(4)
-  screen.move(0,10)
+  _screenMove(0,10)
   screen.text(n)
   local appended = ''
   if params:get(m.voice_focus..'_poly_voice_count') > 1 then
     appended = ' | ('..kildare.pad_focus[m.voice_focus]..')'
   end
   n = 'PAD: '..m.pad_focus..appended
-  screen.move(128,10)
+  _screenMove(128,10)
   screen.text_right(n)
   for i=2,6 do
     if (i > 2 - m.pos) and (i < #page - m.pos + 3) then
@@ -328,13 +329,13 @@ m.redraw = function()
       local p = page[i+m.pos-2]
       local t = params:t(p)
       if t == params.tSEPARATOR then
-        screen.move(0,10*i+2.5)
+        _screenMove(0,10*i+2.5)
         screen.line_rel(127,0)
         screen.stroke()
-        screen.move(63,10*i)
+        _screenMove(63,10*i)
         screen.text_center(params:get_name(p))
       elseif t == params.tGROUP then
-        screen.move(0,10*i)
+        _screenMove(0,10*i)
         screen.text(params:get_name(p) .. " >")
       else
         if check_subtables(p) then
@@ -343,9 +344,9 @@ m.redraw = function()
           screen.stroke()
           screen.level(0)
         end
-        screen.move(2,10*i)
+        _screenMove(2,10*i)
         screen.text(params:get_name(p))
-        screen.move(125,10*i)
+        _screenMove(125,10*i)
         if check_subtables(p) then
           screen.text_right(m:string(p))
         else
@@ -356,13 +357,13 @@ m.redraw = function()
   end
   if key1_hold then
     draw_popup("///_")
-    screen.move(70,23)
+    _screenMove(70,23)
     screen.level(m.alt_menu_focus == 1 and 15 or 4)
     screen.text('VOICE: '..m.voice_focus)
-    screen.move(70,33)
+    _screenMove(70,33)
     screen.level(m.alt_menu_focus == 2 and 15 or 4)
     screen.text('HILL: '..m.hill_focus)
-    screen.move(70,43)
+    _screenMove(70,43)
     screen.level(m.alt_menu_focus == 3 and 15 or 4)
     screen.text('STEP: '..m.step_focus)
   end

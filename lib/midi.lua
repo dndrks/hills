@@ -2,8 +2,8 @@ local _midi = {}
 
 function _midi.populate_midi_devices()
   local connected_midi_devices = {}
-  for i = 1,#midi.vports do
-    table.insert(connected_midi_devices,midi.vports[i].name)
+  for i = 1,#midi.vinports do
+    table.insert(connected_midi_devices,midi.vinports[i].name)
   end
   return connected_midi_devices
 end

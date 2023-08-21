@@ -60,6 +60,7 @@ function screen_actions.draw()
   screen.aa(1)
   screen.font_size(10)
   -- local hill_names = {"A","B","C","D","E","F","G","H"}
+  screen.color(192,util.linlin(1,7,108,255,ui.hill_focus),128,255)
   screen.text(hill_names[ui.hill_focus])
   screen.fill()
   screen.aa(0)
@@ -69,30 +70,50 @@ function screen_actions.draw()
       local seg = h[focus]
       local peak_pitch = util.clamp(seg.note_num.max,1,#h.note_ocean)
       screen.level(1)
-      screen.rect(40,15,80,40)
+      -- backdrop //
+      screen.move(40,15)
+      screen.color(92, 71, 47,120)
+      screen.rect_fill(80,40)
+      -- //
       screen.fill()
       local s_c = ui.screen_controls[hf][focus]
       local iter_index = seg.index-1 ~= 0 and seg.index-1 or hills[hf][focus].high_bound.note
       for i = hills[hf][focus].low_bound.note,hills[hf][focus].high_bound.note do
         local horizontal = util.linlin(hills[hf][focus].note_timestamp[hills[hf][focus].low_bound.note], hills[hf][focus].note_timestamp[hills[hf][focus].high_bound.note],40,120,hills[hf][focus].note_timestamp[i])
         local vertical = util.linlin(hills[hf].note_ocean[1],hills[hf].note_ocean[peak_pitch],55,15,hills[hf].note_ocean[hills[hf][focus].note_num.pool[i]])
+        local screen_level;
         if ui.control_set == "edit" and (ui.menu_focus == 1 or ui.menu_focus == 3 or ui.menu_focus == 5) then
           if ui.menu_focus == 1 then
-            screen.level(s_c["hills"]["focus"] == i and 15 or (iter_index == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0)))
+            screen_level = s_c["hills"]["focus"] == i and 15 or (iter_index == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0))
           elseif ui.menu_focus == 3 then
-            screen.level(s_c["notes"]["focus"] == i and 15 or (iter_index == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0)))
+            screen_level = s_c["notes"]["focus"] == i and 15 or (iter_index == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0))
           elseif ui.menu_focus == 5 then
-            screen.level(s_c["samples"]["focus"] == i and 15 or (iter_index == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0)))
+            screen_level = s_c["samples"]["focus"] == i and 15 or (iter_index == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0))
           end
         else
           -- print(seg.index, iter_index)
-          screen.level(iter_index == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0))
+          screen_level = iter_index == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0)
         end
         if hills[hf][focus].note_timedelta[i] > hills[hf][focus].duration/#hills[hf][focus].note_num.pool then
+          if screen_level == 10 then
+            screen.color(156, 196, 193)
+          else
+            screen.color(196, 156, 159)
+          end
           screen.circle(horizontal+util.round_up(hills[hf][focus].note_timedelta[i]*2),vertical,util.round_up(hills[hf][focus].note_timedelta[i]*2))
         elseif hills[hf][focus].note_timedelta[i] < (hills[hf][focus].duration/#hills[hf][focus].note_num.pool)/2 then
+          if screen_level == 10 then
+            screen.color(156, 196, 193)
+          else
+            screen.color(206, 166, 112)
+          end
           screen.pixel(horizontal,vertical)
         else
+          if screen_level == 10 then
+            screen.color(156, 196, 193)
+          else
+            screen.color(64, 108, 184)
+          end
           screen.rect(horizontal,vertical,util.round_up(hills[hf][focus].note_timedelta[i]*2),8)
         end
         screen.stroke()

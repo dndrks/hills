@@ -4,8 +4,8 @@ local frm = require 'formatters'
 local vports = {}
 
 local function refresh_params_vports()
-  for i = 1,#midi.vports do
-    vports[i] = midi.vports[i].name ~= "none" and (tostring(i)..": "..util.trim_string_to_width(midi.vports[i].name,90)) or tostring(i)..": [device]"
+  for i = 1,#midi.voutports do
+    vports[i] = midi.voutports[i].name ~= "none" and (tostring(i)..": "..util.trim_string_to_width(midi.voutports[i].name,90)) or tostring(i)..": [device]"
   end
 end
 
@@ -21,7 +21,7 @@ end
 local function populate_midi_devices()
   local connected_midi_devices = {}
   for i = 1,16 do
-    table.insert(connected_midi_devices,midi.vports[i].name)
+    table.insert(connected_midi_devices,midi.voutports[i].name)
   end
   return connected_midi_devices
 end
@@ -565,7 +565,7 @@ function parameters.init()
     )
   end
 
-  params:add_group('snapshot_crossfade_settings', 'snapshot crossfaders', (4*number_of_hills) + (14*number_of_hills))
+  params:add_group('snapshot_crossfade_settings', 'snapshot crossfaders', (4*number_of_hills) + (12*number_of_hills))
 
   local function spec_format(param, value, units)
     return value.." "..(units or param.controlspec.units or "")
@@ -622,8 +622,8 @@ function parameters.init()
     params[state](params, "lfo_baseline_"..i)
     params[state](params, "lfo_offset_"..i)
     params[state](params, "lfo_depth_"..i)
-    params:hide("lfo_scaled_"..i)
-    params:hide("lfo_raw_"..i)
+    -- params:hide("lfo_scaled_"..i)
+    -- params:hide("lfo_raw_"..i)
     params[state](params, "lfo_mode_"..i)
     if state == "show" then
       if params:get("lfo_mode_"..i) == 1 then
@@ -686,8 +686,8 @@ function parameters.init()
     params:set_action("lfo_snapshot_"..i,function(x)
       if x == 1 then
         lfo_params_visibility("hide", 'snapshot_'..i)
-        params:set("lfo_scaled_snapshot_"..i,"")
-        params:set("lfo_raw_snapshot_"..i,"")
+        -- params:set("lfo_scaled_snapshot_"..i,"")
+        -- params:set("lfo_raw_snapshot_"..i,"")
         snapshot_lfos[i]:stop()
       elseif x == 2 then
         lfo_params_visibility("show", 'snapshot_'..i)

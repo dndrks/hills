@@ -15,6 +15,50 @@
 -- osc_echo = "169.254.111.133"
 osc_echo = "192.168.2.1"
 
+engine = include 'lib/engine'
+
+if norns == nil then
+  -- screen.width = 128
+  -- screen.height = 64
+  clock.get_beat_sec = clock.get_sec_per_beat
+  _menu = paramsMenu
+  screen.level = function(level)
+    local target_color = util.linlin(0,15,0,255,level)
+    return screen.color(target_color,target_color,target_color,255)
+  end
+  screen.update = screen.refresh
+  _screenMove = function(x,y)
+    return screen.move(util.linlin(0,128,0,256,x),util.linlin(0,64,0,128,y))
+  end
+  screen.move = function(x,y)
+    _seamstress.screen_move(x+5, y)
+  end
+  screen.pixel = function(x,y)
+    _seamstress.screen_pixel(x+5, y)
+  end
+  screen.font_size = function() end
+  screen.aa = function() end
+  screen.fill = function() end
+  screen.stroke = function() end
+  util.round_up = function(number, quant)
+    if quant == 0 then
+      return number
+    else
+      return math.ceil(number/(quant or 1)) * (quant or 1)
+    end
+  end
+  screen.rect = function(x,y,w,h)
+    screen.move(x,y)
+    screen.rect_fill(w,h)
+  end
+
+  screen.circle = function(x,y,r)
+    screen.move(x,y)
+    _seamstress.screen_circle(r)
+  end
+  
+end
+
 function full_PSET_swap()
   clock.run(
     function()
@@ -36,11 +80,6 @@ function full_PSET_swap()
       end
     end
   )
-end
-
-if tonumber(norns.version.update) < 220802 then
-  norns.script.clear()
-  norns.script.load('code/hills/lib/fail_state.lua')
 end
 
 kildare = include('kildare/lib/kildare')
@@ -140,29 +179,6 @@ function externalIterator(noteNum)
 end
 
 osc.event=function(path,args,from)
-  -- if string.sub(path,1,1)=="/" then
-  --   path=string.sub(path,2)
-  -- end
-  -- print('osc path: '..path)
-  -- if osc_fun[path] ~= 'progressbar' or 'aubiodone' then
-  --   osc_fun[path](args)
-  -- end
-  -- params:delta(path, args[1])
-  -- print(args[1])
-  -- local d = args[1] == 1 and 1 or -1
-
-
-  -- if path == '/Velocity1' and args[1] > 0 then
-  --   make_sound = true
-  -- end
-  -- if path == '/Note1' and make_sound then
-  --   print(args[1])
-  --   externalIterator(args[1])
-  --   make_sound = false
-  -- end
-
-  
-  -- params:delta(path, args[1])
 end
 
 _sequins = require 'sequins'
@@ -219,25 +235,19 @@ function grid.add(dev)
   grid_dirty = true
 end
 
-for i = 1,3 do
-  norns.enc.sens(i,2)
-end
-
 function midi_to_hz(note)
   return (440 / 32) * (2 ^ ((note - 9) / 12))
 end
 
 local pre_note = {}
-midi_device = {}
+incoming_midi_device = {}
+outgoing_midi_device = {}
 
 local util_round = util.round
 local lin_lin = util.linlin
 
 function init()
   print('starting: '..util.time())
-  for i = 1,6 do
-    softcut.enable(i,0)
-  end
   kildare.init(number_of_hills, true)
   _ca.init() -- initialize clips
   _snapshots.init()
@@ -282,9 +292,10 @@ function init()
 
   hills = {}
 
-  for i = 1,#midi.vports do -- query all ports
-    midi_device[i] = midi.connect(i) -- connect each device
-    midi_device[i].event = function(data)
+  for i = 1,#midi.vinports do -- query all ports
+    incoming_midi_device[i] = midi.connect_input(i) -- connect each device
+    incoming_midi_device[i].event = function(data)
+      print('incoming midi')
       local d = midi.to_msg(data)
       if d.type == 'note_on' then
         for j = 1,number_of_hills do
@@ -323,6 +334,10 @@ function init()
         end
       end
     end
+  end
+
+  for i = 1,#midi.voutports do
+    outgoing_midi_device[i] = midi.connect_output(i)
   end
 
   scale_names = {}
@@ -455,9 +470,10 @@ function init()
 
     menu_rebuild_clock = clock.run(function()
       while true do
-        clock.sleep(1/15)
+        clock.sleep(1/60)
         if screen_dirty then
           redraw()
+          paramsMenu.redraw()
         end
         if menu_rebuild_queued then
           _menu.rebuild_params()
@@ -768,13 +784,12 @@ hodgepodge = function(i,j)
   local h = hills[i]
   local seg = h[j]
   local populous = params:get("hill ["..i.."]["..j.."] population")/100
-  local total_notes = util.clamp(util_round(48*populous),10,inf)
+  local total_notes = util.clamp(util_round(48*populous),10,math.huge)
   -- print(i,j,params:get("hill ["..i.."]["..j.."] population")/100)
   local index = 0
   local reasonable_max = seg.note_num.min ~= seg.note_num.max and seg.note_num.max or seg.note_num.min+1
 
   -- just generate times
-
   local splitter = {}
   local splits = 5
   local tests = {}
@@ -929,7 +944,7 @@ end
 calculate_timedeltas = function(i,j)
   for k = 1,#hills[i][j].note_timestamp do
     if k < #hills[i][j].note_timestamp then
-      hills[i][j].note_timedelta[k] = util.clamp(hills[i][j].note_timestamp[k+1] - hills[i][j].note_timestamp[k], 0.1, inf)
+      hills[i][j].note_timedelta[k] = util.clamp(hills[i][j].note_timestamp[k+1] - hills[i][j].note_timestamp[k], 0.1, math.huge)
     else
       hills[i][j].note_timedelta[k] = 0.06
     end
@@ -1017,7 +1032,7 @@ stop = function(i,clock_synced_loop)
         seg.perf_led = false
         grid_dirty = true
         if params:string("hill "..i.." MIDI output") == "yes" then
-          midi_device[dev]:note_off(pre_note[i],0,ch)
+          outgoing_midi_device[dev]:note_off(pre_note[i],0,ch)
         end
         if params:string("hill "..i.." JF output") == "yes" then
           local ch = params:get("hill "..i.." JF output id")
@@ -1270,9 +1285,9 @@ force_note = function(i,j,played_note)
     local ch = params:get("hill "..i.." MIDI note channel")
     local dev = params:get("hill "..i.." MIDI device")
     if pre_note[i] ~= nil and params:get('hill_'..i..'_legato') ~= 1 then
-      midi_device[dev]:note_off(pre_note[i],0,ch)
+      outgoing_midi_device[dev]:note_off(pre_note[i],0,ch)
     end
-    midi_device[dev]:note_on(played_note,127,ch)
+    outgoing_midi_device[dev]:note_on(played_note,127,ch)
   end
 
   pre_note[i] = played_note
@@ -1473,9 +1488,9 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
       local ch = params:get("hill "..i.." MIDI note channel")
       local dev = params:get("hill "..i.." MIDI device")
       if pre_note[i] ~= nil and params:get('hill_'..i..'_legato') ~= 1 then
-        midi_device[dev]:note_off(pre_note[i],0,ch)
+        outgoing_midi_device[dev]:note_off(pre_note[i],0,ch)
       end
-      midi_device[dev]:note_on(played_note,seg.note_velocity[index],ch)
+      outgoing_midi_device[dev]:note_on(played_note,seg.note_velocity[index],ch)
     end
     if params:string("hill "..i.." crow output") == "yes" then
       if params:string("hill "..i.." crow output style") == "osc" then
@@ -1571,8 +1586,24 @@ function enc(n,d)
   end
 end
 
-function key(n,z)
+-- function key(n,z)
+--   if loading_done then
+--     if key2_hold and (ui.control_set == 'play' or ui.control_set == 'song') then
+--       _flow.process_key(n,z)
+--     else
+--       if ui.control_set ~= "song" then
+--         _k.parse(n,z)
+--       else
+--         _flow.process_key(n,z)
+--       end
+--     end
+--     screen_dirty = true
+--   end
+-- end
+
+function key(char, modifiers, is_repeat, state)
   if loading_done then
+    -- if #modifiers == 1 and modifiers[1] == "shift" and char == "m" and state == 1 then
     if key2_hold and (ui.control_set == 'play' or ui.control_set == 'song') then
       _flow.process_key(n,z)
     else
@@ -1617,53 +1648,50 @@ redraw = function()
       frames = frames + 1
     end
     -- if frames <= 10 then
-    --   screen.move(64,32)
+    --   _screenMove(64,32)
     --   screen.font_size(8)
     --   screen.level(15)
     --   screen.text_center('hills')
     --   screen.level(math.random(3,15))
-    --   screen.move(math.random(0,128),math.random(0,64))
+    --   _screenMove(math.random(0,128),math.random(0,64))
     --   screen.font_size(math.random(8,30))
     --   screen.text_center('/')
     --   screen.level(math.random(3,15))
-    --   screen.move(math.random(0,128),math.random(0,64))
+    --   _screenMove(math.random(0,128),math.random(0,64))
     --   screen.font_size(math.random(8,30))
     --   screen.text_center('_ _ _')
     --   screen.level(math.random(3,15))
-    --   screen.move(math.random(0,128),math.random(0,64))
+    --   _screenMove(math.random(0,128),math.random(0,64))
     --   screen.font_size(math.random(8,30))
     --   screen.text_center('\\ \\ \\')
     --   screen.level(math.random(3,15))
-    --   screen.move(math.random(0,128),math.random(0,64))
+    --   _screenMove(math.random(0,128),math.random(0,64))
     --   screen.font_size(math.random(8,30))
     --   screen.text_center('/ /  \\ / \\/ / /')
     -- else
-    --   screen.move(54,32)
+    --   _screenMove(54,32)
     --   screen.font_size(8)
     --   -- screen.text_center('hills')
     --   screen.level(math.random(3,15))
     --   screen.text_center('__/\\______/\\\\___')
-    --   screen.move(64,32)
+    --   _screenMove(64,32)
     --   screen.level(math.random(3,15))
     --   screen.text_center('____/\\\\\\\\\\___/\\_')
-    --   screen.move(74,32)
+    --   _screenMove(74,32)
     --   screen.level(math.random(3,15))
     --   screen.text_center('/\\///_____/\\\\\\__')
     -- end
     if frames > 94 then
-      screen.move(64,22)
+      _screenMove(64,22)
       screen.level(15)
-      -- screen.text_center('hills')
-      screen.move(54,32)
-      screen.font_size(8)
-      -- screen.text_center('hills')
-      screen.level(math.random(3,15))
+      _screenMove(54,32)
+      screen.color(math.random(64), 108, 184, math.random(255))
       screen.text_center('__/\\______/\\\\___')
-      screen.move(64,32)
-      screen.level(math.random(3,15))
+      _screenMove(64,32)
+      screen.color(196, math.random(156), 159, math.random(255))
       screen.text_center('____/\\\\\\\\\\___/\\_')
-      screen.move(74,32)
-      screen.level(math.random(3,15))
+      _screenMove(74,32)
+      screen.color(92, math.random(71), 47,math.random(255))
       screen.text_center('/\\///_____/\\\\\\__')
       screen.update()
       screen_dirty = true
@@ -1677,10 +1705,12 @@ function index_to_grid_pos(val,columns)
   return {x,y}
 end
 
-function cleanup ()
-  print("cleanup")
+function cleanup()
+  print("quitting hills")
+  clock.cancel(menu_rebuild_clock)
+  g:all(0)
+  g:refresh()
   -- if osc_echo ~= nil then
   --   osc.send({osc_echo,57120},"/cleanup",{})
   -- end
-  metro.free_all()
 end
