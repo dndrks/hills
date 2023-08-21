@@ -183,7 +183,7 @@ end
 
 _sequins = require 'sequins'
 mu = require 'musicutil'
-euclid = require 'er'
+euclid = include 'lib/er'
 pt = include 'lib/hills_new_pt'
 curves = include 'lib/easing'
 _midi = include 'lib/midi'
@@ -967,8 +967,12 @@ iterate = function(i)
             end
             seg.step = util_round(seg.step + 0.01,0.01)
             -- local reasonable_max = seg.note_timestamp[seg.high_bound.note+1] ~= nil and seg.note_timestamp[seg.high_bound.note+1] or seg.note_timestamp[seg.high_bound.note] + seg.note_timedelta[seg.high_bound.note]
-            local reasonable_max = seg.note_timestamp[seg.high_bound.note]
-            if util_round(seg.step,0.01) >= util_round(reasonable_max,0.01) then
+            
+            -- 230821 //
+            -- local reasonable_max = seg.note_timestamp[seg.high_bound.note]
+            local reasonable_max = seg.note_timestamp[util.clamp(seg.high_bound.note+1,1,#seg.note_num.pool)]
+            if util_round(seg.step,0.01) > util_round(reasonable_max,0.01) then
+            --//
               if seg.looper.mode == "phase" then
                 _a.start(i,h.segment)
               else
@@ -1020,6 +1024,7 @@ stop = function(i,clock_synced_loop)
   seg.iterated = true
   if params:string('hill '..i..' reset at stop') == 'yes' then
     seg.step = seg.note_timestamp[seg.low_bound.note] -- reset
+    seg.index = 1
   end
   screen_dirty = true
   local ch = params:get("hill "..i.." MIDI note channel")
@@ -1601,14 +1606,14 @@ end
 --   end
 -- end
 
-function key(char, modifiers, is_repeat, state)
+function screen.key(char, modifiers, is_repeat, state)
   if loading_done then
     -- if #modifiers == 1 and modifiers[1] == "shift" and char == "m" and state == 1 then
     if key2_hold and (ui.control_set == 'play' or ui.control_set == 'song') then
       _flow.process_key(n,z)
     else
       if ui.control_set ~= "song" then
-        _k.parse(n,z)
+        _k.parse(char, modifiers, is_repeat, state)
       else
         _flow.process_key(n,z)
       end
@@ -1682,15 +1687,13 @@ redraw = function()
     --   screen.text_center('/\\///_____/\\\\\\__')
     -- end
     if frames > 94 then
-      _screenMove(64,22)
-      screen.level(15)
-      _screenMove(54,32)
+      screen.move(108,64)
       screen.color(math.random(64), 108, 184, math.random(255))
       screen.text_center('__/\\______/\\\\___')
-      _screenMove(64,32)
+      screen.move(128,64)
       screen.color(196, math.random(156), 159, math.random(255))
       screen.text_center('____/\\\\\\\\\\___/\\_')
-      _screenMove(74,32)
+      screen.move(148,64)
       screen.color(92, math.random(71), 47,math.random(255))
       screen.text_center('/\\///_____/\\\\\\__')
       screen.update()

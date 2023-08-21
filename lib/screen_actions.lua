@@ -77,7 +77,7 @@ function screen_actions.draw()
       -- //
       screen.fill()
       local s_c = ui.screen_controls[hf][focus]
-      local iter_index = seg.index-1 ~= 0 and seg.index-1 or hills[hf][focus].high_bound.note
+      local iter_index = seg.index-1 ~= 0 and seg.index-1 or nil
       for i = hills[hf][focus].low_bound.note,hills[hf][focus].high_bound.note do
         local horizontal = util.linlin(hills[hf][focus].note_timestamp[hills[hf][focus].low_bound.note], hills[hf][focus].note_timestamp[hills[hf][focus].high_bound.note],40,120,hills[hf][focus].note_timestamp[i])
         local vertical = util.linlin(hills[hf].note_ocean[1],hills[hf].note_ocean[peak_pitch],55,15,hills[hf].note_ocean[hills[hf][focus].note_num.pool[i]])

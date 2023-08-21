@@ -1417,7 +1417,6 @@ function Kildare.init(track_count, poly)
                 local ch = params:get(i.."_"..v..'_midiCC_ch_'..which_def)
                 local dev = params:get("hill "..i.." MIDI device")
                 outgoing_midi_device[dev]:cc(ccNum,x,ch)
-                print(ccNum,x,ch)
                 -- send to midi devices
                 Kildare.last_adjusted_param = {i, v, d.id}
               end
