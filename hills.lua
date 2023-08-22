@@ -247,6 +247,7 @@ local util_round = util.round
 local lin_lin = util.linlin
 
 function init()
+  paramsMenu.loadMessage = "loading hills params..."
   print('starting: '..util.time())
   kildare.init(number_of_hills, true)
   _ca.init() -- initialize clips
@@ -294,9 +295,8 @@ function init()
 
   for i = 1,#midi.vinports do -- query all ports
     incoming_midi_device[i] = midi.connect_input(i) -- connect each device
-    incoming_midi_device[i].event = function(data)
-      print('incoming midi')
-      local d = midi.to_msg(data)
+    incoming_midi_device[i].event = function(timestamp, bytes)
+      local d = midi.to_msg(bytes)
       if d.type == 'note_on' then
         for j = 1,number_of_hills do
           -- if d.note == params:get('hill_'..j..'_iterator_midi_note')
@@ -722,7 +722,15 @@ function init()
       end
       -- print('dev state: '..util.time())
       -- print('starting from toggle')
-      clock.run(function() clock.sleep(1) loading_done = true clock.cancel(startup_animation) end)
+      clock.run(
+        function()
+          clock.sleep(1)
+          loading_done = true
+          paramsMenu.loadMessage = nil
+          paramsMenu.redraw()
+          clock.cancel(startup_animation)
+        end
+      )
     end
   )
 
@@ -1652,40 +1660,6 @@ redraw = function()
     else
       frames = frames + 1
     end
-    -- if frames <= 10 then
-    --   _screenMove(64,32)
-    --   screen.font_size(8)
-    --   screen.level(15)
-    --   screen.text_center('hills')
-    --   screen.level(math.random(3,15))
-    --   _screenMove(math.random(0,128),math.random(0,64))
-    --   screen.font_size(math.random(8,30))
-    --   screen.text_center('/')
-    --   screen.level(math.random(3,15))
-    --   _screenMove(math.random(0,128),math.random(0,64))
-    --   screen.font_size(math.random(8,30))
-    --   screen.text_center('_ _ _')
-    --   screen.level(math.random(3,15))
-    --   _screenMove(math.random(0,128),math.random(0,64))
-    --   screen.font_size(math.random(8,30))
-    --   screen.text_center('\\ \\ \\')
-    --   screen.level(math.random(3,15))
-    --   _screenMove(math.random(0,128),math.random(0,64))
-    --   screen.font_size(math.random(8,30))
-    --   screen.text_center('/ /  \\ / \\/ / /')
-    -- else
-    --   _screenMove(54,32)
-    --   screen.font_size(8)
-    --   -- screen.text_center('hills')
-    --   screen.level(math.random(3,15))
-    --   screen.text_center('__/\\______/\\\\___')
-    --   _screenMove(64,32)
-    --   screen.level(math.random(3,15))
-    --   screen.text_center('____/\\\\\\\\\\___/\\_')
-    --   _screenMove(74,32)
-    --   screen.level(math.random(3,15))
-    --   screen.text_center('/\\///_____/\\\\\\__')
-    -- end
     if frames > 94 then
       screen.move(108,64)
       screen.color(math.random(64), 108, 184, math.random(255))

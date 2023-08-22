@@ -56,7 +56,7 @@ function parameters.init()
     params:set_action('hill_'..i..'_iterator', function(x)
       if x == 1 then
         if hills[i].highway then
-          if not clock.threads[track_clock[i]] then
+          if not _seamstress.clock.threads[track_clock[i]] then
             local _page = track[i][track[i].active_hill].page
             track[i][track[i].active_hill][_page].micro[0] = track[i][track[i].active_hill][_page].micro[1]
             _htracks.start_playback(i,track[i].active_hill)
@@ -76,7 +76,7 @@ function parameters.init()
         end
         menu_rebuild_queued = true
       elseif x == 2 then
-        if clock.threads[track_clock[i]] then
+        if _seamstress.clock.threads[track_clock[i]] then
           clock.cancel(track_clock[i])
           _htracks.stop_playback(i)
         end
@@ -93,7 +93,7 @@ function parameters.init()
         end
         menu_rebuild_queued = true
       elseif x == 3 then
-        if clock.threads[track_clock[i]] then
+        if _seamstress.clock.threads[track_clock[i]] then
           clock.cancel(track_clock[i])
           _htracks.stop_playback(i)
         end
@@ -565,7 +565,7 @@ function parameters.init()
     )
   end
 
-  params:add_group('snapshot_crossfade_settings', 'snapshot crossfaders', (4*number_of_hills) + (12*number_of_hills))
+  params:add_group('snapshot_crossfade_settings', 'snapshot crossfaders', (4*number_of_hills) + (14*number_of_hills))
 
   local function spec_format(param, value, units)
     return value.." "..(units or param.controlspec.units or "")

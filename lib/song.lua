@@ -170,7 +170,7 @@ function song.toggle_transport()
     end
     clock.transport.start()
     for i = 1,number_of_hills do
-      if clock.threads[track_clock[i]] then
+      if _seamstress.clock.threads[track_clock[i]] then
         clock.cancel(track_clock[i])
       end
       if params:string('hill_'..i..'_iterator') == 'norns' then

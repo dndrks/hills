@@ -374,7 +374,7 @@ end
 function track_actions.stop_playback(i)
   local j = track[i].active_hill
   local _page = track[i][j].page
-  if clock.threads[track_clock[i]] then
+  if _seamstress.clock.threads[track_clock[i]] then
     clock.cancel(track_clock[i])
   end
   track[i][j].playing = false

@@ -71,7 +71,7 @@ function ca.init()
     sample_info[voice].sample_frames = {}
     sample_info[voice].sample_count = 0
     for i = 1,sample_loop_info[voice].count do
-      if clock.threads[sample_loop_info[voice].clocks[i]] then
+      if _seamstress.clock.threads[sample_loop_info[voice].clocks[i]] then
         clock.cancel(sample_loop_info[voice].clocks[i])
       end
     end
@@ -183,7 +183,7 @@ function ca.play_slice(target,slice,velocity,i,j, played_note, retrig_index)
   if params:get(target..'_sample_sampleFile') ~= _path.audio then
     kildare.allocVoice[i] = util.wrap(kildare.allocVoice[i]+1, 1, params:get(i..'_poly_voice_count'))
     -- print(target,kildare.allocVoice[i],sample_loop_info[target].clocks[kildare.allocVoice[i]])
-    -- if clock.threads[sample_loop_info[target].clocks[kildare.allocVoice[i]]] then
+    -- if _seamstress.clock.threads[sample_loop_info[target].clocks[kildare.allocVoice[i]]] then
     --   clock.cancel(sample_loop_info[target].clocks[kildare.allocVoice[i]])
     -- end
     -- if params:get(i..'_poly_voice_count') > 1
