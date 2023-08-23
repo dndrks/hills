@@ -110,45 +110,6 @@ hill_names = {
 
 pre_step_page = 'play'
 
-aubiodone=function(args)
-  local id=tonumber(args[1])
-  local data_s=args[2]
-  print('aubiodone',id,data_s)
-end
-
-osc_fun={
-  progressbar=function(args)
-    print(args[1],tonumber(args[2]))
-  end,
-  aubiodone=function(args)
-    local id=tonumber(args[1])
-    stuff=args[2]
-    local data=kildare.json.parse(stuff)
-    if data==nil then
-      print("error getting onset data!")
-      do return end
-    end
-    if data.error~=nil then
-      print("error getting onset data: "..data.error)
-      do return end
-    end
-    if data.result==nil then
-      print("no onset results!")
-      do return end
-    end
-    cursors=data.result
-    -- self:do_move(0)
-    -- show_message(string.format("[%d] loaded",self.id),2)
-  
-    -- -- save the top_slices
-    -- print("writing cursor file",self.path_to_cursors)
-    -- local file=io.open(self.path_to_cursors,"w+")
-    -- io.output(file)
-    -- io.write(json.encode({cursors=self.cursors}))
-    -- io.close(file)
-  end,
-}
-
 local make_sound = false
 
 function externalIterator(noteNum)
