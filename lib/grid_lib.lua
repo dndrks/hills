@@ -534,14 +534,14 @@ function g.key(x,y,z)
       if x > 1 and x <= number_of_hills+1 and not mod_held then
         if z == 1 then
           if hills[x-1].highway == false then
-            if params:string('hill_'..(x-1)..'_iterator') == 'norns' then
+            if params:string('hill_'..(x-1)..'_iterator') == 'internal' then
               _a.start(x-1,y,true)
             else
               hills[x-1].segment = y
             end
             hills[x-1].screen_focus = y
           else
-            if params:string('hill_'..(x-1)..'_iterator') == 'norns' and #track[x-1] >= y then
+            if params:string('hill_'..(x-1)..'_iterator') == 'internal' and #track[x-1] >= y then
               _htracks.stop_playback(x-1)
               track[x-1].active_hill = y
               _htracks.start_playback(x-1,y)
@@ -567,13 +567,13 @@ function g.key(x,y,z)
         end
         if z == 0 then
           if hills[x-1].highway == false and hills[x-1][y].playmode == "momentary" and hills[x-1].segment == y then
-            if params:string('hill_'..(x-1)..'_iterator') == 'norns' then
+            if params:string('hill_'..(x-1)..'_iterator') == 'internal' then
               stop(x-1,true)
             end
           elseif hills[x-1].highway and hills[x-1][y].playmode == "momentary" then
             -- TODO: add this in later
             -- print(x-1,y,#track[x-1] >= y)
-            -- if params:string('hill_'..(x-1)..'_iterator') == 'norns' and #track[x-1] >= y  then
+            -- if params:string('hill_'..(x-1)..'_iterator') == 'internal' and #track[x-1] >= y  then
             --   _htracks.stop_playback(x-1)
             -- end
           end

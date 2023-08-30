@@ -57,6 +57,8 @@ if norns == nil then
     _seamstress.screen_circle(r)
   end
   
+  screen.font_face = function() end
+  
 end
 
 function full_PSET_swap()
@@ -109,6 +111,46 @@ hill_names = {
 }
 
 pre_step_page = 'play'
+
+hills_midi_output = {
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+}
+
+hills_note_channel = {
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+}
+
+hills_midi_device = {
+  1,
+  1,
+  1,
+  1,
+  1,
+  1,
+  1,
+}
+
+hills_random_offset_prob = {
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+}
 
 local make_sound = false
 
@@ -175,7 +217,7 @@ development_state = function()
   -- song_atoms.transport_active = true
   for i = 1,number_of_hills do
     -- DIAMOND HOLLOW/
-    -- params:set('hill_'..i..'_mode', 2)
+    params:set('hill_'..i..'_mode', 2)
     -- params:set('hill_'..i..'_iterator',2)
     -- params:set('hill_'..i..'_iterator_midi_device',6)
     -- params:set('hill_'..i..'_iterator_midi_note',35+util.wrap(i,1,4))
@@ -188,6 +230,33 @@ development_state = function()
     params:set('hill '..i..' MIDI output', 2)
     --/BERLIN
   end
+
+  params:hide('kildare_fx_header')
+  params:hide('kildare_delay')
+  params:hide('kildare_feedback')
+  params:hide('kildare_main')
+  params:hide('kildare_lfo_header')
+  params:hide('lfos')
+  for i = 1,number_of_hills do
+    -- params:hide('hill_'..i..'_highway_header')
+    -- params:hide('hill_'..i..'_mode')
+    params:hide('hill_'..i..'_flatten')
+    params:hide('hill_'..i..'_legato')
+    params:hide('hill '..i..' accent mult')
+    params:hide('hill_'..i..'_kildare_header')
+    params:hide("hill "..i.." kildare_notes")
+    params:hide("hill "..i.." kildare_chords")
+    params:hide('hill_'..i..'_sample_header')
+    params:hide("hill "..i.." sample output")
+    params:hide('hill_'..i..'_crow_header')
+    params:hide("hill "..i.." crow output")
+    params:hide('hill_'..i..'_JF_header')
+    params:hide("hill "..i.." JF output")
+
+
+  end
+  rebuild_params = true
+
   _htracks.sync_playheads()
   screen_dirty = true
 end
@@ -431,7 +500,7 @@ function init()
 
     menu_rebuild_clock = clock.run(function()
       while true do
-        clock.sleep(1/60)
+        clock.sleep(1/15)
         if screen_dirty then
           redraw()
           paramsMenu.redraw()
@@ -647,13 +716,13 @@ function init()
     hill_names[hill] = hill..': '..model
     
     prms.change_UI_name('hill_'..hill..'_group', hill_names[hill])
-    prms.change_UI_name('hill_'..hill..'_note_header', 'note management '..hill_names[hill])
+    -- prms.change_UI_name('hill_'..hill..'_note_header', 'note management '..hill_names[hill])
     prms.change_UI_name('hill_'..hill..'_kildare_header', 'Kildare management '..hill_names[hill])
     prms.change_UI_name('hill_'..hill..'_sample_header', 'sample management '..hill_names[hill])
     prms.change_UI_name('hill_'..hill..'_MIDI_header', 'MIDI management '..hill_names[hill])
     prms.change_UI_name('hill_'..hill..'_crow_header', 'crow management '..hill_names[hill])
     prms.change_UI_name('hill_'..hill..'_JF_header', 'JF management '..hill_names[hill])
-    prms.change_UI_name('snapshot_crossfade_header_'..hill, 'crossfader '..hill_names[hill])
+    -- prms.change_UI_name('snapshot_crossfade_header_'..hill, 'crossfader '..hill_names[hill])
 
     grid_dirty = true
     for i = 1,8 do
@@ -969,7 +1038,7 @@ iterate = function(i)
             seg.perf_led = true
           end
           seg.step = util_round(seg.step + 0.01,0.01)
-          local comparator;
+          local comparator
           if seg.bound_mode == "time" then
             comparator = util_round(seg.step,0.01) > util_round(seg.high_bound.time,0.01)
           elseif seg.bound_mode == "note" then
@@ -996,8 +1065,8 @@ stop = function(i,clock_synced_loop)
     seg.index = 1
   end
   screen_dirty = true
-  local ch = params:get("hill "..i.." MIDI note channel")
-  local dev = params:get("hill "..i.." MIDI device")
+  local ch = hills_note_channel[i]
+  local dev = hills_midi_device[i]
   grid_dirty = true
   seg.end_of_cycle_clock = clock.run(
     function()
@@ -1005,18 +1074,8 @@ stop = function(i,clock_synced_loop)
       if seg.iterated then
         seg.perf_led = false
         grid_dirty = true
-        if params:string("hill "..i.." MIDI output") == "yes" then
+        if hills_midi_output[i] then
           outgoing_midi_device[dev]:note_off(pre_note[i],0,ch)
-        end
-        if params:string("hill "..i.." JF output") == "yes" then
-          local ch = params:get("hill "..i.." JF output id")
-          if pre_note[i] ~= nil then
-            if params:string("hill "..i.." JF output style") == "sound" then
-              crow.ii.jf.play_voice(ch,0)
-            elseif params:string("hill "..i.." JF output style") == "shape" then
-              crow.ii.jf.trigger(ch,0)
-            end
-          end
         end
       end
     end
@@ -1065,9 +1124,9 @@ end
 -- end
 
 local function get_random_offset(i,note)
-  if params:get("hill "..i.." random offset probability") == 0 then
+  if hills_random_offset_prob[i] == 0 then
     return note
-  elseif params:get("hill "..i.." random offset probability") >= math.random(0,100) then
+  elseif hills_random_offset_prob[i] >= math.random(0,100) then
     if params:string("hill "..i.." random offset style") == "+ oct" then
       if note + 12 <= 127 then
         return note + 12
@@ -1081,7 +1140,7 @@ local function get_random_offset(i,note)
         return note
       end
     elseif params:string("hill "..i.." random offset style") == "+/- oct" then
-      local modifier = math.random(0,100) <= 50 and 12 or -12;
+      local modifier = math.random(0,100) <= 50 and 12 or -12
       if (note + modifier >= 0) and (note + modifier <=127) then
         return note + modifier
       else
@@ -1120,14 +1179,14 @@ end
 per_step_params_adjusted = {}
 trigless_params_adjusted = {}
 for i = 1,number_of_hills do
-  per_step_params_adjusted[i] = {param = {}, value = {}}
-  trigless_params_adjusted[i] = {param = {}, value = {}}
+  per_step_params_adjusted[i] = {param = {}, value = {}, count = 0}
+  trigless_params_adjusted[i] = {param = {}, value = {}, count = 0}
 end
 
 local non_indexed_voices = {'delay', 'feedback', 'main'}
 
 function fkmap(i,j,index,p)
-  local target_trig;
+  local target_trig
   local _page = track[i][j].page
   if hills[i].highway == true then
     if track[i][j][_page].trigs[index] then
@@ -1154,62 +1213,10 @@ local function extract_voice_from_string(s)
   end
 end
 
-local function process_params_per_step(parent,i,j,k,index)
-  local id = params.lookup[parent[k]]
-  local is_drum_voice = id <= last_voice_param
-  local drum_target = params:get_id(id):match('(.+)_(.+)_(.+)')
-  drum_target = tonumber(drum_target)
-
-  local value = params:get(id)
-
-  if is_drum_voice and type(drum_target) == 'number' and drum_target == i then
-    local p_name = string.gsub(params:get_id(id),drum_target..'_'..selectedVoiceModels[drum_target]..'_','')
-    -- print('reseeding default value for voice', drum_target, p_name, value)
-    prms.send_to_engine(drum_target,p_name,value)
-  elseif is_drum_voice and type(drum_target) == 'string' then
-    -- local target_voice = drum_target
-    -- local p_name = string.gsub(params:get_id(id),target_voice..'_','')
-    -- prms.send_to_engine(target_voice,p_name,value)
-    -- print('reseeding default value for sample voice', i, j, index, id)
-    print("this shouldn't be happening: 879")
-  elseif drum_target == i then
-    local p_name = extract_voice_from_string(params:get_id(id))
-    local sc_target = string.gsub(params:get_id(id),p_name..'_','')
-    -- print('reseeding default value to fx', i, j, index, id)
-    engine['set_'..p_name..'_param'](sc_target,value)
-  end
-end
-
--- function play_chord(i,j,index)
---   local chord_target = hills[i].highway == false and hills[i][j].note_num.chord_degree[index] or track[i][j].chord_degrees[index]
---   local base_note;
---   if params:string('hill_'..i..'_mode') == 'highway' then
---     if track[i][j].focus == 'main' then
---       base_note = track[i][j].base_note[index]
---     else
---       base_note = track[i][j].fill.base_note[index]
---     end
---     if base_note == -1 then
---       base_note = params:get(i..'_'..selectedVoiceModels[i]..'_carHz')
---     end
---   else
---     base_note = params:get('hill '..i..' base note')
---   end
---   -- print(index,base_note)
---   local shell_notes = mu.generate_chord_scale_degree(
---     base_note,
---     params:string('hill '..i..' scale'),
---     chord_target,
---     true
---   )
---   -- engine.set_voice_param(i,"carHzThird",midi_to_hz(shell_notes[2]))
---   -- engine.set_voice_param(i,"carHzSeventh",midi_to_hz(shell_notes[4]))
--- end
-
 local function play_linked_sample(i, j, played_note, vel_target, retrig_index, force)
   if params:string("hill "..i.." sample output") == "yes" then
     if params:get("hill "..i.." sample probability") >= math.random(100) then
-      local should_play;
+      local should_play
       if hills[i].highway then
         local index = track[i][j].step
         local _page = track[i][j].page
@@ -1255,9 +1262,9 @@ force_note = function(i,j,played_note)
     play_linked_sample(i, j, played_note, vel_target, retrig_index, true)
   end
 
-  if params:string("hill "..i.." MIDI output") == "yes" then
-    local ch = params:get("hill "..i.." MIDI note channel")
-    local dev = params:get("hill "..i.." MIDI device")
+  if hills_midi_output[i] then
+		local ch = hills_note_channel[i]
+		local dev = hills_midi_device[i]
     if pre_note[i] ~= nil and params:get('hill_'..i..'_legato') ~= 1 then
       outgoing_midi_device[dev]:note_off(pre_note[i],0,ch)
     end
@@ -1272,7 +1279,6 @@ local function trigger_notes(i,j,index,velocity,retrigger_bool,played_note)
   if params:get('hill_'..i..'_legato') == 0 then
     kildare.allocVoice[i] = util.wrap(kildare.allocVoice[i]+1, 1, params:get(i..'_poly_voice_count'))
     send_to_engine('trig',{i,velocity,retrigger_bool,kildare.allocVoice[i]})
-    print(clock.get_beats())
   end
   if params:get('hill_'..i..'_flatten') == 1 then
     send_note_data(i,j,index,params:get(i..'_'..selectedVoiceModels[i]..'_carHz'))
@@ -1283,17 +1289,11 @@ local function trigger_notes(i,j,index,velocity,retrigger_bool,played_note)
     if hills[i].highway then
       local _page = track[i][j].page
       local focused_notes = track[i][j].focus == 'main' and track[i][j][_page].base_note[index] or track[i][j][_page].fill.base_note[index]
-      local focused_chords = track[i][j].focus == 'main' and track[i][j][_page].chord_notes[index] or track[i][j][_page].fill.chord_notes[index]
-      local note_check;
-      if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' then
+      local note_check
+      if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input'and selectedVoiceModels[i] ~= 'midi' then
         note_check = params:get(i..'_'..selectedVoiceModels[i]..'_carHz')
       else
         note_check = params:get('hill '..i..' base note')
-      end
-      for notes = 1,3 do
-        if focused_chords[notes] ~= 0 then
-          force_note(i,j,focused_notes == -1 and note_check+focused_chords[notes] or focused_notes+focused_chords[notes])
-        end
       end
     end
   end
@@ -1306,16 +1306,13 @@ end
 
 pass_note = function(i,j,seg,note_val,index,retrig_index)
   local midi_notes = hills[i].note_ocean
-  local played_note;
+  local played_note
   if hills[i].highway == true then
     played_note = get_random_offset(i,note_val)
   else
     played_note = get_random_offset(i,midi_notes[note_val])
   end
-  local _active, _page, _ap, focused_set;
-  -- local _active = track[i][j]
-  -- local _page = _active.page
-  -- local _a = _active[_page]
+  local _active, _page, _ap, focused_set
   if hills[i].highway == true then
     _active = track[i][j]
     _page = _active.page
@@ -1324,98 +1321,85 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
   else
     _page = 1
   end
-  if (played_note ~= nil and hills[i].highway == false and hills[i][j].note_num.active[index]) or
-    (played_note ~= nil and hills[i].highway == true and not focused_set.muted_trigs[index]) then
+  if (hills[i].highway == false and hills[i][j].note_num.active[index]) or
+    (hills[i].highway == true and not focused_set.muted_trigs[index]) then
     -- per-step params //
     -- TODO / FIXME: 230615, added to highway check in next line to avoid errors with hills:
     -- if i <= number_of_hills then
     -- if i <= number_of_hills and hills[i].highway == true then
-    if i <= number_of_hills then
-      if check_subtables(i,j,index) then
-        -- step to step params resets:
-        local target_trig;
-        if hills[i].highway == true then
-          if focused_set.trigs[index] then
-            target_trig = _fkprm.adjusted_params
+    -- step to step params resets:
+    local target_trig
+    if hills[i].highway == true then
+      if focused_set.trigs[index] then
+        target_trig = _fkprm.adjusted_params
+      else
+        target_trig = _fkprm.adjusted_params_lock_trigs
+      end
+    else
+      target_trig = _fkprm.adjusted_params
+    end
+    if target_trig == _fkprm.adjusted_params then
+      for k = 1,per_step_params_adjusted[i].count do
+        local check_prm = per_step_params_adjusted[i].param[k]
+        -- print('>S>S>S'..check_prm)
+        if _fkprm.adjusted_params[i][j][_page][index].params[check_prm] == nil then
+          local lock_trig = track[i][j].focus == 'main' and track[i][j][_page].lock_trigs[index] or track[i][j][_page].fill.lock_trigs[index]
+          local is_drum_voice = params.lookup[check_prm] <= last_voice_param
+          local id = check_prm
+          if is_drum_voice and i <= number_of_hills then
+            local target_voice = string.match(id,"%d+")
+            local target_drum = id:match('(.*_)')
+            target_drum = string.gsub(target_drum, target_voice..'_', '')
+            target_drum = string.gsub(target_drum, '_', '')
+            local p_name = string.gsub(id,target_voice..'_'..target_drum..'_','')
+            prms.send_to_engine(target_voice,p_name,params:get(id))
+            -- print('reseeding non-adjusted value for voice', target_voice, j, index, id, p_name)
           else
-            target_trig = _fkprm.adjusted_params_lock_trigs
+            local p_name = extract_voice_from_string(id)
+            local sc_target = string.gsub(id,p_name..'_','')
+            engine['set_'..p_name..'_param'](sc_target,params:get(id))
           end
-        else
-          target_trig = _fkprm.adjusted_params
         end
-        if target_trig == _fkprm.adjusted_params then
-          for k = 1,#per_step_params_adjusted[i].param do
-            local check_prm = per_step_params_adjusted[i].param[k]
-            -- print('>S>S>S'..check_prm)
-            if _fkprm.adjusted_params[i][j][_page][index].params[check_prm] == nil then
-              local lock_trig = track[i][j].focus == 'main' and track[i][j][_page].lock_trigs[index] or track[i][j][_page].fill.lock_trigs[index]
-              local is_drum_voice = params.lookup[check_prm] <= last_voice_param
-              local id = check_prm
-              if is_drum_voice and i <= number_of_hills then
-                local target_voice = string.match(id,"%d+")
-                local target_drum = id:match('(.*_)')
-                target_drum = string.gsub(target_drum, target_voice..'_', '')
-                target_drum = string.gsub(target_drum, '_', '')
-                local p_name = string.gsub(id,target_voice..'_'..target_drum..'_','')
-                prms.send_to_engine(target_voice,p_name,params:get(id))
-                -- print('reseeding non-adjusted value for voice', target_voice, j, index, id, p_name)
-              else
-                local p_name = extract_voice_from_string(id)
-                local sc_target = string.gsub(id,p_name..'_','')
-                engine['set_'..p_name..'_param'](sc_target,params:get(id))
-              end
+      end
+      per_step_params_adjusted[i] = {param = {}, value = {}, count = 0}
+    end
+    -- this step's entry handling:
+    -- per_step_params_adjusted[i] = {param = {}, value = {}}
+    for k,v in next,target_trig[i][j][_page][index].params do
+      -- print('this is ahppening!!')
+      local param_id = k
+      -- print(k, last_voice_param)
+      k = params.lookup[k]
+      -- print(k, last_voice_param)
+      local is_drum_voice = k <= last_voice_param
+      local drum_target = param_id:match('(.+)_(.+)_(.+)')
+      drum_target = tonumber(drum_target)
+      -- print('huh! '..drum_target, k, params:get_id(k), param_id)
+      if is_drum_voice and type(drum_target) == 'number' and drum_target <= number_of_hills then
+        if retrig_index == 0 then
+          local target_voice = drum_target
+          local target_drum = param_id:match('(.*_)')
+          target_drum = string.gsub(target_drum, target_voice..'_', '')
+          target_drum = string.gsub(target_drum, '_', '')
+          local p_name = string.gsub(param_id,target_voice..'_'..target_drum..'_','')
+          -- print('sending voice param',target_voice,p_name,fkmap(i,j,index,param_id))
+          if target_voice ~= i then
+            if not tab.contains(track[target_voice].external_prm_change,param_id) then
+              track[target_voice].external_prm_change[#track[target_voice].external_prm_change+1] = param_id
             end
           end
-          per_step_params_adjusted[i] = {param = {}, value = {}}
-        end
-        -- this step's entry handling:
-        -- per_step_params_adjusted[i] = {param = {}, value = {}}
-        for k,v in next,target_trig[i][j][_page][index].params do
-          -- print('this is ahppening!!')
-          local param_id = k
-          -- print(k, last_voice_param)
-          k = params.lookup[k]
-          -- print(k, last_voice_param)
-          local is_drum_voice = k <= last_voice_param
-          local drum_target = param_id:match('(.+)_(.+)_(.+)')
-          drum_target = tonumber(drum_target)
-          -- print('huh! '..drum_target, k, params:get_id(k), param_id)
-          if is_drum_voice and type(drum_target) == 'number' and drum_target <= number_of_hills then
-            if retrig_index == 0 then
-              local target_voice = drum_target
-              local target_drum = param_id:match('(.*_)')
-              target_drum = string.gsub(target_drum, target_voice..'_', '')
-              target_drum = string.gsub(target_drum, '_', '')
-              local p_name = string.gsub(param_id,target_voice..'_'..target_drum..'_','')
-              -- print('sending voice param',target_voice,p_name,fkmap(i,j,index,param_id))
-              if target_voice ~= i then
-                if not tab.contains(track[target_voice].external_prm_change,param_id) then
-                  track[target_voice].external_prm_change[#track[target_voice].external_prm_change+1] = param_id
-                end
-              end
-              prms.send_to_engine(target_voice,p_name,fkmap(i,j,index,param_id))
-            end
-          else
-            local p_name = extract_voice_from_string(param_id)
-            local sc_target = string.gsub(param_id,p_name..'_','')
-            -- print('sending step param to fx', i, j, index, k)
-            engine['set_'..p_name..'_param'](sc_target,fkmap(i,j,index,param_id))
-          end
-          per_step_params_adjusted[i].param[#per_step_params_adjusted[i].param+1] = param_id
-          per_step_params_adjusted[i].value[#per_step_params_adjusted[i].value+1] = v
-        
+          prms.send_to_engine(target_voice,p_name,fkmap(i,j,index,param_id))
         end
       else
-        -- restore default param value:
-        for k = 1,#per_step_params_adjusted[i].param do
-          process_params_per_step(per_step_params_adjusted[i].param,i,j,k,index)
-        end
-        per_step_params_adjusted[i] = {param = {}, value = {}}
-        for k = 1,#track[i].external_prm_change do
-          process_params_per_step(track[i].external_prm_change,i,j,k,index)
-        end
-        track[i].external_prm_change = {}
+        local p_name = extract_voice_from_string(param_id)
+        local sc_target = string.gsub(param_id,p_name..'_','')
+        -- print('sending step param to fx', i, j, index, k)
+        engine['set_'..p_name..'_param'](sc_target,fkmap(i,j,index,param_id))
       end
+      per_step_params_adjusted[i].count = per_step_params_adjusted[i].count + 1
+      per_step_params_adjusted[i].param[per_step_params_adjusted[i].count] = param_id
+      per_step_params_adjusted[i].value[per_step_params_adjusted[i].count] = v
+    
     end
     -- // per-step params
     -- print('done with fkprm stuff')
@@ -1426,30 +1410,23 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
     if hills[i].highway then
       local lock_trig = track[i][j].focus == 'main' and track[i][j][_page].lock_trigs[index] or track[i][j][_page].fill.lock_trigs[index]
       if focused_set.trigs[index] and not focused_set.muted_trigs[index] then
-        if retrig_index == nil then
-          if selectedVoiceModels[i] ~= 'sample' then
-            trigger_notes(i,j,index,vel_target,'false',played_note)
-          end
-          play_linked_sample(i, j, played_note, vel_target, retrig_index)
+        local destination_vel = focused_set.velocities[index] * (focused_set.accented_trigs[index] and accent_vel or 1)
+        local destination_count = focused_set.conditional.retrig_count[index]
+        local destination_curve = focused_set.conditional.retrig_slope[index]
+        local retrig_vel
+        if destination_curve < 0 and destination_count > 0 then
+          local destination_min = lin_lin(-128, -1, 0, destination_vel, destination_curve)
+          retrig_vel = util_round(lin_lin(0, destination_count, destination_vel, destination_min, retrig_index))
+        elseif destination_curve > 0 and destination_count > 0 then
+          local destination_max = lin_lin(1, 128, 0, destination_vel, destination_curve)
+          retrig_vel = util_round(lin_lin(0, destination_count, 0, destination_max, retrig_index))
         else
-          local destination_vel = focused_set.velocities[index] * (focused_set.accented_trigs[index] and accent_vel or 1)
-          local destination_count = focused_set.conditional.retrig_count[index]
-          local destination_curve = focused_set.conditional.retrig_slope[index]
-          local retrig_vel;
-          if destination_curve < 0 and destination_count > 0 then
-            local destination_min = lin_lin(-128, -1, 0, destination_vel, destination_curve)
-            retrig_vel = util_round(lin_lin(0, destination_count, destination_vel, destination_min, retrig_index))
-          elseif destination_curve > 0 and destination_count > 0 then
-            local destination_max = lin_lin(1, 128, 0, destination_vel, destination_curve)
-            retrig_vel = util_round(lin_lin(0, destination_count, 0, destination_max, retrig_index))
-          else
-            retrig_vel = destination_vel
-          end
-          if selectedVoiceModels[i] ~= 'sample' then
-            trigger_notes(i,j,index,retrig_vel,'true',played_note)
-          end
-          play_linked_sample(i, j, played_note, retrig_vel, retrig_index)
+          retrig_vel = destination_vel
         end
+        if selectedVoiceModels[i] ~= 'sample' then
+          trigger_notes(i,j,index,retrig_vel,'true',played_note)
+        end
+        play_linked_sample(i, j, played_note, retrig_vel, retrig_index)
       end
     else
       if selectedVoiceModels[i] ~= 'sample' then
@@ -1458,72 +1435,15 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
       play_linked_sample(i, j, played_note, vel_target, retrig_index)
     end
     manual_iter(i,j)
-    if params:string("hill "..i.." MIDI output") == "yes" then
-      local ch = params:get("hill "..i.." MIDI note channel")
-      local dev = params:get("hill "..i.." MIDI device")
-      if pre_note[i] ~= nil and params:get('hill_'..i..'_legato') ~= 1 then
-        outgoing_midi_device[dev]:note_off(pre_note[i],0,ch)
-      end
-      outgoing_midi_device[dev]:note_on(played_note,seg.note_velocity[index],ch)
-    end
-    if params:string("hill "..i.." crow output") == "yes" then
-      if params:string("hill "..i.." crow output style") == "osc" then
-        local out = params:get("hill "..i.." crow output id")
-        if hills[i].crow_change_queued then
-          crow.output[out].action = "oscillate( dyn{pitch="..mu.note_num_to_freq(played_note).."}, dyn{lev="..(params:get("hill "..i.." crow osc level")/100).."}:mul(dyn{dur="..(params:get("hill "..i.." crow osc decay")/100).."}), '"..params:string("hill "..i.." crow osc shape").."')"
-          crow.output[out]()
-          if params:string("hill "..i.." crow osc aliasing") == 'none' then
-            crow.output[out].scale('none')
-          elseif params:string("hill "..i.." crow osc aliasing") == 'soft' then
-            crow.output[out].scale({0,2,3,5,7,8,10})
-          elseif params:string("hill "..i.." crow osc aliasing") == 'harsh' then
-            crow.output[out].scale({0})
-          end
-          hills[i].crow_change_queued = false
-        else
-          if params:string("hill "..i.." crow osc aliasing") == 'none' then
-            crow.output[out].scale('none')
-          elseif params:string("hill "..i.." crow osc aliasing") == 'soft' then
-            crow.output[out].scale({0,2,3,5,7,8,10})
-          elseif params:string("hill "..i.." crow osc aliasing") == 'harsh' then
-            crow.output[out].scale({0})
-          end
-          crow.output[out].dyn.pitch = mu.note_num_to_freq(played_note)
-          crow.output[out].dyn.lev = params:get("hill "..i.." crow osc level")/100
-          crow.output[out].dyn.dur = params:get("hill "..i.." crow osc decay")/100
-        end
-      elseif params:string("hill "..i.." crow output style") == "v/8" then
-        local out = params:get("hill "..i.." crow output id")
-        crow.output[out].scale('none')
-        -- crow.output[out].volts = (played_note - params:get("hill "..i.." base note"))/12
-        crow.output[out].volts = (played_note - 60)/12
-      elseif params:string("hill "..i.." crow output style") == "v/8+pulse" then
-        local v8_out = params:get("hill "..i.." crow output id")
-        local pulse_out = params:get("hill "..i.." crow v/8 pulse output id")
-        crow.output[v8_out].scale('none')
-        crow.output[v8_out].volts = (played_note - 60)/12
-        norns.crow.send ("output["..pulse_out.."]( pulse(0.001) )")
-      elseif params:string("hill "..i.." crow output style") == "pulse" then
-        local out = params:get("hill "..i.." crow output id")
-        norns.crow.send ("output["..out.."]( pulse(0.001) )")
-      end
-    end
-    if params:string("hill "..i.." JF output") == "yes" then
-      local ch = params:get("hill "..i.." JF output id")
-      if pre_note[i] ~= nil then
-        if params:string("hill "..i.." JF output style") == "sound" then
-          crow.ii.jf.play_voice(ch,0)
-        elseif params:string("hill "..i.." JF output style") == "shape" then
-          crow.ii.jf.trigger(ch,0)
-        end
-      end
-      if params:string("hill "..i.." JF output style") == "sound" then
-        crow.ii.jf.play_voice(ch,(played_note - 60)/12,5)
-        -- print(ch,(played_note - 60)/12,5)
-      elseif params:string("hill "..i.." JF output style") == "shape" then
-        crow.ii.jf.trigger(ch,1)
-      end
-    end
+		if hills_midi_output[i] then
+			local ch = hills_note_channel[i]
+			local dev = hills_midi_device[i]
+		  if pre_note[i] ~= nil and params:get('hill_'..i..'_legato') ~= 1 then
+		    outgoing_midi_device[dev]:note_off(pre_note[i],0,ch)
+		  end
+		  outgoing_midi_device[dev]:note_on(played_note,seg.note_velocity[index],ch)
+			print(clock.get_beats())
+		end
     pre_note[i] = played_note
   end
   screen_dirty = true
@@ -1531,7 +1451,7 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
 end
 
 function manual_iter(i,j)
-  for idx = 1,#hills[i].iter_links do
+  for idx = 1,number_of_hills do
     if hills[i].iter_links[idx] == true then
       if hills[i].iter_counter[idx] == 1 then
         local c_hill = hills[idx].segment

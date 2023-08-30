@@ -253,7 +253,7 @@ end
 
 function m:delta(index, d, voice, hill, page, step)
   local target_trig = get_focus(voice,hill,page,step)
-  local val;
+  local val
   if target_trig[voice][hill][page][step].params[index] == nil then
     -- write index and value
     val = params:lookup_param(index).raw
@@ -280,7 +280,7 @@ function m:delta_many(index, d, voice, hill, page)
 end
 --- UP TO HERE...230519
 function m:map(p)
-  local target_trig;
+  local target_trig
   local focused_step = track[self.voice_focus][self.hill_focus][self.page_focus].trigs[self.step_focus]
   if hills[self.voice_focus].highway == true then
     if focused_step then
@@ -302,7 +302,7 @@ function m:string(p)
   if params:lookup_param(p).formatter then
     return params:lookup_param(p).formatter(self:map(p))
   else
-    local target_trig;
+    local target_trig
     if hills[self.voice_focus].highway == true then
       if track[self.voice_focus][self.hill_focus][self.page_focus].trigs[self.step_focus] then
         target_trig = self.adjusted_params

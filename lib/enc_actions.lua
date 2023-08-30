@@ -18,7 +18,7 @@ function enc_actions.delta_track_pos(i,j,d)
   end
 end
 
-local function check_for_menu_condition(i)
+function check_for_menu_condition(i)
   if (key1_hold or (#conditional_entry_steps.focus[i] > 0)) and ui.control_set == 'edit' then
     return true
   else

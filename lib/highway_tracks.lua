@@ -161,7 +161,7 @@ end
 function track_actions.init(target, hill_number, clear_reset)
   print('begin initialize track: '..target..', '..util.time())
   local build_clock = false
-  local pre_clear_step;
+  local pre_clear_step
   if clear_reset and track[target].active_hill == hill_number then
     pre_clear_step = track[target][hill_number].step
   end
@@ -217,7 +217,6 @@ function track_actions.init(target, hill_number, clear_reset)
   for pages = 1,8 do
     track[target][hill_number][pages] = {}
     track[target][hill_number][pages].base_note = {}
-    track[target][hill_number][pages].chord_notes = {}
     track[target][hill_number][pages].seed_default_note = {}
     track[target][hill_number][pages].chord_degrees = {}
     track[target][hill_number][pages].velocities = {}
@@ -243,7 +242,6 @@ function track_actions.init(target, hill_number, clear_reset)
     track[target][hill_number][pages].fill =
     {
       ["base_note"] = {},
-      ["chord_notes"] = {},
       ["seed_default_note"] = {},
       ["chord_degrees"] = {},
       ["velocities"] = {},
@@ -269,7 +267,6 @@ function track_actions.init(target, hill_number, clear_reset)
       track[target][hill_number][pages].end_point = 16
 
       track[target][hill_number][pages].base_note[i] = -1
-      track[target][hill_number][pages].chord_notes[i] = {0,0,0}
       track[target][hill_number][pages].seed_default_note[i] = true
       track[target][hill_number][pages].chord_degrees[i] = 1
       track[target][hill_number][pages].velocities[i] = 127
@@ -291,7 +288,6 @@ function track_actions.init(target, hill_number, clear_reset)
       track[target][hill_number][pages].conditional.retrig_slope[i] = 0
 
       track[target][hill_number][pages].fill.base_note[i] = -1
-      track[target][hill_number][pages].fill.chord_notes[i] = {0,0,0}
       track[target][hill_number][pages].fill.seed_default_note[i] = true
       track[target][hill_number][pages].fill.chord_degrees[i] = 1
       track[target][hill_number][pages].fill.velocities[i] = 127
@@ -346,7 +342,7 @@ function track_actions.change_page_probability(i,j,n,d)
 end
 
 function track_actions.start_playback(i,j)
-  local _page;
+  local _page
   -- for p = 1,8 do
   --   if track[i][j].page_active[p] then
   --     _page = p
@@ -376,6 +372,7 @@ function track_actions.stop_playback(i)
   local _page = track[i][j].page
   if _seamstress.clock.threads[track_clock[i]] then
     clock.cancel(track_clock[i])
+    track_clock[i] = nil
   end
   track[i][j].playing = false
   track[i][j][_page].conditional.cycle = 1
@@ -422,20 +419,26 @@ end
 
 function track_actions.tick(target)
   -- if song_atoms.transport_active
-  -- or params:string('hill_'..target..'_iterator') ~= 'norns'
+  -- or params:string('hill_'..target..'_iterator') ~= 'internal'
   -- then
   local _active = track[target][track[target].active_hill]
   local _a = _active[_active.page]
-  if _active.step == _a.end_point and not _active.loop then
-    track_actions.stop_playback(target)
+  if not _active.loop then
+    if _active.step == _a.end_point then
+      track_actions.stop_playback(target)
+    end
   else
-    if _active.swing > 50 and _active.step % 2 == 1 then
-      local base_time = (clock.get_beat_sec() * _active.time)
-      local swung_time =  base_time*util.linlin(50,100,0,1,_active.swing)
-      clock.run(function()
-        clock.sleep(swung_time)
+    if _active.swing > 50 then
+      if _active.step % 2 == 1 then
+        local base_time = (clock.get_beat_sec() * _active.time)
+        local swung_time =  base_time*util.linlin(50,100,0,1,_active.swing)
+        clock.run(function()
+          clock.sleep(swung_time)
+          track_actions.process(target)
+        end)
+      else
         track_actions.process(target)
-      end)
+      end
     else
       track_actions.process(target)
     end
@@ -496,11 +499,6 @@ end
 
 function track_actions.process(target)
   local _active = track[target][track[target].active_hill]
-  local _a = _active[_active.page]
-  if _active.step == nil then
-    print("how is track step nil???")
-    _active.step = _a.start_point
-  end
   -- TODO: drunk walk!
   track_actions[_active.mode](target)
   screen_dirty = true
@@ -666,24 +664,21 @@ function track_actions.execute_step(target, step)
   local focused_trigs = {}
   local focused_notes = {}
   local focused_legato = {}
-  local focused_chords = {}
   if _active.focus == "main" then
     focused_trigs = _a.trigs[step]
     focused_notes = _a.base_note[step]
     focused_legato = _a.legato_trigs[step]
-    focused_chords = _a.chord_notes[step]
   else
     focused_trigs = _a.fill.trigs[step]
     focused_notes = _a.fill.base_note[step]
     focused_legato = _a.fill.legato_trigs[step]
-    focused_chords = _a.fill.chord_notes[step]
   end
   local i,j = target, track[target].active_hill
   if focused_legato and not focused_trigs then
     send_note_data(i,j,step,focused_notes)
   else
-    local note_check;
-    if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' then
+    local note_check
+    if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' and selectedVoiceModels[i] ~= 'midi' then
       note_check = params:get(i..'_'..selectedVoiceModels[i]..'_carHz')
     else
       note_check = params:get('hill '..i..' base note')
@@ -696,11 +691,6 @@ function track_actions.execute_step(target, step)
       step, -- index
       0 -- retrig_index
     )
-    for notes = 1,3 do
-      if focused_chords[notes] ~= 0 then
-        -- force_note(i,j,focused_notes == -1 and note_check+focused_chords[notes] or focused_notes+focused_chords[notes]) -- note_val
-      end
-    end
   end
   -- TODO: should these be focuseD???
   if _a.trigs[step] then
@@ -731,8 +721,8 @@ function track_actions.retrig_step(target,step)
       function()
         for retrigs = 1,focused_set.retrig_count[step] do
           clock.sleep(((clock.get_beat_sec() * _active.time)*focused_set.retrig_time[step])+swung_time)
-          local note_check;
-          if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' then
+          local note_check
+          if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' and selectedVoiceModels[i] ~= 'midi' then
             note_check = params:get(i..'_'..selectedVoiceModels[i]..'_carHz')
           else
             note_check = params:get('hill '..i..' base note')
@@ -759,8 +749,8 @@ function track_actions.reset_note_to_default(i,j)
   local _active = track[i][j]
   local _a = _active[_active.page]
   local focused_set = _active.focus == 'main' and _a or _a.fill
-  local note_check;
-  if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' then
+  local note_check
+  if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' and selectedVoiceModels[i] ~= 'midi' then
     note_check = params:get(i..'_'..selectedVoiceModels[i]..'_carHz')
   else
     note_check = params:get('hill '..i..' base note')

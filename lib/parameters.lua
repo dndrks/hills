@@ -1,5 +1,5 @@
 local parameters = {}
-local frm = require 'formatters'
+local frm = include 'lib/formatters'
 
 local vports = {}
 
@@ -52,7 +52,7 @@ function parameters.init()
       hills[i].screen_focus = 1
       screen_dirty = true
     end)
-    params:add_option('hill_'..i..'_iterator', 'iterator', {'norns','external MIDI', 'hill'}, 1)
+    params:add_option('hill_'..i..'_iterator', 'iterator', {'internal','external MIDI', 'hill'}, 1)
     params:set_action('hill_'..i..'_iterator', function(x)
       if x == 1 then
         if hills[i].highway then
@@ -78,6 +78,7 @@ function parameters.init()
       elseif x == 2 then
         if _seamstress.clock.threads[track_clock[i]] then
           clock.cancel(track_clock[i])
+          track_clock[i] = nil
           _htracks.stop_playback(i)
         end
         params:show('hill_'..i..'_iterator_midi_device')
@@ -95,6 +96,7 @@ function parameters.init()
       elseif x == 3 then
         if _seamstress.clock.threads[track_clock[i]] then
           clock.cancel(track_clock[i])
+          track_clock[i] = nil
           _htracks.stop_playback(i)
         end
         params:hide('hill_'..i..'_iterator_midi_device')
@@ -153,7 +155,7 @@ function parameters.init()
       end
     end
 
-    params:add_separator('hill_'..i..'_note_header', "note management "..hill_names[i])
+    params:add_separator('hill_'..i..'_note_header', "note management")
     params:add_binary('hill_'..i..'_flatten', 'flatten to carrier freq', 'toggle', 1)
     params:set_action('hill_'..i..'_flatten', function(x)
       if x == 1 then
@@ -236,6 +238,7 @@ function parameters.init()
     )
     params:add_option("hill "..i.." random offset style", "random offset style", {"+ oct","- oct","+/- oct"},1)
     params:add_number("hill "..i.." random offset probability","random offset probability",0,100,0)
+    params:set_action("hill "..i.." random offset probability",function(x) hills_random_offset_prob[i] = x end)
     params:add_binary('hill_'..i..'_legato','legato', 'momentary', 0)
     params:add_option("hill "..i.." accent mult", 'accent multiplier', {'0.125x','0.25x','0.33x','0.5x','0.75x','1.5x','2x','3x','4x','5x','6x','7x','8x','9x','10x'},7)
     params:add_option("hill "..i.." quant value","quant value",{"1/4", "1/4d", "1/4t", "1/8", "1/8d", "1/8t", "1/16", "1/16d", "1/16t", "1/32", "1/32d", "1/32t"},7)
@@ -251,8 +254,8 @@ function parameters.init()
     params:set_action("hill "..i.." kildare_notes",
       function(x)
         if x == 1 then
-          local note_check;
-          if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' then
+          local note_check
+          if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' and selectedVoiceModels[i] ~= 'midi' then
             note_check = params:get(i..'_'..selectedVoiceModels[i]..'_carHz')
           else
             note_check = params:get('hill '..i..' base note')
@@ -273,8 +276,8 @@ function parameters.init()
     params:set_action("hill "..i.." kildare_chords",
       function(x)
         if x == 1 then
-          local note_check;
-          if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' then
+          local note_check
+          if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' and selectedVoiceModels[i] ~= 'midi' then
             note_check = params:get(i..'_'..selectedVoiceModels[i]..'_carHz')
           else
             note_check = params:get('hill '..i..' base note')
@@ -351,10 +354,11 @@ function parameters.init()
     params:add_option("hill "..i.." sample repitch", "send pitches?",{"no","yes"},1)
     params:add_option("hill "..i.." sample momentary", "stop when released?", {"no","yes"},1)
 
-    params:add_separator('hill_'..i..'_MIDI_header', "MIDI management "..hill_names[i])
+    params:add_separator('hill_'..i..'_MIDI_header', "MIDI management")
     params:add_option("hill "..i.." MIDI output", "MIDI output?",{"no","yes"},1)
     params:set_action("hill "..i.." MIDI output",
       function(x)
+        hills_midi_output[i] = x == 2
         if x == 1 then
           params:hide("hill "..i.." MIDI device")
           params:hide("hill "..i.." MIDI note channel")
@@ -381,7 +385,11 @@ function parameters.init()
       end
     )
     params:add_option("hill "..i.." MIDI device", "device",vports,1)
-    params:add_number("hill "..i.." MIDI note channel","note channel",1,16,1)
+		params:set_action("hill " .. i .. " MIDI device", function(x) hills_midi_device[i] = x end)
+    params:add_number("hill "..i.." MIDI note channel","note channel",1,16,i)
+    params:set_action("hill "..i.." MIDI note channel", function(x)
+      hills_note_channel[i] = x
+    end)
     params:add_number("hill "..i.." velocity","velocity",0,127,60)
     local fixed_ccs = {}
     fixed_ccs[1] = "none"
@@ -622,8 +630,9 @@ function parameters.init()
     params[state](params, "lfo_baseline_"..i)
     params[state](params, "lfo_offset_"..i)
     params[state](params, "lfo_depth_"..i)
-    -- params:hide("lfo_scaled_"..i)
-    -- params:hide("lfo_raw_"..i)
+    params[state](params, "lfo_phase_"..i)
+    params:hide("lfo_scaled_"..i)
+    params:hide("lfo_raw_"..i)
     params[state](params, "lfo_mode_"..i)
     if state == "show" then
       if params:get("lfo_mode_"..i) == 1 then
@@ -651,6 +660,7 @@ function parameters.init()
       params:lookup_param("lfo_"..prm.."_"..i):bang()
     end
     lb('depth')
+    lb('phase')
     lb('min')
     lb('max')
     lb('baseline')
@@ -664,7 +674,7 @@ function parameters.init()
   end
 
   for i = 1,number_of_hills do
-    params:add_separator('snapshot_crossfade_header_'..i, 'crossfader '..hill_names[i])
+    params:add_separator('snapshot_crossfade_header_'..i, 'crossfader')
     params:add_number('snapshot_crossfade_left_'..i, 'left snapshot',1,16,1)
     params:add_number('snapshot_crossfade_right_'..i, 'right snapshot',1,16,1)
     params:add_control('snapshot_crossfade_value_'..i, 'crossfade', controlspec.PAN, crossfade_widget)
@@ -686,8 +696,8 @@ function parameters.init()
     params:set_action("lfo_snapshot_"..i,function(x)
       if x == 1 then
         lfo_params_visibility("hide", 'snapshot_'..i)
-        -- params:set("lfo_scaled_snapshot_"..i,"")
-        -- params:set("lfo_raw_snapshot_"..i,"")
+        params:set("lfo_scaled_snapshot_"..i,"")
+        params:set("lfo_raw_snapshot_"..i,"")
         snapshot_lfos[i]:stop()
       elseif x == 2 then
         lfo_params_visibility("show", 'snapshot_'..i)

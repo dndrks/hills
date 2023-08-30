@@ -1,8 +1,8 @@
 local hway_ui = {}
 
-local _hui;
+local _hui
 
-local snake_styles;
+local snake_styles
 
 function hway_ui.init()
   
@@ -18,14 +18,6 @@ function hway_ui.init()
   highway_ui.alt_fill_sel = 1
   highway_ui.fill = {}
   _hui = highway_ui
-end
-
-local function check_for_menu_condition(i)
-  if (key1_hold or (#conditional_entry_steps.focus[i] > 0)) and ui.control_set == 'edit' then
-    return true
-  else
-    return false
-  end
 end
 
 function hway_ui.draw_menu()
@@ -47,7 +39,8 @@ function hway_ui.draw_menu()
       local focus = h.screen_focus
       local seg = h[focus]
       screen.level(1)
-      screen.rect(31,15,97,20)
+      -- background:
+      screen.rect(31,21,97,20)
       screen.fill()
       local s_c = ui.screen_controls[hf][focus]
       local iter_index = seg.index-1 ~= 0 and seg.index-1 or hills[hf][focus].high_bound.note
@@ -59,10 +52,10 @@ function hway_ui.draw_menu()
         screen.text("hwy: "..focus)
       elseif ui.control_set == "edit" and ui.menu_focus == 1 then
         screen.move(31,12)
-        screen.level(3)
+        screen.level(15)
         screen.text("step: ".._active.ui_position)
       end
-      local upper_bound;
+      local upper_bound
       if ui.hill_focus <= 7 then
         if params:string("hill "..ui.hill_focus.." sample output") == "yes" then
           upper_bound = 5
@@ -91,7 +84,7 @@ function hway_ui.draw_menu()
       screen.level(3)
       screen.level(_hui.focus == "seq" and 8 or 0)
       local e_pos = track[hf][h.screen_focus].ui_position
-      screen.rect(31+(hway_ui.index_to_grid_pos(e_pos,8)[1]-1)*12,6+(10*hway_ui.index_to_grid_pos(e_pos,8)[2]),13,8)
+      screen.rect(31+(hway_ui.index_to_grid_pos(e_pos,8)[1]-1)*12,12+(10*hway_ui.index_to_grid_pos(e_pos,8)[2]),11,9)
       screen.fill()
       local lvl = 5
       screen.font_face(2)
@@ -138,9 +131,12 @@ function hway_ui.draw_menu()
           local note_index = focused_set.base_note[i]
           if focused_set.trigs[i] == true then
             if focused_set.base_note[i] == -1 then
-              local note_check;
-              if params:string('voice_model_'..hf) ~= 'sample' and params:string('voice_model_'..hf) ~= 'input' then
-                note_check = params:get(hf..'_'..params:string('voice_model_'..hf)..'_carHz')
+              local note_check
+              local prmstring = params:string('voice_model_'..hf)
+              if prmstring ~= 'sample'
+              and prmstring ~= 'input'
+              and prmstring ~= 'midi' then
+                note_check = params:get(hf..'_'..prmstring..'_carHz')
               else
                 note_check = params:get('hill '..hf..' base note')
               end
@@ -154,9 +150,9 @@ function hway_ui.draw_menu()
         end
 
         if highway_ui.alt and _hui.focus == "params" then
-          local first;
+          local first
           local second = display_step_data
-          local third;
+          local third
           if _hui.fill.start_point[_hui.sel] == i then
             first = "["
           else
@@ -170,9 +166,12 @@ function hway_ui.draw_menu()
           screen.text_center(first..second..third)
         else
           screen.text_center(display_step_data)
-          local note_check;
-          if params:string('voice_model_'..hf) ~= 'sample' and params:string('voice_model_'..hf) ~= 'input' then
-            note_check = params:get(hf..'_'..params:string('voice_model_'..hf)..'_carHz')
+          local note_check
+          local prmstring = params:string('voice_model_'..hf)
+          if prmstring ~= 'sample'
+          and prmstring ~= 'input'
+          and prmstring ~= 'midi' then
+            note_check = params:get(hf..'_'..prmstring..'_carHz')
           else
             note_check = params:get('hill '..hf..' base note')
           end
@@ -188,34 +187,34 @@ function hway_ui.draw_menu()
           end
           if focused_set.prob[i] ~= 100 then
             if focused_set.prob[i] <= 20 then
-              for pix = 33,34 do
-                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+              for pix = 32,33 do
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,18+(10*hway_ui.index_to_grid_pos(i,8)[2]))
               end
             elseif focused_set.prob[i] <= 40 then
-              for pix = 33,34 do
-                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+              for pix = 32,33 do
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,17+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,18+(10*hway_ui.index_to_grid_pos(i,8)[2]))
               end
             elseif focused_set.prob[i] <= 60 then
-              for pix = 33,34 do
-                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,10+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+              for pix = 32,33 do
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,16+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,17+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,18+(10*hway_ui.index_to_grid_pos(i,8)[2]))
               end
             elseif focused_set.prob[i] <= 80 then
-              for pix = 33,34 do
-                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,9+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,10+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+              for pix = 32,33 do
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,15+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,16+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,17+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,18+(10*hway_ui.index_to_grid_pos(i,8)[2]))
               end
             elseif focused_set.prob[i] < 100 then
-              for pix = 33,34 do
-                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,8+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,9+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,10+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+              for pix = 32,33 do
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,14+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,15+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,16+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,17+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+                screen.pixel(pix+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,18+(10*hway_ui.index_to_grid_pos(i,8)[2]))
               end
             end
             screen.fill()
@@ -247,7 +246,7 @@ function hway_ui.draw_menu()
           lvl = _hui.seq_page[hf] == i and 10 or 2
           screen.level(lvl)
           -- screen.rect(117 + (util.wrap(i-1,0,3) * 3),i <= 4 and 56 or 59,2,2)
-          screen.rect(113 + (util.wrap(i-1,0,3) * 4),i <= 4 and 56 or 60,3,3)
+          screen.rect(113 + (util.wrap(i-1,0,3) * 4),i <= 4 and 10 or 14,3,3)
           screen.fill()
         end
       end
@@ -292,9 +291,12 @@ function hway_ui.draw_menu()
           if focused_set.trigs[pos] == false then
             display_text = 'set note adds trig'
           else
-            local note_check;
-            if params:string('voice_model_'..hf) ~= 'sample' and params:string('voice_model_'..hf) ~= 'input' then
-              note_check = params:get(hf..'_'..params:string('voice_model_'..hf)..'_carHz')
+            local note_check
+            local prmstring = params:string('voice_model_'..hf)
+            if prmstring ~= 'sample'
+            and prmstring ~= 'input'
+            and prmstring ~= 'midi' then
+              note_check = params:get(hf..'_'..prmstring..'_carHz')
             else
               note_check = params:get('hill '..hf..' base note')
             end
@@ -310,7 +312,7 @@ function hway_ui.draw_menu()
       -- if (key1_hold or (#conditional_entry_steps.focus[hf] > 0)) and ui.control_set == 'edit' then
       local current_step = track[hf][h.screen_focus].ui_position
       if ui.menu_focus == 1 and ui.control_set ~= 'play' then
-        local lvl_sel, lvl_other;
+        local lvl_sel, lvl_other
         if (key1_hold or (#conditional_entry_steps.focus[hf] > 0)) and ui.control_set == 'edit' then
           lvl_sel = 15
           lvl_other = 4
@@ -322,7 +324,7 @@ function hway_ui.draw_menu()
         -- screen.move(40,20)
         screen.move(32,42)
         screen.level(_s.popup_focus.tracks[hf][1] == 1 and lvl_sel or lvl_other)
-        local base, line_above;
+        local base, line_above
         if focused_set.conditional.mode[current_step] == "NOT PRE" then
           base = "PRE"
           line_above = true

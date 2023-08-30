@@ -320,7 +320,7 @@ function screen_actions.draw()
         elseif ui.seq_menu_layer == "nav" then
           screen.level(step_seq[hf].steps.current == i and 6 or 2)
         end
-        screen.text(step_seq[hf].steps.event[i] ~= 0 and step_seq[hf].steps.event[i] or "-")
+        screen.text_center(step_seq[hf].steps.event[i] ~= 0 and step_seq[hf].steps.event[i] or "-")
       end
       if ui.seq_menu_layer == "deep_edit" then
         local deep_edits = {"PROB", "A", "B"}

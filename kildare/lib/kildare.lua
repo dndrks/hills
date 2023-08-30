@@ -1,7 +1,7 @@
 local Kildare = {}
 local specs = {}
 local ControlSpec = require 'controlspec'
-local frm = require 'formatters'
+local frm = include("lib/formatters")
 Kildare.lfos = include 'kildare/lib/kildare_lfos'
 Kildare.json = include 'kildare/lib/kildare_json'
 local musicutil = require 'musicutil'
@@ -208,7 +208,7 @@ end
 local sample_speedlist = {-4, -2, -1, -0.5, -0.25, 0, 0.25, 0.5, 1, 2, 4}
 
 local function get_resampled_rate(voice)
-  local total_offset;
+  local total_offset
   total_offset = params:get(voice..'_sample_playbackRateOffset')
   total_offset = 0.5^(-total_offset / 12)
   if util.round(params:get(voice..'_sample_playbackPitchControl'),0.01) ~= 0 then
@@ -1111,7 +1111,7 @@ function Kildare.init(track_count, poly)
   params:add_group('kildare_model_management', 'models', track_count)
   local models = swappable_drums
   for i = 1,track_count do
-    params:add_option('voice_model_'..i, 'voice '..i, models, i)
+    params:add_option('voice_model_'..i, 'voice '..i, models, #models)
     params:set_action('voice_model_'..i, function(x)
       if all_loaded then
         send_to_engine('set_model', {i, 'kildare_'..models[x], 'false'})
@@ -1415,7 +1415,7 @@ function Kildare.init(track_count, poly)
               function(x)
                 local ccNum = params:get(i.."_"..v..'_midiCC_num_'..which_def)
                 local ch = params:get(i.."_"..v..'_midiCC_ch_'..which_def)
-                local dev = params:get("hill "..i.." MIDI device")
+                local dev = hills_midi_device[i]
                 outgoing_midi_device[dev]:cc(ccNum,x,ch)
                 -- send to midi devices
                 Kildare.last_adjusted_param = {i, v, d.id}

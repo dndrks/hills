@@ -51,8 +51,8 @@ m.track_transpose = function(i,j,_page,pos,delta)
     else
       _htracks.change_trig_state(_a.fill,pos, true, i, j, _page)
     end
-    local note_check;
-    if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' then
+    local note_check
+    if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' and selectedVoiceModels[i] ~= 'midi' then
       note_check = params:get(i..'_'..selectedVoiceModels[i]..'_carHz')
     else
       note_check = params:get('hill '..i..' base note')
@@ -60,8 +60,8 @@ m.track_transpose = function(i,j,_page,pos,delta)
     focused_set[pos] = note_check
   else
     if focused_set[pos] == -1 then
-      local note_check;
-      if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' then
+      local note_check
+      if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' and selectedVoiceModels[i] ~= 'midi'  then
         note_check = params:get(i..'_'..selectedVoiceModels[i]..'_carHz')
       else
         note_check = params:get('hill '..i..' base note')
@@ -507,7 +507,7 @@ end
 m.nudge = function(i,j,index,delta)
   local h = hills[i]
   local seg = h[j]
-  local reasonable_min, reasonable_max;
+  local reasonable_min, reasonable_max
   if index == 1 then
     reasonable_min = 0
   else
@@ -531,7 +531,7 @@ end
 m.snap_bound = function(i,j)
   local h = hills[i]
   local seg = h[j]
-  local clamp_to;
+  local clamp_to
   if seg.index < 1 then
     clamp_to = 1
   else

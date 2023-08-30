@@ -202,7 +202,7 @@ end
 
 function m:delta(index, d, voice, alloc)
   build_check(m.adjusted_params, voice, alloc)
-  local val;
+  local val
   if m.adjusted_params[voice][alloc].params[index] == nil then
     -- write index and value
     val = params:lookup_param(index).raw
@@ -281,6 +281,7 @@ local function check_subtables(p)
 end
 
 m.redraw = function()
+	print("here?")
   -- print(m.pos, 2 - m.pos, #page - m.pos + 3)
   screen.clear()
   screen.font_size(8)

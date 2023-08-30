@@ -12,7 +12,11 @@ function key_actions.lr_nav(d)
   local s_c,i,j,s_q = table.unpack(share_aliases())
   
   if ui.control_set == "play" then
-    hills[i].screen_focus = util.clamp(j+d,1,8)
+    if hills[i].highway then
+      hills[i].screen_focus = util.clamp(j+d,1,#track[i])
+    else
+      hills[i].screen_focus = util.clamp(j+d,1,8)
+    end
     if mods["hill"] then
       grid_dirty = true
     end
@@ -52,7 +56,7 @@ function key_actions.lr_nav(d)
         if check_for_menu_condition(i) then
           _s.popup_focus.tracks[i][1] = util.clamp(_s.popup_focus.tracks[i][1] + d, 1, 5)
         else
-          enc_actions.delta_track_pos(i,j,d)
+          _e.delta_track_pos(i,j,d)
         end
       elseif ui.menu_focus == 2 then
         if key1_hold then
@@ -67,7 +71,7 @@ function key_actions.lr_nav(d)
         if key1_hold then
           _s.popup_focus.tracks[i][3] = util.clamp(_s.popup_focus.tracks[i][3] + d, 1, 2)
         else
-          enc_actions.delta_track_pos(i,j,d)
+          _e.delta_track_pos(i,j,d)
         end
       end
     end
@@ -153,6 +157,72 @@ function key_actions.ud_nav(d)
         local rate_adjustments = {"shuffle","reverse","rotate","rand rate","static rate","rand loop","static loop"}
         local current_adjustment = tab.key(rate_adjustments,s_c["samples"]["transform"])
         s_c["samples"]["transform"] = rate_adjustments[util.clamp(current_adjustment+d,1,#rate_adjustments)]
+      end
+    end
+  elseif ui.control_set == "edit" and hills[i].highway then
+		d = d * -1
+    local _pos = track[i][j].ui_position
+    if ui.menu_focus == 1 then
+      if ui.control_set == 'edit' then
+        -- if key1_hold then
+        if check_for_menu_condition(i) then
+          if _s.popup_focus.tracks[i][1] == 1 then
+            _hsteps.cycle_conditional(i,j,_pos,d)
+          elseif _s.popup_focus.tracks[i][1] == 2 then
+            _hsteps.cycle_prob(i,j,_pos,d)
+          elseif _s.popup_focus.tracks[i][1] == 3 then
+            _hsteps.cycle_retrig_count(i,j,_pos,d)
+          elseif _s.popup_focus.tracks[i][1] == 4 then
+            _hsteps.cycle_retrig_time(i,j,_pos,d)
+          elseif _s.popup_focus.tracks[i][1] == 5 then
+            _hsteps.cycle_retrig_vel(i,j,_pos,d)
+          end
+        else
+          local _active = track[i][j]
+          local _a = _active[highway_ui.seq_page[i]]
+          local focused_set = _active.focus == 'main' and _a or _a.fill
+          if d > 0 then
+            if focused_set.trigs[_pos] == false then
+              _htracks.change_trig_state(focused_set,_pos,true,i,j,highway_ui.seq_page[i])
+            end
+          else
+            if focused_set.trigs[_pos] == true then
+              _htracks.change_trig_state(focused_set,_pos,false,i,j,highway_ui.seq_page[i])
+            end
+          end
+        end
+      elseif ui.control_set == 'play' then
+        hills[i].screen_focus = util.clamp(j+d,1,#track[i])
+        -- highway_ui.seq_page[i] = math.ceil(track[i][hills[i].screen_focus].ui_position/16)
+        if mods["hill"] then
+          grid_dirty = true
+        end
+      end
+    elseif ui.menu_focus == 2 and ui.control_set == 'edit' then
+      if key1_hold then
+        if _s.popup_focus.tracks[i][2] == 1 then
+          _hsteps.cycle_er_param('pulses',i,j,d)
+        elseif _s.popup_focus.tracks[i][2] == 2 then
+          _hsteps.cycle_er_param('steps',i,j,d)
+        elseif _s.popup_focus.tracks[i][2] == 3 then
+          _hsteps.cycle_er_param('shift',i,j,d)
+        end
+      else
+        local _page = track[i][j].page
+        if s_c["bounds"]["focus"] == 1 then
+          track[i][j][_page].start_point = util.clamp(track[i][j][_page].start_point + d, 1, track[i][j][_page].end_point)
+        elseif s_c["bounds"]["focus"] == 2 then
+          track[i][j][_page].end_point = util.clamp(track[i][j][_page].end_point + d, track[i][j][_page].start_point, 16)
+        end
+      end
+    elseif ui.menu_focus == 3 and ui.control_set == 'edit' then
+      if key1_hold then
+        if _s.popup_focus.tracks[i][3] == 1 then
+        elseif _s.popup_focus.tracks[i][3] == 2 then
+          _hsteps.cycle_chord_degrees(i,j,_pos,d)
+        end
+      else
+        _t.track_transpose(i,j,highway_ui.seq_page[i],track[i][j].ui_position,d)
       end
     end
   end

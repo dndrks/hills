@@ -217,7 +217,7 @@ end
 
 function m:delta(index, d, voice, alloc)
   build_check(m.adjusted_params, voice, alloc)
-  local val;
+  local val
   if m.adjusted_params[voice][alloc].params[index] == nil then
     -- write index and value
     val = params:lookup_param(index).raw
