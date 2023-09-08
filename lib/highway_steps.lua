@@ -56,15 +56,7 @@ function hway_ui.draw_menu()
         screen.text("step: ".._active.ui_position)
       end
       local upper_bound
-      if ui.hill_focus <= 7 then
-        if params:string("hill "..ui.hill_focus.." sample output") == "yes" then
-          upper_bound = 5
-        else
-          upper_bound = 4
-        end
-      else
-        upper_bound = 5
-      end
+			upper_bound = 4
       for i = 1,upper_bound do
         screen.level(ui.menu_focus == i and (key1_hold and ((ui.menu_focus > 2 and  ui.control_set == "edit") and 3 or 15) or 15) or 3)
         screen.move(0,12+(10*i))
@@ -132,14 +124,8 @@ function hway_ui.draw_menu()
           if focused_set.trigs[i] == true then
             if focused_set.base_note[i] == -1 then
               local note_check
-              local prmstring = params:string('voice_model_'..hf)
-              if prmstring ~= 'sample'
-              and prmstring ~= 'input'
-              and prmstring ~= 'midi' then
-                note_check = params:get(hf..'_'..prmstring..'_carHz')
-              else
-                note_check = params:get('hill '..hf..' base note')
-              end
+
+              note_check = hills_base_note[hf]
               display_step_data = note_check
             else
               display_step_data = note_index
@@ -167,14 +153,7 @@ function hway_ui.draw_menu()
         else
           screen.text_center(display_step_data)
           local note_check
-          local prmstring = params:string('voice_model_'..hf)
-          if prmstring ~= 'sample'
-          and prmstring ~= 'input'
-          and prmstring ~= 'midi' then
-            note_check = params:get(hf..'_'..prmstring..'_carHz')
-          else
-            note_check = params:get('hill '..hf..' base note')
-          end
+          note_check = hills_base_note[hf]
           if focused_set.base_note[i] == note_check then
             if e_pos == i then
               screen.level(15)
@@ -253,7 +232,7 @@ function hway_ui.draw_menu()
 
       if ui.menu_focus == 1 then
         screen.level(15)
-        screen.move(128,10)
+        screen.move(128,80)
         if grid_mute then
           screen.text_right("[STEP MUTE]")
         elseif grid_accent then
@@ -265,7 +244,7 @@ function hway_ui.draw_menu()
             screen.text_right('[SET LOOP END]')
           end
         end
-        screen.move(128,10)
+        screen.move(128,80)
         screen.text_right(track[hf][h.screen_focus].focus == "fill" and "[FILL]" or "")
       elseif ui.menu_focus == 2 then
         local s_c = ui.screen_controls[hf][h.screen_focus]
@@ -281,7 +260,7 @@ function hway_ui.draw_menu()
         else
           screen.level(s_c["bounds"]["focus"] == 1 and 3 or 15)
         end
-        screen.move(128,10)
+        screen.move(110,10)
         screen.text_right("max: "..track[hf][h.screen_focus][_page].end_point)
       elseif ui.menu_focus == 3 then
         if ui.control_set == 'edit' then
@@ -292,19 +271,12 @@ function hway_ui.draw_menu()
             display_text = 'set note adds trig'
           else
             local note_check
-            local prmstring = params:string('voice_model_'..hf)
-            if prmstring ~= 'sample'
-            and prmstring ~= 'input'
-            and prmstring ~= 'midi' then
-              note_check = params:get(hf..'_'..prmstring..'_carHz')
-            else
-              note_check = params:get('hill '..hf..' base note')
-            end
+            note_check = hills_base_note[hf]
             if focused_set.base_note[pos] == note_check then
               display_text = 'K3: clear to default'
             end
           end
-          screen.move(40,10)
+          screen.move(40,80)
           screen.text(display_text)
         end
       end
@@ -359,8 +331,8 @@ function hway_ui.draw_menu()
         screen.move(32,62)
         local show_sign = focused_set.conditional.retrig_slope[current_step] > 0 and '+' or ''
         screen.text('SLOPE: '..show_sign..focused_set.conditional.retrig_slope[current_step])
-      elseif ui.menu_focus == 2 then
-        draw_popup(norns.state.path..'img/bolt.png',6,17)
+      elseif ui.menu_focus == 2 and ui.control_set ~= 'play' then
+        -- draw_popup(norns.state.path..'img/bolt.png',6,17)
         screen.move(15,20)
         screen.level(15)
         screen.text('[EUCLID]')
@@ -376,8 +348,8 @@ function hway_ui.draw_menu()
         screen.move(55,50)
         screen.level(_s.popup_focus.tracks[hf][2] == 4 and 15 or 4)
         screen.text('GENERATE (K3)')
-      elseif ui.menu_focus == 3 then
-        draw_popup(norns.state.path..'img/keys.png',9,17)
+      elseif ui.menu_focus == 3 and ui.control_set ~= 'play' then
+        -- draw_popup(norns.state.path..'img/keys.png',9,17)
         screen.move(55,20)
         screen.level(_s.popup_focus.tracks[hf][3] == 1 and 15 or 4)
         screen.text('VELOCITY: '..focused_set.velocities[current_step])

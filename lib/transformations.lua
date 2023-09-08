@@ -52,20 +52,12 @@ m.track_transpose = function(i,j,_page,pos,delta)
       _htracks.change_trig_state(_a.fill,pos, true, i, j, _page)
     end
     local note_check
-    if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' and selectedVoiceModels[i] ~= 'midi' then
-      note_check = params:get(i..'_'..selectedVoiceModels[i]..'_carHz')
-    else
-      note_check = params:get('hill '..i..' base note')
-    end
+    note_check = hills_base_note[i]
     focused_set[pos] = note_check
   else
     if focused_set[pos] == -1 then
       local note_check
-      if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' and selectedVoiceModels[i] ~= 'midi'  then
-        note_check = params:get(i..'_'..selectedVoiceModels[i]..'_carHz')
-      else
-        note_check = params:get('hill '..i..' base note')
-      end
+      note_check = hills_base_note[i]
       focused_set[pos] = note_check + delta
     else
       focused_set[pos] = util.clamp(focused_set[pos] + delta, 0, 127)

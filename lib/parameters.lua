@@ -52,7 +52,12 @@ function parameters.init()
       hills[i].screen_focus = 1
       screen_dirty = true
     end)
-    params:add_option('hill_'..i..'_iterator', 'iterator', {'internal','external MIDI', 'hill'}, 1)
+    params:add_option('hill_'..i..'_iterator', 'iterator', {
+      'internal',
+      'external MIDI clock',
+      'external MIDI notes',
+      'hill'
+    }, 1)
     params:set_action('hill_'..i..'_iterator', function(x)
       if x == 1 then
         if hills[i].highway then
@@ -74,26 +79,47 @@ function parameters.init()
             params:hide('hill_'..i..'_iterator_hill_'..j..'_pulse_count')
           end
         end
+				track[i].iter_by_midi_clock = false
         menu_rebuild_queued = true
       elseif x == 2 then
-        if _seamstress.clock.threads[track_clock[i]] then
-          clock.cancel(track_clock[i])
-          track_clock[i] = nil
-          _htracks.stop_playback(i)
-        end
-        params:show('hill_'..i..'_iterator_midi_device')
-        params:show('hill_'..i..'_iterator_midi_note')
-        params:show('hill_'..i..'_iterator_midi_velocity_lo')
-        params:show('hill_'..i..'_iterator_midi_velocity_hi')
-        params:show('hill_'..i..'_iterator_midi_record')
-        for j = 1,number_of_hills do
-          if i ~= j then
-            params:hide('hill_'..i..'_iterator_hill_'..j)
-            params:hide('hill_'..i..'_iterator_hill_'..j..'_pulse_count')
-          end
-        end
-        menu_rebuild_queued = true
+				if _seamstress.clock.threads[track_clock[i]] then
+					clock.cancel(track_clock[i])
+					track_clock[i] = nil
+					_htracks.stop_playback(i)
+				end
+				params:hide("hill_" .. i .. "_iterator_midi_device")
+				params:hide("hill_" .. i .. "_iterator_midi_note")
+				params:hide("hill_" .. i .. "_iterator_midi_velocity_lo")
+				params:hide("hill_" .. i .. "_iterator_midi_velocity_hi")
+				params:hide("hill_" .. i .. "_iterator_midi_record")
+				for j = 1, number_of_hills do
+					if i ~= j then
+						params:hide("hill_" .. i .. "_iterator_hill_" .. j)
+						params:hide("hill_" .. i .. "_iterator_hill_" .. j .. "_pulse_count")
+					end
+				end
+				track[i].iter_by_midi_clock = true
+				menu_rebuild_queued = true
       elseif x == 3 then
+				if _seamstress.clock.threads[track_clock[i]] then
+					clock.cancel(track_clock[i])
+					track_clock[i] = nil
+					_htracks.stop_playback(i)
+				end
+				params:show("hill_" .. i .. "_iterator_midi_device")
+				params:show("hill_" .. i .. "_iterator_midi_note")
+				params:show("hill_" .. i .. "_iterator_midi_velocity_lo")
+				params:show("hill_" .. i .. "_iterator_midi_velocity_hi")
+				params:show("hill_" .. i .. "_iterator_midi_record")
+				for j = 1, number_of_hills do
+					if i ~= j then
+						params:hide("hill_" .. i .. "_iterator_hill_" .. j)
+						params:hide("hill_" .. i .. "_iterator_hill_" .. j .. "_pulse_count")
+					end
+				end
+				track[i].iter_by_midi_clock = false
+				menu_rebuild_queued = true
+      elseif x == 4 then
         if _seamstress.clock.threads[track_clock[i]] then
           clock.cancel(track_clock[i])
           track_clock[i] = nil
@@ -112,6 +138,7 @@ function parameters.init()
             end
           end
         end
+				track[i].iter_by_midi_clock = false
         menu_rebuild_queued = true
       end
     end)
@@ -190,6 +217,7 @@ function parameters.init()
     params:add_number("hill "..i.." base note","base note",0,127,60)
     params:set_action("hill "..i.." base note",
     function(x)
+      hills_base_note[i] = x
       hills[i].note_ocean = mu.generate_scale_of_length(x,params:get("hill "..i.." scale"),127)
       for j = 1,8 do
         if params:get("hill "..i.." span") > #hills[i].note_ocean then
@@ -237,10 +265,13 @@ function parameters.init()
       end
     )
     params:add_option("hill "..i.." random offset style", "random offset style", {"+ oct","- oct","+/- oct"},1)
+    params:set_action("hill "..i.." random offset style",function(x) hills_random_offset_style[i] = x end)
     params:add_number("hill "..i.." random offset probability","random offset probability",0,100,0)
     params:set_action("hill "..i.." random offset probability",function(x) hills_random_offset_prob[i] = x end)
     params:add_binary('hill_'..i..'_legato','legato', 'momentary', 0)
+    params:set_action("hill_"..i..'_legato', function(x) hills_legato[i] = x == 1 end)
     params:add_option("hill "..i.." accent mult", 'accent multiplier', {'0.125x','0.25x','0.33x','0.5x','0.75x','1.5x','2x','3x','4x','5x','6x','7x','8x','9x','10x'},7)
+    params:set_action("hill "..i.." accent mult", function(x) hills_accent_mult[i] = params:string("hill "..i.." accent mult"):sub(1,-2) end)
     params:add_option("hill "..i.." quant value","quant value",{"1/4", "1/4d", "1/4t", "1/8", "1/8d", "1/8t", "1/16", "1/16d", "1/16t", "1/32", "1/32d", "1/32t"},7)
     params:add_option('hill '..i..' reset at stop', 'reset index @ stop?', {'no','yes'}, 2)
 
@@ -255,11 +286,7 @@ function parameters.init()
       function(x)
         if x == 1 then
           local note_check
-          if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' and selectedVoiceModels[i] ~= 'midi' then
-            note_check = params:get(i..'_'..selectedVoiceModels[i]..'_carHz')
-          else
-            note_check = params:get('hill '..i..' base note')
-          end
+          note_check = hills_base_note[i]
           local note_to_send = mu.note_num_to_freq(note_check)
           -- engine.set_voice_param(i,"carHz", note_to_send)
           send_to_engine('set_voice_param',{i,"carHz", note_to_send})
@@ -277,11 +304,7 @@ function parameters.init()
       function(x)
         if x == 1 then
           local note_check
-          if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' and selectedVoiceModels[i] ~= 'midi' then
-            note_check = params:get(i..'_'..selectedVoiceModels[i]..'_carHz')
-          else
-            note_check = params:get('hill '..i..' base note')
-          end
+          note_check = hills_base_note[i]
           local return_to = mu.note_num_to_freq(note_check)
           -- engine.set_voice_param(i,"carHzThird", return_to)
           -- engine.set_voice_param(i,"carHzSeventh", return_to)

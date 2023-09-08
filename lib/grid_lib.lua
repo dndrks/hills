@@ -82,9 +82,9 @@ function grid_lib.pattern_execute(data)
       end
     else
       if data.legato then
-        send_note_data(i,j,1,(params:get('hill '..i..' base note') + played_index) + (12 * data.octave))
+        send_note_data(i,j,1,(hills_base_note[i] + played_index) + (12 * data.octave))
       else  
-        force_note(i,j,(params:get('hill '..i..' base note') + played_index) + (12 * data.octave))
+        force_note(i,j,(hills_base_note[i] + played_index) + (12 * data.octave))
       end
     end
     patterned_es[i].x = data.x
@@ -282,6 +282,40 @@ hill_fade = 0
 
 grid_dirty_runner = clock.run(function() while true do clock.sync(1/4) grid_dirty = true end end) -- TODO: make this unnecessary...
 
+local function draw_startup()
+  if frames == nil then
+    frames = 0
+  end
+  if frames > 94 then
+    g:all(0)
+    for i = 1,4 do
+      g:led(i,3,math.random(5))
+      g:led(i+12,3,math.random(5))
+      g:led(i,4,math.random(5))
+      g:led(i+12,4,math.random(5))
+      g:led(i,5,math.random(5))
+      g:led(i+12,5,math.random(5))
+      g:led(i,6,math.random(5))
+      g:led(i+12,6,math.random(5))
+    end
+    hill_fade = util.wrap(hill_fade+1,0,15)
+    for i = 5,12 do
+      if i ~=8 and i~=9 then
+        g:led(i,3,math.random(5,12))
+        g:led(i,4,math.random(5,12))
+        g:led(i,5,math.random(5,12))
+        g:led(i,6,math.random(5,12))
+      else
+        g:led(i,3,hill_fade)
+        g:led(i,4,hill_fade)
+        g:led(i,5,hill_fade)
+        g:led(i,6,hill_fade)
+      end
+    end
+    g:refresh()
+  end
+end
+
 function grid_lib.init()
   reset_state.loop_modifier()
   grid_lib_redraw = clock.run(function()
@@ -302,37 +336,7 @@ function grid_lib.init()
           end
         end
       else
-        if frames == nil then
-          frames = 0
-        end
-        if frames > 94 then
-          g:all(0)
-          for i = 1,4 do
-            g:led(i,3,math.random(5))
-            g:led(i+12,3,math.random(5))
-            g:led(i,4,math.random(5))
-            g:led(i+12,4,math.random(5))
-            g:led(i,5,math.random(5))
-            g:led(i+12,5,math.random(5))
-            g:led(i,6,math.random(5))
-            g:led(i+12,6,math.random(5))
-          end
-          hill_fade = util.wrap(hill_fade+1,0,15)
-          for i = 5,12 do
-            if i ~=8 and i~=9 then
-              g:led(i,3,math.random(5,12))
-              g:led(i,4,math.random(5,12))
-              g:led(i,5,math.random(5,12))
-              g:led(i,6,math.random(5,12))
-            else
-              g:led(i,3,hill_fade)
-              g:led(i,4,hill_fade)
-              g:led(i,5,hill_fade)
-              g:led(i,6,hill_fade)
-            end
-          end
-          g:refresh()
-        end
+				-- draw_startup()
       end
     end
   end)
@@ -695,7 +699,7 @@ function g.key(x,y,z)
             local which_focus = (mods["snapshots"] and not mods['snapshots_extended']) and 'snapshots' or 'snapshots_extended'
             x = x - 1
             
-            local _snap;
+            local _snap
             if x <= number_of_hills and which_focus ~= 'snapshots_extended' then
               local d_voice = params:string('voice_model_'..x)
               _snap = snapshots[x][d_voice]
@@ -742,7 +746,7 @@ function g.key(x,y,z)
           local fx = {'delay','feedback','main'}
           local which_focus = (mods["snapshots"] and not mods['snapshots_extended']) and 'snapshots' or 'snapshots_extended'
           x = x - 1
-          local _snap, _snapover;
+          local _snap, _snapover
           if  x <= number_of_hills and which_focus ~= 'snapshots_extended' then
             local d_voice = params:string('voice_model_'..x)
             _snap = snapshots[x][d_voice]
@@ -1109,7 +1113,7 @@ local function process_ccES(i,j,played_note)
       params:set('hill '..i..' kildare_notes',2)
     end
     local current_step = track[i][j].step
-    if params:get('hill_'..i..'_legato') == 1 then
+    if hills_legato[i] then
       focused_set.legato_trigs[current_step] = true
     else
       _htracks.change_trig_state(focused_set,current_step, true, i, j, _page)
@@ -1121,7 +1125,7 @@ local function process_ccES(i,j,played_note)
       params:set('hill '..i..' kildare_notes',2)
     end
     local pos = track[i][j].ui_position
-    if params:get('hill_'..i..'_legato') == 1 then
+    if hills_legato[i] then
       focused_set.legato_trigs[pos] = true
     else
       _htracks.change_trig_state(focused_set,pos, true, i, j, _page)
@@ -1132,7 +1136,7 @@ local function process_ccES(i,j,played_note)
   -- else
   end
   if track[i].mute_during_note_entry == false or (track[i].mute_during_note_entry and track[i].manual_note_entry == false) then
-    if params:get('hill_'..i..'_legato') == 1 then
+    if hills_legato[i] then
       send_note_data(i,j,1,played_note)
     else
       force_note(i,j,played_note)
@@ -1156,8 +1160,8 @@ function grid_lib.cc_press(x,y,z)
       cc[i].x = x
       cc[i].y = y
       local played_index = (cc[i].x - 2) + ((cc[i].y - 4) * 4)
-      local played_note;
-      played_note = (params:get('hill '..i..' base note') + played_index) + (12 * params:get('hill_'..i..'_iso_octave'))
+      local played_note
+      played_note = (hills_base_note[i] + played_index) + (12 * params:get('hill_'..i..'_iso_octave'))
       process_ccES(i,j,played_note)
       for k = 1,16 do
         local table_to_record =
@@ -1169,7 +1173,7 @@ function grid_lib.cc_press(x,y,z)
           ["hill_i"] = i,
           ["hill_j"] = j,
           ["octave"] = params:get('hill_'..i..'_iso_octave'),
-          ["legato"] = params:get('hill_'..i..'_legato') == 1
+          ["legato"] = hills_legato[i]
         }
         write_pattern_data(k,table_to_record,false)
       end
@@ -1219,11 +1223,11 @@ function grid_lib.earthsea_press(x,y,z)
     es[i].y = y
     local midi_notes = hills[i].note_ocean
     local played_index = (((7-es[i].y)*5) + (es[i].x-1)-1)
-    local played_note;
+    local played_note
     if params:string('hill_'..i..'_iso_quantize') == 'yes' then
       played_note = hills[i].note_ocean[played_index+1] + (12 * params:get('hill_'..i..'_iso_octave'))
     else
-      played_note = (params:get('hill '..i..' base note') + played_index) + (12 * params:get('hill_'..i..'_iso_octave'))
+      played_note = (hills_base_note[i] + played_index) + (12 * params:get('hill_'..i..'_iso_octave'))
     end
     -- print(played_index+1, played_note)
     process_ccES(i,j,played_note)
@@ -1238,7 +1242,7 @@ function grid_lib.earthsea_press(x,y,z)
         ["hill_i"] = i,
         ["hill_j"] = j,
         ["octave"] = params:get('hill_'..i..'_iso_octave'),
-        ["legato"] = params:get('hill_'..i..'_legato') == 1
+        ["legato"] =hills_legato[i]
       }
       write_pattern_data(k,table_to_record,false)
     end
@@ -1319,7 +1323,7 @@ function grid_redraw()
               end
             end
           elseif mods["playmode"] then
-            local display_level;
+            local display_level
             if mods['playmode_extended'] then
               if iter_link_held[1] == i-1 then
                 g:led(i,iter_link_held[2],15)
@@ -1373,10 +1377,10 @@ function grid_redraw()
           elseif snapshot_overwrite_mod then
 
             if mods["snapshots"] then
-              local display_level;
+              local display_level
               local fx = {'delay','feedback','main'}
               local extension_limit = mods['snapshots_extended'] and 4 or number_of_hills+1
-              local _snap, _snapover;
+              local _snap, _snapover
 
               if i-1 <= 10 then
                 local d_voice = params:string('voice_model_'..i-1)
@@ -1407,11 +1411,11 @@ function grid_redraw()
 
           elseif not snapshot_overwrite_mod then
             if mods["snapshots"] then
-              local display_level;
+              local display_level
               local fx = {'delay','feedback','main'}
               local extension_limit = mods['snapshots_extended'] and 4 or number_of_hills+1
               if i-1 < extension_limit then
-                local _snap,d_voice;
+                local _snap,d_voice
                 if i-1 <= 10 then
                   d_voice = params:string('voice_model_'..i-1)
                   _snap = snapshots[i-1][d_voice]
@@ -1855,7 +1859,7 @@ function grid_lib.draw_es()
   if track[i].manual_note_entry then
     g:led(7,6,track[i].mute_during_note_entry and 15 or 4)
   end
-  g:led(7,7,params:get('hill_'..i..'_legato') == 1 and 15 or 0)
+  g:led(7,7,hills_legato[i] and 15 or 0)
   -- print(util.time())
 end
 

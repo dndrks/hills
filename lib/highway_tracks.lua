@@ -418,9 +418,6 @@ function track_actions.iterate(target)
 end
 
 function track_actions.tick(target)
-  -- if song_atoms.transport_active
-  -- or params:string('hill_'..target..'_iterator') ~= 'internal'
-  -- then
   local _active = track[target][track[target].active_hill]
   local _a = _active[_active.page]
   if not _active.loop then
@@ -594,7 +591,6 @@ function track_actions.run(target,step)
         (_a.fill.trigs[step] == true or _a.fill.lock_trigs[step] == true or _a.fill.legato_trigs[step] == true))
   then   
     local should_happen = track_actions.check_prob(target,step)
-    -- if target == 1 then print(should_happen) end
     if should_happen then
       local A_step = _active.focus == 'main' and _a.conditional.A[step] or _a.fill.conditional.A[step]
       local B_step = _active.focus == 'main' and _a.conditional.B[step] or _a.fill.conditional.B[step]
@@ -654,10 +650,6 @@ function track_actions.run(target,step)
   end
 end
 
--- function track_actions.execute_step(target,step)
---   track_actions.resolve_step(target, step)
--- end
-
 function track_actions.execute_step(target, step)
   local _active = track[target][track[target].active_hill]
   local _a = _active[_active.page]
@@ -674,24 +666,16 @@ function track_actions.execute_step(target, step)
     focused_legato = _a.fill.legato_trigs[step]
   end
   local i,j = target, track[target].active_hill
-  if focused_legato and not focused_trigs then
-    send_note_data(i,j,step,focused_notes)
-  else
-    local note_check
-    if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' and selectedVoiceModels[i] ~= 'midi' then
-      note_check = params:get(i..'_'..selectedVoiceModels[i]..'_carHz')
-    else
-      note_check = params:get('hill '..i..' base note')
-    end
-    pass_note(
-      i,
-      j,
-      hills[i][j], -- seg
-      focused_notes == -1 and note_check or focused_notes, -- note_val
-      step, -- index
-      0 -- retrig_index
-    )
-  end
+  local note_check
+  note_check = hills_base_note[i]
+  pass_note(
+    i,
+    j,
+    hills[i][j], -- seg
+    focused_notes == -1 and note_check or focused_notes, -- note_val
+    step, -- index
+    0 -- retrig_index
+  )
   -- TODO: should these be focuseD???
   if _a.trigs[step] then
     track_actions.retrig_step(target,step)
@@ -704,6 +688,7 @@ function track_actions.retrig_step(target,step)
   local _a = _active[_active.page]
   if _a.conditional.retrig_clock ~= nil then
     clock.cancel(_a.conditional.retrig_clock)
+    _a.conditional.retrig_clock = nil
   end
   local focused_set, focused_notes = {}, {}
   if _active.focus == "main" then
@@ -713,20 +698,16 @@ function track_actions.retrig_step(target,step)
     focused_set = _a.fill.conditional
     focused_notes = _a.fill.base_note
   end
-  local base_time = (clock.get_beat_sec() * _active.time)
-  local swung_time =  base_time*util.linlin(50,100,0,1,_active.swing)
   if focused_set.retrig_count[step] > 0 then
+		local base_time = (clock.get_beat_sec() * _active.time)
+		local swung_time = base_time * util.linlin(50, 100, 0, 1, _active.swing)
     local i,j = target, track[target].active_hill
     _a.conditional.retrig_clock = clock.run(
       function()
         for retrigs = 1,focused_set.retrig_count[step] do
           clock.sleep(((clock.get_beat_sec() * _active.time)*focused_set.retrig_time[step])+swung_time)
           local note_check
-          if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' and selectedVoiceModels[i] ~= 'midi' then
-            note_check = params:get(i..'_'..selectedVoiceModels[i]..'_carHz')
-          else
-            note_check = params:get('hill '..i..' base note')
-          end
+          note_check = hills_base_note[i]
           pass_note(
             i,
             j,
@@ -750,11 +731,7 @@ function track_actions.reset_note_to_default(i,j)
   local _a = _active[_active.page]
   local focused_set = _active.focus == 'main' and _a or _a.fill
   local note_check
-  if selectedVoiceModels[i] ~= 'sample' and selectedVoiceModels[i] ~= 'input' and selectedVoiceModels[i] ~= 'midi' then
-    note_check = params:get(i..'_'..selectedVoiceModels[i]..'_carHz')
-  else
-    note_check = params:get('hill '..i..' base note')
-  end
+  note_check = hills_base_note[i]
   if focused_set.base_note[_active.ui_position] == note_check then
     focused_set.base_note[_active.ui_position] = -1
   end
