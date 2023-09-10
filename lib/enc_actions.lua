@@ -1,20 +1,24 @@
 local enc_actions = {}
 
-function enc_actions.delta_track_pos(i,j,d)
-  if track[i][j].ui_position + d < 1 then
-    local pre_change = highway_ui.seq_page[i]
-    highway_ui.seq_page[i] = util.clamp(highway_ui.seq_page[i]-1,1,8)
-    if pre_change ~= highway_ui.seq_page[i] then
-      track[i][j].ui_position = 16
-    end
-  elseif track[i][j].ui_position + d > 16 then
-    local pre_change = highway_ui.seq_page[i]
-    highway_ui.seq_page[i] = util.clamp(highway_ui.seq_page[i]+1,1,8)
-    if pre_change ~= highway_ui.seq_page[i] then
-      track[i][j].ui_position = 1
+function enc_actions.delta_track_pos(i,j,d,jump_page)
+  if not jump_page then
+    if track[i][j].ui_position + d < 1 then
+      local pre_change = highway_ui.seq_page[i]
+      highway_ui.seq_page[i] = util.clamp(highway_ui.seq_page[i]-1,1,8)
+      if pre_change ~= highway_ui.seq_page[i] then
+        track[i][j].ui_position = 16
+      end
+    elseif track[i][j].ui_position + d > 16 then
+      local pre_change = highway_ui.seq_page[i]
+      highway_ui.seq_page[i] = util.clamp(highway_ui.seq_page[i]+1,1,8)
+      if pre_change ~= highway_ui.seq_page[i] then
+        track[i][j].ui_position = 1
+      end
+    else
+      track[i][j].ui_position = util.clamp(track[i][j].ui_position + d, 1, 16)
     end
   else
-    track[i][j].ui_position = util.clamp(track[i][j].ui_position + d, 1, 16)
+		highway_ui.seq_page[i] = util.clamp(highway_ui.seq_page[i] + (d > 0 and 1 or -1), 1, 8)
   end
 end
 

@@ -157,6 +157,8 @@ function get_loop_modifier_stage()
   return loop_modifier_stage
 end
 
+grid_page_modifier = false
+
 grid_pattern = {}
 grid_overdub_state = {}
 overdubbing_pattern = false
@@ -1016,14 +1018,32 @@ function grid_lib.highway_press(x,y,z)
     elseif grid_data_entry then
       data_entry_steps.held[i] = util.clamp(data_entry_steps.held[i] - 1,0,128)
     end
+  elseif y == 7 and x == 4 then
+    grid_page_modifier = z == 1
   elseif (y == 5 or y == 6) and (x >=5 and x <= 8) and z == 1 then
-    if not highway_mod_copy.state then
-      highway_ui.seq_page[i] = x-4 + (y == 5 and 0 or 4)
+    local _page = x-4 + (y == 5 and 0 or 4)
+    if not grid_page_modifier then
+      if not highway_mod_copy.state then
+        highway_ui.seq_page[i] = _page
+      else
+        -- print('would copy/paste page data')
+        print('copy/paste page data')
+        _cp.clipboard(i,j,_page,"page: trigs")
+      end
     else
-      -- print('would copy/paste page data')
-      print('copy/paste page data')
-      local _page = x-4 + (y == 5 and 0 or 4)
-      _cp.clipboard(i,j,_page,"page: trigs")
+      print(#track[i][j].page_chain, tab.contains(track[i][j].page_chain, _page), _page)
+      if #track[i][j].page_chain > 1 and tab.contains(track[i][j].page_chain, _page) then
+        local to_remove = tab.key(track[i][j].page_chain, _page)
+        table.remove(track[i][j].page_chain, to_remove)
+				track[i][j].page_chain:settable(track[i][j].page_chain)
+				table.sort(track[i][j].page_chain)
+				print(to_remove,track[i][j].page_chain)
+      elseif tab.contains(track[i][j].page_chain, _page) == false then
+        table.insert(track[i][j].page_chain,_page)
+				track[i][j].page_chain:settable(track[i][j].page_chain)
+        table.sort(track[i][j].page_chain)
+        print(track[i][j].page_chain)
+      end
     end
   elseif y == 7 and x == 1 then
     if mods.alt and z == 1 then
@@ -1731,22 +1751,42 @@ function grid_lib.draw_highway()
     end
   end
   draw_pattern_selector(i)
+  
+  -- draw page selector:
   for j = 1,8 do
-    if highway_ui.seq_page[i] == j then
-      lvl = 10
-    else
-      if _active.playing then
-        if _active.page == j then
-          lvl = 5
-        else
-          lvl = 2
-        end
+    if grid_page_modifier then
+      if tab.contains(track[i][track[i].active_hill].page_chain,j) then
+        lvl = 8
       else
         lvl = 2
+      end
+    else
+      if highway_ui.seq_page[i] == j then
+        lvl = 12
+      else
+        if _active.playing then
+          if _active.page == j then
+            lvl = 8
+          else
+            if tab.contains(track[i][track[i].active_hill].page_chain,j) then
+              lvl = 4
+            else
+              lvl = 2
+            end
+          end
+        else
+          if tab.contains(track[i][track[i].active_hill].page_chain,j) then
+            lvl = 4
+          else
+            lvl = 2
+          end
+        end
       end
     end
     g:led(4 + util.wrap(j,1,4), j <= 4 and 5 or 6, lvl)
   end
+
+  g:led(4,7,grid_page_modifier and 15 or 2)
 
   -- draw grid_lock:
   if highway_mod_copy.state then

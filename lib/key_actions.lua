@@ -8,7 +8,7 @@ local function share_aliases()
   return {s_c,i,j,s_q}
 end
 
-function key_actions.lr_nav(d)
+function key_actions.lr_nav(d, modifiers)
   local s_c,i,j,s_q = table.unpack(share_aliases())
   
   if ui.control_set == "play" then
@@ -56,7 +56,11 @@ function key_actions.lr_nav(d)
         if check_for_menu_condition(i) then
           _s.popup_focus.tracks[i][1] = util.clamp(_s.popup_focus.tracks[i][1] + d, 1, 5)
         else
-          _e.delta_track_pos(i,j,d)
+          local mod_active
+          if #modifiers == 1 and modifiers[1] == "alt" then
+            mod_active = true
+          end
+          _e.delta_track_pos(i,j,d,mod_active)
         end
       elseif ui.menu_focus == 2 then
         if key1_hold then
@@ -244,9 +248,9 @@ function key_actions.parse(char, modifiers, is_repeat, state)
         ui.control_set = 'play'
       end
     elseif (char.name == 'right' or char.name == 'left') and state == 1 then
-      key_actions.lr_nav(char.name == 'left' and -1 or 1)
+      key_actions.lr_nav(char.name == 'left' and -1 or 1, modifiers)
     elseif (char.name == 'up' or char.name == 'down') and state == 1 then
-      key_actions.ud_nav(char.name == 'up' and -1 or 1)
+      key_actions.ud_nav(char.name == 'up' and -1 or 1, modifiers)
     end
     -- if z == 1 then
     --   local s_c = ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]
