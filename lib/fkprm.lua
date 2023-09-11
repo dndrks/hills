@@ -74,6 +74,44 @@ local function build_sub(sub)
   end
 end
 
+local function share_aliases()
+	local s_c = ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]
+	local i = ui.hill_focus
+	local j = hills[i].screen_focus
+	local s_q = ui.seq_controls[i]
+	return { s_c, i, j, s_q }
+end
+
+function m.ud_nav(d, modifiers)
+	local s_c, i, j, s_q = table.unpack(share_aliases())
+
+	local prev = m.pos
+	m.pos = util.clamp(m.pos + d, 0, #page - 1)
+	if m.pos ~= prev then
+		m.redraw()
+	end
+end
+
+function m.lr_nav(d, modifiers)
+	local s_c, i, j, s_q = table.unpack(share_aliases())
+
+  local jump = modifiers[1] == 'alt'
+  m.fine = modifiers[1] == 'shift'
+
+  if params.count > 0 then
+    if params:lookup_param(page[m.pos+1]).t == 2 then
+      local dx = m.fine and (d/20) or (jump and d*10 or d)
+      print(dx)
+      if grid_data_entry then
+        m:delta_many(params:lookup_param(page[m.pos+1]).id, dx, m.voice_focus, m.hill_focus, m.page_focus)
+      else
+        m:delta(params:lookup_param(page[m.pos+1]).id, dx, m.voice_focus, m.hill_focus, m.page_focus, m.step_focus)
+      end
+      m.redraw()
+    end
+  end
+end
+
 m.key = function(n,z)
   if n==1 and z==1 then
     key1_hold = true
@@ -116,15 +154,7 @@ m.key = function(n,z)
         if n > #page then n = 1 end
       until params:t(page[n]) == params.tSEPARATOR
       m.pos = n-1
-    elseif t == params.tFILE then
-    elseif t == params.tTEXT then
-    elseif t == params.tTRIGGER then
-    elseif t == params.tBINARY then 
-    else
-      m.fine = true
     end
-  elseif n==3 and z==0 then
-    m.fine = false
   end
   m.redraw()
 end
@@ -335,92 +365,131 @@ end
 
 m.redraw = function()
   -- print(m.pos, 2 - m.pos, #page - m.pos + 3)
-  screen.clear()
   screen.font_size(8)
   local trig_type = track[m.voice_focus][m.hill_focus][m.page_focus].trigs[m.step_focus] and '' or ' (parameter lock)'
   local n = m.voice_focus..' / hill: '..m.hill_focus..trig_type
   screen.level(4)
-  _screenMove(0,10)
+  screen.move(0,10)
   screen.text(n)
   n = "STEP "..m.step_focus.." PARAMS"
   if m.group then n = n .. " / " .. m.groupname end
-  _screenMove(0,20)
-  screen.text(n)
-  for i=3,6 do
-    if (i > 2 - m.pos) and (i < #page - m.pos + 3) then
-      local highlight = {[0] = true, [3] = true, [7] = true}
-      if i==3 then
-        if highlight[params:lookup_param(page[m.pos+1]).t] then
-          -- screen.level(key1_hold and 4 or 15)
-          screen.level(15)
-        else
-          screen.level(1)
-        end
-      else
-        if highlight[params:lookup_param(page[i+m.pos-2]).t] then
-          screen.level(4)
-        else
-          screen.level(1)
-        end
-      end
-      local p = page[i+m.pos-2]
-      local t = params:t(p)
-      if t == params.tSEPARATOR then
-        _screenMove(0,10*i+2.5)
-        screen.line_rel(127,0)
-        screen.stroke()
-        _screenMove(63,10*i)
-        screen.text_center(params:get_name(p))
-      elseif t == params.tGROUP then
-        _screenMove(0,10*i)
-        screen.text(params:get_name(p) .. " >")
-      else
+
+	screen.move(10, 20)
+	screen.text(n)
+	screen.move_rel(0, 5)
+	for i = 1, 20 do
+		if (i > 1 - m.pos) and (i < #page - m.pos + 2) then
+			if i == 2 then
+        screen.level(15)
+			else
+				screen.level(4)
+			end
+			local p = page[i + m.pos - 1]
+			local t = params:t(p)
+			screen.move_rel(0, 10)
+			if t == params.tSEPARATOR then
+				screen.text(params:get_name(p))
+				screen.move_rel(0, 8)
+				screen.line_rel(127, 0)
+				screen.move_rel(0, -8)
+			elseif t == params.tGROUP then
+				screen.text(params:get_name(p) .. " >")
+			else
         if check_subtables(p) then
-          screen.rect(0,(10*i)-7,127,9)
-          screen.fill()
-          screen.stroke()
+					screen.move_rel(-1,0)
+          screen.rect_fill(130,8)
           screen.level(0)
+					screen.move_rel(1, 0)
         end
-        _screenMove(2,10*i)
-        screen.text(params:get_name(p))
-        _screenMove(125,10*i)
+				screen.text(params:get_name(p))
+				screen.move_rel(127, 0)
         if check_subtables(p) then
           screen.text_right(m:string(p))
         else
-          screen.text_right(params:string(p))
+          -- screen.text_right(params:string(p))
+					screen.text_right(params:string(p, params:is_number(p) and 1 or 0.001))
         end
-      end
-    end
-  end
-  if key1_hold and params:lookup_param(page[m.pos+1]).t == 3 then
+				screen.move_rel(-127, 0)
+			end
+		end
+	end
+
+  -- screen.move(0,20)
+  -- screen.text(n)
+  -- for i=3,6 do
+  --   if (i > 2 - m.pos) and (i < #page - m.pos + 3) then
+  --     local highlight = {[0] = true, [3] = true, [7] = true}
+  --     if i==3 then
+  --       if highlight[params:lookup_param(page[m.pos+1]).t] then
+  --         -- screen.level(key1_hold and 4 or 15)
+  --         screen.level(15)
+  --       else
+  --         screen.level(1)
+  --       end
+  --     else
+  --       if highlight[params:lookup_param(page[i+m.pos-2]).t] then
+  --         screen.level(4)
+  --       else
+  --         screen.level(1)
+  --       end
+  --     end
+  --     local p = page[i+m.pos-2]
+  --     local t = params:t(p)
+  --     if t == params.tSEPARATOR then
+  --       screen.move(0,10*i+2.5)
+  --       screen.line_rel(127,0)
+  --       screen.stroke()
+  --       screen.move(63,10*i)
+  --       screen.text_center(params:get_name(p))
+  --     elseif t == params.tGROUP then
+  --       screen.move(0,10*i)
+  --       screen.text(params:get_name(p) .. " >")
+  --     else
+  --       if check_subtables(p) then
+  --         screen.rect(0,(10*i)-7,127,9)
+  --         screen.fill()
+  --         screen.stroke()
+  --         screen.level(0)
+  --       end
+  --       screen.move(2,10*i)
+  --       screen.text(params:get_name(p))
+  --       screen.move(125,10*i)
+  --       if check_subtables(p) then
+  --         screen.text_right(m:string(p))
+  --       else
+  --         screen.text_right(params:string(p))
+  --       end
+  --     end
+  --   end
+  -- end
+  if key1_hold and params:lookup_param(page[m.pos+1]).t == 2 then
     draw_small_popup()
-    _screenMove(4,52)
+    screen.move(4,52)
     screen.level(15)
     screen.font_size(15)
     screen.text('K3')
     screen.font_size(8)
 
-    _screenMove(28,45)
+    screen.move(28,45)
     screen.level(m.alt_menu_focus == 1 and 15 or (m.alt_menu_focus == 4 and 15 or 4))
     screen.text('RESET')
-    _screenMove(56,45)
+    screen.move(56,45)
     screen.level(m.alt_menu_focus == 2 and 15 or (m.alt_menu_focus == 5 and 15 or 4))
     screen.text('FORCE')
-    _screenMove(84,45)
+    screen.move(84,45)
     screen.level(m.alt_menu_focus == 3 and 15 or (m.alt_menu_focus == 6 and 15 or 4))
     screen.text('RND@'..m.random_window..'%')
 
-    _screenMove(32,53)
+    screen.move(32,53)
     screen.level(m.alt_menu_focus == 4 and 15 or 1)
     screen.text('ALL')
-    _screenMove(60,53)
+    screen.move(60,53)
     screen.level(m.alt_menu_focus == 5 and 15 or 1)
     screen.text('ALL')
-    _screenMove(94,53)
+    screen.move(94,53)
     screen.level(m.alt_menu_focus == 6 and 15 or 1)
     screen.text('ALL')
   end
-  screen.update()
 end
 
 m.init = function()

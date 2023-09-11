@@ -234,14 +234,32 @@ function key_actions.ud_nav(d)
 end
 
 function key_actions.parse(char, modifiers, is_repeat, state)
+  local s_c,i,j,s_q = table.unpack(share_aliases())
   if ui.control_set == 'step parameters' then
-    _fkprm.key(char, modifiers, is_repeat, state)
+		if (char.name == "up" or char.name == "down") and state == 1 then
+			_fkprm.ud_nav(char.name == "up" and -1 or 1, modifiers)
+		elseif (char.name == 'right' or char.name == 'left') and state == 1 then
+      _fkprm.lr_nav(char.name == 'left' and -1 or 1, modifiers)
+    elseif char.name == 'return' then
+      _fkprm.key(3,state)
+    elseif char.name == 'backspace' then
+			_fkprm.key(2, state)
+    end
   elseif ui.control_set == 'poly parameters' then
     _polyparams.key(char, modifiers, is_repeat, state)
   else
     if char.name == 'return' and state == 1 then
       if ui.control_set == 'play' then
         ui.control_set = 'edit'
+      elseif ui.control_set == 'edit' then
+        grid_conditional_entry = not grid_conditional_entry
+        if grid_conditional_entry == true then
+          print(track[i][j].ui_position)
+          -- conditional_entry_steps.focus[i] = {track[i][j].ui_position}
+					_g.process_modifier(conditional_entry_steps, track[i][j].ui_position, i, j)
+        else
+          conditional_entry_steps.focus[i] = {}
+        end
       end
     elseif char.name == 'backspace' and state == 1 then
       if ui.control_set == 'edit' then

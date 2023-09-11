@@ -870,7 +870,8 @@ local function reset_step_mods(retain)
   -- end
 end
 
-local function process_modifier(parent,pressed_step,i,j)
+function grid_lib.process_modifier(parent,pressed_step,i,j)
+  print(pressed_step)
   if parent == data_entry_steps and ui.control_set ~= 'step parameters' then
     _fkprm.flip_to_fkprm('edit',true)
   end
@@ -980,9 +981,9 @@ function grid_lib.highway_press(x,y,z)
           write_pattern_data(k,table_to_record,false)
         end
       elseif grid_data_entry then
-        process_modifier(data_entry_steps, pressed_step, i, j)
+        grid_lib.process_modifier(data_entry_steps, pressed_step, i, j)
       elseif grid_conditional_entry then
-        process_modifier(conditional_entry_steps, pressed_step, i, j)
+        grid_lib.process_modifier(conditional_entry_steps, pressed_step, i, j)
       elseif grid_loop_modifier then
         if loop_modifier_stage == 'define start' then
           track[i][j][_page].start_point = util.clamp(pressed_step, 1, track[i][j][_page].end_point)

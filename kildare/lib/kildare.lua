@@ -283,9 +283,48 @@ function Kildare.init(track_count, poly)
   midi_params = {}
   for mpIter = 1,32 do
     table.insert(midi_params, {type = 'separator', name = 'midi cc ouput #'..mpIter})
-    table.insert(midi_params, {id = 'midiCC_num_'..mpIter, name = 'cc number', type = 'control', min = 0, max = 127, warp = 'lin', default = mpIter, step = 1, formatter = function(param) return (round_form((type(param) == 'table' and param:get() or param),1,'')) end})
-    table.insert(midi_params, {id = 'midiCC_ch_'..mpIter, name = 'cc channel', type = 'control', min = 1, max = 16, warp = 'lin', default = 1, step = 1, formatter = function(param) return (round_form((type(param) == 'table' and param:get() or param),1,'')) end})
-    table.insert(midi_params, {id = 'midiCC_val_'..mpIter, name = 'cc value', type = 'control', min = 0, max = 127, warp = 'lin', default = 0, step = 1, formatter = function(param) return (round_form((type(param) == 'table' and param:get() or param),1,'')) end})
+		table.insert(midi_params, {
+			id = "midiCC_val_" .. mpIter,
+			name = "cc value",
+			type = "control",
+			min = 0,
+			max = 127,
+			warp = "lin",
+			quantum = 1 / 127,
+			default = 0,
+			step = 1,
+			formatter = function(param)
+				return (round_form((type(param) == "table" and param:get() or param), 1, ""))
+			end,
+		})
+		table.insert(midi_params, {
+			id = "midiCC_num_" .. mpIter,
+			name = "cc number",
+			type = "control",
+			min = 0,
+			max = 127,
+			warp = "lin",
+			quantum = 1 / 127,
+			default = mpIter-1,
+			step = 1,
+			formatter = function(param)
+				return (round_form((type(param) == "table" and param:get() or param), 1, ""))
+			end,
+		})
+		table.insert(midi_params, {
+			id = "midiCC_ch_" .. mpIter,
+			name = "cc channel",
+			type = "control",
+			min = 1,
+			max = 16,
+			warp = "lin",
+			quantum = 1 / 16,
+			default = 1,
+			step = 1,
+			formatter = function(param)
+				return (round_form((type(param) == "table" and param:get() or param), 1, ""))
+			end,
+		})
   end
   
   kildare_drum_params = {

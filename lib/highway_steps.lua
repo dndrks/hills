@@ -22,20 +22,21 @@ end
 
 function hway_ui.draw_menu()
 
-  local hf = ui.hill_focus
-  local h = hills[hf]
-  local _page = highway_ui.seq_page[hf]
-  local _active = track[hf][h.screen_focus]
-  local _a = track[hf][h.screen_focus][_page]
-  screen.level(15)
-  screen.move(0,10)
-  screen.aa(1)
-  screen.font_size(10)
-  screen.text(hill_names[ui.hill_focus])
-  screen.fill()
-  screen.aa(0)
   if ui.control_set ~= "seq" then
     if ui.control_set ~= 'step parameters' and ui.control_set ~= 'poly parameters' and ui.control_set ~= 'cc parameters' then
+			local hf = ui.hill_focus
+			local h = hills[hf]
+			local _page = highway_ui.seq_page[hf]
+			local _active = track[hf][h.screen_focus]
+			local _a = track[hf][h.screen_focus][_page]
+			screen.level(15)
+			screen.move(0, 10)
+			screen.aa(1)
+			screen.font_size(10)
+			screen.text(hill_names[ui.hill_focus])
+			screen.fill()
+			screen.aa(0)
+      
       local focus = h.screen_focus
       local seg = h[focus]
       screen.level(1)
@@ -108,7 +109,7 @@ function hway_ui.draw_menu()
             elseif focused_set.accented_trigs[i] and not focused_set.lock_trigs[i] then
               display_step_data = '\\'
             elseif focused_set.lock_trigs[i] then
-              display_step_data = 'P'
+              display_step_data = '|P'
             else
               display_step_data = '|'
             end
@@ -199,17 +200,12 @@ function hway_ui.draw_menu()
             screen.fill()
           end
           if focused_set.conditional.A[i] ~= 1 or focused_set.conditional.B[i] ~= 1 then
-            screen.pixel(40+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,7+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-            screen.pixel(42+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,7+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-            screen.fill()
+            screen.move(41+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,15+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+            screen.text_center(':')
           end
           if focused_set.conditional.retrig_count[i] > 0 then
-            screen.pixel(41+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,10+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-            screen.pixel(42+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-            screen.pixel(41+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-            screen.pixel(40+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-            screen.pixel(41+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,12+(10*hway_ui.index_to_grid_pos(i,8)[2]))
-            screen.fill()
+            screen.move(41+(hway_ui.index_to_grid_pos(i,8)[1]-1)*12,11+(10*hway_ui.index_to_grid_pos(i,8)[2]))
+            screen.text_center('+')
           end
         end
       end

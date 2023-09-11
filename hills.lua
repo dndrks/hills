@@ -1340,6 +1340,8 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
         local check_prm = per_step_params_adjusted[i].param[k]
         -- print('>S>S>S'..check_prm)
         if _fkprm.adjusted_params[i][j][_page][index].params[check_prm] == nil then
+          -- reset param:
+					params:lookup_param(check_prm).action(params:get(check_prm))
           -- send param! eg. prms.send_to_engine(target_voice,p_name,params:get(id))
         end
       end
@@ -1350,6 +1352,8 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
     for k,v in next,target_trig[i][j][_page][index].params do
       local param_id = k
       if retrig_index == 0 then
+				-- send per-step param:
+        params:lookup_param(param_id).action(fkmap(i,j,index,param_id))
         -- send param! eg. prms.send_to_engine(target_voice,p_name,fkmap(i,j,index,param_id))
       end
       per_step_params_adjusted[i].count = per_step_params_adjusted[i].count + 1
@@ -1367,6 +1371,19 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
       local lock_trig = track[i][j].focus == 'main' and track[i][j][_page].lock_trigs[index] or track[i][j][_page].fill.lock_trigs[index]
       if focused_set.trigs[index] and not focused_set.muted_trigs[index] then
         if retrig_index == 0 then
+					local destination_vel = focused_set.velocities[index] * (focused_set.accented_trigs[index] and accent_vel or 1)
+					local destination_count = focused_set.conditional.retrig_count[index]
+					local destination_curve = focused_set.conditional.retrig_slope[index]
+					local retrig_vel
+          if destination_curve < 0 and destination_count > 0 then
+            local destination_min = lin_lin(-128, -1, 0, destination_vel, destination_curve)
+            retrig_vel = util_round(lin_lin(0, destination_count, destination_vel, destination_min, retrig_index))
+          elseif destination_curve > 0 and destination_count > 0 then
+            local destination_max = lin_lin(1, 128, 0, destination_vel, destination_curve)
+            retrig_vel = util_round(lin_lin(0, destination_count, 0, destination_max, retrig_index))
+          else
+            retrig_vel = destination_vel
+          end
 					if hills_midi_output[i] then
 						local ch = hills_note_channel[i]
 						local dev = hills_midi_device[i]
@@ -1397,7 +1414,7 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
               outgoing_midi_device[dev]:note_off(pre_note[i], 0, ch)
             end
             outgoing_midi_device[dev]:note_on(played_note, retrig_vel, ch)
-            print('retrigged',i,clock.get_beats())
+            print('retrigged',i,clock.get_beats(),retrig_vel)
           end
         end
       end
