@@ -4,7 +4,7 @@ local f_m = flow_menu
 local groups = {"1","2","3","4"}
 local pattern_names = {1,2,3,4}
 local pattern_banks = {"A","B","C","D","E","F","G","H"}
-local _fm_;
+local _fm_
 
 function f_m.init()
   page = {}
@@ -73,7 +73,7 @@ function f_m.draw_song_menu()
     screen.move(col_starts[1],6)
     screen.text("#")
     screen.move(57,6)
-    screen.circle(57,5,2)
+    draw_circle(57,5,2)
     screen.fill()
     screen.move(59,6)
     screen.line(59,0)

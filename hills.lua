@@ -55,9 +55,9 @@ if norns == nil then
     screen.rect_fill(w,h)
   end
 
-  screen.circle = function(x,y,r)
+  draw_circle = function(x,y,r)
     screen.move(x,y)
-    _seamstress.screen_circle(r)
+    screen.circle(util.clamp(r,2,math.huge))
   end
   
   screen.font_face = function() end
@@ -318,6 +318,31 @@ incoming_midi_device = {}
 outgoing_midi_device = {}
 
 function init()
+	startup_animation = clock.run(function()
+		while true do
+			clock.sleep(1 / 60)
+			screen.clear()
+			if frames == nil then
+				frames = 0
+			else
+				frames = frames + 1
+			end
+			if frames > 94 then
+				screen.move(108, 64)
+				screen.color(math.random(64), 108, 184, math.random(255))
+				screen.text_center("__/\\______/\\\\___")
+				screen.move(128, 64)
+				screen.color(196, math.random(156), 159, math.random(255))
+				screen.text_center("____/\\\\\\\\\\___/\\_")
+				screen.move(148, 64)
+				screen.color(92, math.random(71), 47, math.random(255))
+				screen.text_center("/\\///_____/\\\\\\__")
+				-- screen_dirty = true
+			end
+			screen.refresh()
+		end
+	end)
+
   paramsMenu.loadMessage = "loading hills params..."
   print('starting: '..util.time())
   kildare.init(number_of_hills, true)
@@ -429,7 +454,7 @@ function init()
   _polyparams.init()
   _ccparams.init()
   _midi.init()
-  -- prms.reload_engine(params:string("global engine"),true)
+	-- prms.reload_engine(params:string("global engine"),true)
   
   for i = 1,number_of_hills do
     ui.edit_note[i] = {}
@@ -536,29 +561,21 @@ function init()
 
     hills[i].screen_focus = 1
 
-    startup_animation = clock.run(
-      function()
-        while true do
-          clock.sleep(1/60)
-          redraw()
-        end
-      end
-    )
-
-    menu_rebuild_clock = clock.run(function()
-      while true do
-        clock.sleep(1/15)
-        if screen_dirty then
-          redraw()
-          paramsMenu.redraw()
-        end
-        if menu_rebuild_queued then
-          _menu.rebuild_params()
-          menu_rebuild_queued = false
-        end
-      end
-    end)
   end
+
+	menu_rebuild_clock = clock.run(function()
+		while true do
+			clock.sleep(1 / 15)
+			if screen_dirty then
+				redraw()
+				paramsMenu.redraw()
+			end
+			if menu_rebuild_queued then
+				_menu.rebuild_params()
+				menu_rebuild_queued = false
+			end
+		end
+	end)
 
   print('built hills: '..util.time())
 
@@ -812,6 +829,7 @@ function init()
   end
 
   print('wrapped with startup: '..util.time())
+
   clock.run(
     function()
       clock.sleep(2)
@@ -826,10 +844,11 @@ function init()
       clock.run(
         function()
           clock.sleep(1)
+			    clock.cancel(startup_animation)
+          -- print("D>D>D>D>D",startup_animation)
           loading_done = true
           paramsMenu.loadMessage = nil
           paramsMenu.redraw()
-          clock.cancel(startup_animation)
         end
       )
     end
@@ -1501,6 +1520,7 @@ function screen.click(x, y, state, button)
   if ui.control_set ~= "song" then
     prms.mouseclick_ccs(ui.hill_focus, x, y, state, button)
   end
+	screen_dirty = true
 end
 
 function screen.mouse(x,y)
@@ -1530,29 +1550,10 @@ redraw = function()
         end
       end
     end
-    -- prms.draw_ccs(ui.hill_focus)
-    screen.update()
+    prms.draw_ccs(ui.hill_focus)
+    screen.refresh()
     screen_dirty = false
     if key2_hold then
-      screen_dirty = true
-    end
-  else
-    if frames == nil then
-      frames = 0
-    else
-      frames = frames + 1
-    end
-    if frames > 94 then
-      screen.move(108,64)
-      screen.color(math.random(64), 108, 184, math.random(255))
-      screen.text_center('__/\\______/\\\\___')
-      screen.move(128,64)
-      screen.color(196, math.random(156), 159, math.random(255))
-      screen.text_center('____/\\\\\\\\\\___/\\_')
-      screen.move(148,64)
-      screen.color(92, math.random(71), 47,math.random(255))
-      screen.text_center('/\\///_____/\\\\\\__')
-      screen.update()
       screen_dirty = true
     end
   end

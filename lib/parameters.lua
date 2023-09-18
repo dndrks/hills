@@ -120,6 +120,7 @@ function parameters.mousedrag_ccs(voice,x,y)
   if delta ~= nil then
     params:delta(voice..'_midi_midiCC_val_'..mouseparam.cc, delta)
   end
+	screen_dirty = true
 end
 
 function parameters.init()

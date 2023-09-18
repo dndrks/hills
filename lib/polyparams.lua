@@ -283,7 +283,7 @@ end
 m.redraw = function()
 	print("here?")
   -- print(m.pos, 2 - m.pos, #page - m.pos + 3)
-  screen.clear()
+  -- screen.clear()
   screen.font_size(8)
   local n = m.groupname
   screen.level(4)
@@ -353,7 +353,7 @@ m.redraw = function()
     screen.level(m.alt_menu_focus == 3 and 15 or 4)
     screen.text('STEP: '..m.step_focus)
   end
-  screen.update()
+  -- screen.refresh()
 end
 
 m.init = function()

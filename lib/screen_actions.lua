@@ -55,15 +55,15 @@ end
 function screen_actions.draw()
   local hf = ui.hill_focus
   local h = hills[hf]
-  screen.level(15)
+  -- screen.level(15)
   screen.move(0,10)
-  screen.aa(1)
-  screen.font_size(10)
+  -- screen.aa(1)
+  -- screen.font_size(10)
   -- local hill_names = {"A","B","C","D","E","F","G","H"}
   screen.color(192,util.linlin(1,7,108,255,ui.hill_focus),128,255)
   screen.text(hill_names[ui.hill_focus])
-  screen.fill()
-  screen.aa(0)
+  -- screen.fill()
+  -- screen.aa(0)
   if ui.control_set ~= "seq" then
     if ui.control_set ~= 'step parameters' and ui.control_set ~= 'poly parameters' then
       local focus = h.screen_focus
@@ -75,13 +75,13 @@ function screen_actions.draw()
       screen.color(92, 71, 47,120)
       screen.rect_fill(80,40)
       -- //
-      screen.fill()
+      -- screen.fill()
       local s_c = ui.screen_controls[hf][focus]
       local iter_index = seg.index-1 ~= 0 and seg.index-1 or nil
       for i = hills[hf][focus].low_bound.note,hills[hf][focus].high_bound.note do
         local horizontal = util.linlin(hills[hf][focus].note_timestamp[hills[hf][focus].low_bound.note], hills[hf][focus].note_timestamp[hills[hf][focus].high_bound.note],40,120,hills[hf][focus].note_timestamp[i])
         local vertical = util.linlin(hills[hf].note_ocean[1],hills[hf].note_ocean[peak_pitch],55,15,hills[hf].note_ocean[hills[hf][focus].note_num.pool[i]])
-        local screen_level;
+        local screen_level
         if ui.control_set == "edit" and (ui.menu_focus == 1 or ui.menu_focus == 3 or ui.menu_focus == 5) then
           if ui.menu_focus == 1 then
             screen_level = s_c["hills"]["focus"] == i and 15 or (iter_index == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0))
@@ -100,7 +100,8 @@ function screen_actions.draw()
           else
             screen.color(196, 156, 159)
           end
-          screen.circle(horizontal+util.round_up(hills[hf][focus].note_timedelta[i]*2),vertical,util.round_up(hills[hf][focus].note_timedelta[i]*2))
+          -- print(".>>>"..horizontal+util.round_up(hills[hf][focus].note_timedelta[i]*2),vertical,util.round_up(hills[hf][focus].note_timedelta[i]*2))
+          draw_circle(horizontal+util.round_up(hills[hf][focus].note_timedelta[i]*2),vertical,util.round_up(hills[hf][focus].note_timedelta[i]*2))
         elseif hills[hf][focus].note_timedelta[i] < (hills[hf][focus].duration/#hills[hf][focus].note_num.pool)/2 then
           if screen_level == 10 then
             screen.color(156, 196, 193)
@@ -116,7 +117,6 @@ function screen_actions.draw()
           end
           screen.rect(horizontal,vertical,util.round_up(hills[hf][focus].note_timedelta[i]*2),8)
         end
-        screen.stroke()
       end
       local menus = {"hill: "..focus,"bound","notes","loop","smpl"}
       screen.font_size(8)
@@ -125,7 +125,7 @@ function screen_actions.draw()
         screen.level(3)
         screen.text("hill: "..focus)
       end
-      local upper_bound;
+      local upper_bound
       if ui.hill_focus <= 7 then
         if params:string("hill "..ui.hill_focus.." sample output") == "yes" then
           upper_bound = 5
@@ -156,7 +156,7 @@ function screen_actions.draw()
         if ui.menu_focus == 1 then
           screen.level(s_c["loop"]["focus"] == 1 and (key1_hold and 3 or 15) or 3)
           screen.move(120,10)
-          local duration_marker;
+          local duration_marker
           local current_focus = s_c.hills.focus
           if current_focus < tab.count(seg.note_timestamp) then
             duration_marker = seg.note_timestamp[current_focus+1] - seg.note_timestamp[current_focus]
@@ -198,8 +198,8 @@ function screen_actions.draw()
               .." | velocity: "..(hills[hf][focus].note_velocity[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["notes"]["focus"]])
             )
           else
-            local target_sample_voice;
-            local target_sample_string = "";
+            local target_sample_voice
+            local target_sample_string = ""
             if params:string('hill '..hf..' sample output') == "yes" then
               target_sample_voice = params:get('hill '..hf..' sample slot')
               -- if params:string('sample'..target_sample_voice..'_sampleMode') == 'distribute' then
