@@ -34,6 +34,94 @@ function parameters.send_to_engine(voice,param,value)
   end
 end
 
+onscreen_param_colors = {
+
+  {222, 92, 42},
+  {242, 177, 50},
+  {254, 208, 14},
+  {216, 147, 48},
+  {113, 86, 85},
+  {103, 84, 77},
+  {142, 104, 30},
+
+  {210, 77, 35},
+  {254, 182, 2},
+  {250, 195, 13},
+  {160, 94, 29},
+  {104, 87, 94},
+  {78, 58, 41},
+  {138, 106, 91},
+
+  {187, 73, 40},
+  {228, 157, 55},
+  {236, 171, 63},
+  {114, 97, 37},
+  {96, 79, 77},
+  {64, 48, 39},
+  {114, 76, 67},
+
+  {127, 48, 27},
+  {167, 87, 31},
+  {221, 148, 52},
+  {89, 72, 28},
+  {64, 51, 28},
+  {77, 63, 45},
+  {117, 89, 72},
+
+}
+
+local screenlines = {85,93,101,109,117}
+
+function parameters.draw_ccs(voice)
+  if ui.control_set == 'play' or ui.control_set == 'edit' then
+    screen.color(149, 157, 83)
+    screen.move(0,75)
+    screen.text("midi cc's (voice "..voice.."):")
+    for i = 1,#onscreen_param_colors do
+      local group = math.floor((i-1)/7)+1
+      local horiz = util.wrap(i,1,7)
+      screen.move(util.linlin(1,7,19,200,horiz),screenlines[group])
+      screen.color(table.unpack(onscreen_param_colors[i]))
+      screen.text_right(params:get(voice..'_midi_midiCC_num_'..i)..': ')
+      screen.move_rel(0,0)
+      screen.text(params:get(voice..'_midi_midiCC_val_'..i))
+    end
+  end
+end
+
+function parameters.mouseclick_ccs(voice, x, y, state, button)
+  if state == 1 and button == 1 then
+    if x >= 19 and x <= 217 and y >= screenlines[1] and y <= screenlines[#screenlines] then
+      local vert
+      for lines = 1,#screenlines-1 do
+        if y >= screenlines[lines] and y <= screenlines[lines+1] then
+          vert = lines
+        elseif y >= screenlines[#screenlines] then
+          vert = #screenlines
+          break
+        end
+      end
+      local nx = util.round(util.linlin(19,200,1,7,x))
+      mouseparam = {cc = nx + (7*(vert-1)), lastY = y}
+    end
+  elseif state == 0 and button == 1 then
+    mouseparam = nil
+  end
+end
+
+function parameters.mousedrag_ccs(voice,x,y)
+  local delta
+  if mouseparam.lastY < y then
+    delta = -1
+  elseif mouseparam.lastY > y then
+    delta = 1
+  end
+  mouseparam.lastY = y
+  if delta ~= nil then
+    params:delta(voice..'_midi_midiCC_val_'..mouseparam.cc, delta)
+  end
+end
+
 function parameters.init()
   refresh_params_vports()
 

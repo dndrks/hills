@@ -45,7 +45,7 @@ end
 function snapshot.pack(voice,coll)
   if type(voice) == "number" and voice <= 10 then
    
-    local d_voice, d_string;
+    local d_voice, d_string
     if voice <= 10 then
       d_voice = selectedVoiceModels[voice]
       d_string = voice..'_'..d_voice..'_'
@@ -82,7 +82,7 @@ function snapshot.unpack(voice, coll)
       hills[voice].snapshot.partial_restore = false
     end
 
-    local d_voice, d_string;
+    local d_voice, d_string
     if voice <= 10 then
       d_voice = selectedVoiceModels[voice]
       d_string = voice..'_'..d_voice..'_'
@@ -119,7 +119,7 @@ end
 
 function snapshot.save_to_slot(_t,slot)
   clock.sleep(0.25)
-  local focus;
+  local focus
   if type(_t) == "number" and _t <= 10 then
     focus = hills[_t].snapshot.saver_active
   else
@@ -138,7 +138,7 @@ function snapshot.save_to_slot(_t,slot)
 end
 
 function snapshot.clear(_t,slot)
-  local d_voice, _snap;
+  local d_voice, _snap
   if type(_t) == 'number' then
     if _t <= 10 then
       d_voice = params:string('voice_model_'.._t)
@@ -186,7 +186,7 @@ function snapshot.crossfade(voice,scene_a,scene_b,val)
 
   -- focus.partial_restore = true
 
-  local d_voice, d_string, original_srcs, focus;
+  local d_voice, d_string, original_srcs, focus
   if voice <= 10 then
     d_voice = selectedVoiceModels[voice]
     d_string = voice..'_'..d_voice..'_'
@@ -221,7 +221,7 @@ end
 
 function snapshot.route_funnel(voice,coll,mod_idx)
   -- print('route funnel', voice, coll)
-  local focus;
+  local focus
   if type(voice) == 'number' and voice <= 10 then
     focus = hills[voice].snapshot
   else
@@ -247,7 +247,7 @@ function snapshot.route_funnel(voice,coll,mod_idx)
     end
     focus.partial_restore = true
 
-    local d_voice, d_string, original_srcs;
+    local d_voice, d_string, original_srcs
     if type(voice) ~= 'string' and voice <= 10 then
       d_voice = selectedVoiceModels[voice]
       d_string = voice..'_'..d_voice..'_'

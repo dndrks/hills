@@ -261,15 +261,15 @@ development_state = function()
   -- song_atoms.transport_active = true
   for i = 1,number_of_hills do
     -- DIAMOND HOLLOW/
-    params:set('hill_'..i..'_mode', 2)
-    -- params:set('hill_'..i..'_iterator',2)
-    -- params:set('hill_'..i..'_iterator_midi_device',6)
-    -- params:set('hill_'..i..'_iterator_midi_note',35+util.wrap(i,1,4))
-    -- -- /DIAMOND HOLLOW
-    -- params:set('hill_'..i..'_iterator_midi_record',2)
+    -- params:set('hill_'..i..'_mode', 2)
+    -- -- params:set('hill_'..i..'_iterator',2)
+    -- -- params:set('hill_'..i..'_iterator_midi_device',6)
+    -- -- params:set('hill_'..i..'_iterator_midi_note',35+util.wrap(i,1,4))
+    -- -- -- /DIAMOND HOLLOW
+    -- -- params:set('hill_'..i..'_iterator_midi_record',2)
 
-    -- BERLIN
-    params:set('hill_'..i..'_flatten',0)
+    -- -- BERLIN
+    -- params:set('hill_'..i..'_flatten',0)
     params:set('voice_model_'..i, 14)
     params:set('hill '..i..' MIDI output', 2)
     --/BERLIN
@@ -1497,6 +1497,20 @@ function screen.key(char, modifiers, is_repeat, state)
   end
 end
 
+function screen.click(x, y, state, button)
+  if ui.control_set ~= "song" then
+    prms.mouseclick_ccs(ui.hill_focus, x, y, state, button)
+  end
+end
+
+function screen.mouse(x,y)
+  if ui.control_set ~= "song" then
+    if mouseparam ~= nil then
+      prms.mousedrag_ccs(ui.hill_focus,x,y)
+    end
+  end
+end
+
 redraw = function()
   screen.clear()
   if loading_done then
@@ -1516,6 +1530,7 @@ redraw = function()
         end
       end
     end
+    -- prms.draw_ccs(ui.hill_focus)
     screen.update()
     screen_dirty = false
     if key2_hold then

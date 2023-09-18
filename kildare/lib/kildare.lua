@@ -282,7 +282,7 @@ function Kildare.init(track_count, poly)
 
   midi_params = {}
   for mpIter = 1,32 do
-    table.insert(midi_params, {type = 'separator', name = 'midi cc ouput #'..mpIter})
+    table.insert(midi_params, {type = 'separator', name = 'midi cc output #'..mpIter})
 		table.insert(midi_params, {
 			id = "midiCC_val_" .. mpIter,
 			name = "cc value",
@@ -1220,6 +1220,7 @@ function Kildare.init(track_count, poly)
           -- engine.init_voice(i, 'kildare_'..model)
           send_to_engine('init_voice', {i, 'kildare_'..model})
           print('activating voice '..i)
+		  		selectedVoiceModels[i] = model
           Kildare.rebuild_model_params(i, model)
           table.remove(queued_inits,1)
         end
