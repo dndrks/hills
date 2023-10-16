@@ -94,8 +94,15 @@ function screen_actions.draw()
           -- print(seg.index, iter_index)
           screen_level = iter_index == i and (hills[hf][focus].note_num.active[i] and 10 or 2) or (hills[hf][focus].note_num.active[i] and 3 or 0)
         end
+        if ui.control_set == "edit" and ui.menu_focus == 1 and ui.screen_controls[hf][focus].hills.focus == i then
+          screen_level = 15
+        elseif ui.control_set == "edit" and ui.menu_focus == 3 and ui.screen_controls[hf][focus].notes.focus == i then
+          screen_level = 15
+        end
         if hills[hf][focus].note_timedelta[i] > hills[hf][focus].duration/#hills[hf][focus].note_num.pool then
-          if screen_level == 10 then
+          if screen_level == 15 then
+            screen.color(255,255,255)
+          elseif screen_level == 10 then
             screen.color(156, 196, 193)
           else
             screen.color(196, 156, 159)
@@ -103,14 +110,18 @@ function screen_actions.draw()
           -- print(".>>>"..horizontal+util.round_up(hills[hf][focus].note_timedelta[i]*2),vertical,util.round_up(hills[hf][focus].note_timedelta[i]*2))
           draw_circle(horizontal+util.round_up(hills[hf][focus].note_timedelta[i]*2),vertical,util.round_up(hills[hf][focus].note_timedelta[i]*2))
         elseif hills[hf][focus].note_timedelta[i] < (hills[hf][focus].duration/#hills[hf][focus].note_num.pool)/2 then
-          if screen_level == 10 then
+          if screen_level == 15 then
+            screen.color(255,255,255)
+          elseif screen_level == 10 then
             screen.color(156, 196, 193)
           else
             screen.color(206, 166, 112)
           end
           screen.pixel(horizontal,vertical)
         else
-          if screen_level == 10 then
+          if screen_level == 15 then
+            screen.color(255,255,255)
+          elseif screen_level == 10 then
             screen.color(156, 196, 193)
           else
             screen.color(64, 108, 184)
@@ -155,7 +166,7 @@ function screen_actions.draw()
         screen.font_size(8)
         if ui.menu_focus == 1 then
           screen.level(s_c["loop"]["focus"] == 1 and (key1_hold and 3 or 15) or 3)
-          screen.move(120,10)
+          screen.move(120,5)
           local duration_marker
           local current_focus = s_c.hills.focus
           if current_focus < tab.count(seg.note_timestamp) then
@@ -171,7 +182,7 @@ function screen_actions.draw()
             screen.text("SEED: "..util.round(seg.population*100).."%")
             screen.move(64,36)
             screen.level(screen_actions.popup_focus[1] == 2 and 15 or 4)
-            screen.text("QUANT: "..params:string("hill "..hf.." quant value"))
+            -- screen.text("QUANT: "..params:string("hill "..hf.." quant value"))
             screen.move(14,48)
             screen.level(15)
             screen.text('K3: send '..(screen_actions.popup_focus[1] == 1 and 'seed' or 'quant'))
@@ -182,14 +193,14 @@ function screen_actions.draw()
           end
         elseif ui.menu_focus == 2 then
           screen.level(s_c["bounds"]["focus"] == 1 and 15 or 3)
-          screen.move(40,10)
+          screen.move(40,5)
           screen.text("min: "..seg.low_bound.note)
           screen.level(s_c["bounds"]["focus"] == 1 and 3 or 15)
-          screen.move(120,10)
+          screen.move(120,5)
           screen.text_right("max: "..seg.high_bound.note)
         elseif ui.menu_focus == 3 then
           screen.level(key1_hold == true and 3 or 15)
-          screen.move(40,10)
+          screen.move(40,5)
           local note_number = h.note_ocean[seg.note_num.pool[s_c["notes"]["focus"]]]
           if ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus].notes.velocity then
             screen.text(
@@ -240,10 +251,10 @@ function screen_actions.draw()
           end
         elseif ui.menu_focus == 4 then
           screen.level(s_c["loop"]["focus"] == 1 and (key1_hold and 3 or 15) or 3)
-          screen.move(40,10)
+          screen.move(40,5)
           screen.text("rate: "..util.round(seg.counter_div,0.01).."x")
           screen.level(s_c["loop"]["focus"] == 1 and 3 or (key1_hold and 3 or 15))
-          screen.move(120,10)
+          screen.move(120,5)
           screen.text_right("∞: "..(tostring(seg.loop) == "true" and "on" or "off"))
           if key1_hold then
             screen.level(15)
@@ -252,7 +263,7 @@ function screen_actions.draw()
           end
         elseif ui.menu_focus == 5 then
           screen.level(key1_hold == true and 3 or 15)
-          screen.move(40,10)
+          screen.move(40,5)
           local note_number = seg.sample_controls.rate[s_c["samples"]["focus"]]
           local slice_number = h.note_ocean[seg.note_num.pool[s_c["notes"]["focus"]]]
           screen.text(

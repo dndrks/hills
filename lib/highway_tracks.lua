@@ -406,14 +406,10 @@ function track_actions.jump_page(target,new_page,restart)
 end
 
 function track_actions.iterate(target)
-  -- TODO: should this sync before advancing or after??? does anything get fucked up?
   while true do
     local i,j = target, track[target].active_hill
-    clock.sync(
-      track[i][j].time,
-      track[i][j][track[i][j].page].micro[track[i][j].step]/384
-    )
     track_actions.tick(target)
+		clock.sync(track[i][j].time, track[i][j][track[i][j].page].micro[track[i][j].step] / 384)
   end
 end
 

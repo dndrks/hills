@@ -1,11 +1,12 @@
 local parameters = {}
 local frm = include 'lib/formatters'
+_lfo = require("lfo")
 
 local vports = {}
 
 local function refresh_params_vports()
-  for i = 1,#midi.voutports do
-    vports[i] = midi.voutports[i].name ~= "none" and (tostring(i)..": "..util.trim_string_to_width(midi.voutports[i].name,90)) or tostring(i)..": [device]"
+  for i = 1,#midi.vports do
+    vports[i] = midi.vports[i].name ~= "none" and (tostring(i)..": "..util.trim_string_to_width(midi.vports[i].name,90)) or tostring(i)..": [device]"
   end
 end
 
@@ -20,8 +21,8 @@ end
 
 local function populate_midi_devices()
   local connected_midi_devices = {}
-  for i = 1,16 do
-    table.insert(connected_midi_devices,midi.voutports[i].name)
+  for i = 1,#midi.vports do
+    table.insert(connected_midi_devices,midi.vports[i].name)
   end
   return connected_midi_devices
 end
@@ -128,7 +129,7 @@ function parameters.init()
 
   params:add_separator('hills_main_header', 'hills + highways')
   for i = 1,number_of_hills do
-    params:add_group('hill_'..i..'_group', hill_names[i], 79 + ((number_of_hills-1)*2))
+    params:add_group('hill_'..i..'_group', hill_names[i], 78 + ((number_of_hills-1)*2))
 
     params:add_separator('hill_'..i..'_highway_header', 'mode')
     params:add_option('hill_'..i..'_mode', 'mode', {'hill','highway'}, 1)
@@ -141,6 +142,7 @@ function parameters.init()
       hills[i].screen_focus = 1
       screen_dirty = true
     end)
+		params:add_option("hill " .. i .. " reset at stop", "reset index @ stop?", { "no", "yes" }, 2)
     params:add_option('hill_'..i..'_iterator', 'iterator', {
       'internal',
       'external MIDI clock',
@@ -273,26 +275,26 @@ function parameters.init()
 
     params:add_separator('hill_'..i..'_note_header', "note management")
     params:add_binary('hill_'..i..'_flatten', 'flatten to carrier freq', 'toggle', 1)
-    params:set_action('hill_'..i..'_flatten', function(x)
-      if x == 1 then
-        params:hide("hill "..i.." scale")
-        params:hide("hill "..i.." base note")
-        params:hide("hill "..i.." span")
-        params:hide("hill "..i.." octave up")
-        params:hide("hill "..i.." octave down")
-        params:hide("hill "..i.." random offset style")
-        params:hide("hill "..i.." random offset probability")
-      else
-        params:show("hill "..i.." scale")
-        params:show("hill "..i.." base note")
-        params:show("hill "..i.." span")
-        params:show("hill "..i.." octave up")
-        params:show("hill "..i.." octave down")
-        params:show("hill "..i.." random offset style")
-        params:show("hill "..i.." random offset probability")
-      end
-      menu_rebuild_queued = true
-    end)
+    -- params:set_action('hill_'..i..'_flatten', function(x)
+    --   if x == 1 then
+    --     params:hide("hill "..i.." scale")
+    --     params:hide("hill "..i.." base note")
+    --     params:hide("hill "..i.." span")
+    --     params:hide("hill "..i.." octave up")
+    --     params:hide("hill "..i.." octave down")
+    --     params:hide("hill "..i.." random offset style")
+    --     params:hide("hill "..i.." random offset probability")
+    --   else
+    --     params:show("hill "..i.." scale")
+    --     params:show("hill "..i.." base note")
+    --     params:show("hill "..i.." span")
+    --     params:show("hill "..i.." octave up")
+    --     params:show("hill "..i.." octave down")
+    --     params:show("hill "..i.." random offset style")
+    --     params:show("hill "..i.." random offset probability")
+    --   end
+    --   menu_rebuild_queued = true
+    -- end)
     params:add_option("hill "..i.." scale","scale",scale_names,1)
     params:set_action("hill "..i.." scale",
     function(x)
@@ -302,6 +304,7 @@ function parameters.init()
       if track[i].scale.index > #track[i].scale.source then
         track[i].scale.index = 1
       end
+      screen_dirty = true
     end)
     params:add_number("hill "..i.." base note","base note",0,127,60)
     params:set_action("hill "..i.." base note",
@@ -318,6 +321,7 @@ function parameters.init()
           end
         end
       end
+			screen_dirty = true
     end)
     params:add_number("hill "..i.." span","note degree span",1,127,14)
     params:set_action("hill "..i.." span",
@@ -334,6 +338,7 @@ function parameters.init()
           end
         end
       end
+      screen_dirty = true
     end)
     params:add_trigger("hill "..i.." octave up","base octave up")
     params:set_action("hill "..i.." octave up",
@@ -342,6 +347,7 @@ function parameters.init()
         if current_note + 12 <= 127 then
           params:set("hill "..i.." base note", current_note + 12)
         end
+			screen_dirty = true
       end
     )
     params:add_trigger("hill "..i.." octave down","base octave down")
@@ -351,6 +357,7 @@ function parameters.init()
         if current_note - 12 >= 0 then
           params:set("hill "..i.." base note", current_note - 12)
         end
+        screen_dirty = true
       end
     )
     params:add_option("hill "..i.." random offset style", "random offset style", {"+ oct","- oct","+/- oct"},1)
@@ -361,8 +368,6 @@ function parameters.init()
     params:set_action("hill_"..i..'_legato', function(x) hills_legato[i] = x == 1 end)
     params:add_option("hill "..i.." accent mult", 'accent multiplier', {'0.125x','0.25x','0.33x','0.5x','0.75x','1.5x','2x','3x','4x','5x','6x','7x','8x','9x','10x'},7)
     params:set_action("hill "..i.." accent mult", function(x) hills_accent_mult[i] = params:string("hill "..i.." accent mult"):sub(1,-2) end)
-    params:add_option("hill "..i.." quant value","quant value",{"1/4", "1/4d", "1/4t", "1/8", "1/8d", "1/8t", "1/16", "1/16d", "1/16t", "1/32", "1/32d", "1/32t"},7)
-    params:add_option('hill '..i..' reset at stop', 'reset index @ stop?', {'no','yes'}, 2)
 
     params:add_separator('hill_'..i..'_iso_header', 'isometric keys management')
     params:add_number('hill_'..i..'_iso_velocity', 'fixed velocity', 0, 127, 70)

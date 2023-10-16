@@ -152,7 +152,7 @@ function enc_actions.parse(n,d)
                 if _s.popup_focus[1] == 1 then
                   hills[i][j].population = util.clamp((hills[i][j].population*100)+d,10,100)/100
                 elseif _s.popup_focus[1] == 2 then
-                  params:delta("hill "..i.." quant value",d)
+                  -- params:delta("hill "..i.." quant value",d)
                 end
               end
             end

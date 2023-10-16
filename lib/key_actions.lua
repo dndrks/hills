@@ -107,7 +107,7 @@ function key_actions.ud_nav(d)
         if _s.popup_focus[1] == 1 then
           hills[i][j].population = util.clamp((hills[i][j].population*100)+d,10,100)/100
         elseif _s.popup_focus[1] == 2 then
-          params:delta("hill "..i.." quant value",d)
+          -- params:delta("hill "..i.." quant value",d)
         end
       end
     elseif ui.menu_focus == 2 then
@@ -127,7 +127,7 @@ function key_actions.ud_nav(d)
         -- else
         --   _t.transpose(i,j,s_c["notes"]["focus"],d)
         -- end
-        _t.transpose(i,j,s_c["notes"]["focus"],d)
+        _t.transpose(i,j,s_c["notes"]["focus"],-d)
       else
         if _s.popup_focus[3] == 1 then
           _t.adjust_velocity(i,j,s_c["notes"]["focus"],d)
@@ -142,9 +142,9 @@ function key_actions.ud_nav(d)
     elseif ui.menu_focus == 4 then
       if not key1_hold then
         if s_c["loop"]["focus"] == 1 then
-          hills[i][j].counter_div = util.clamp(hills[i][j].counter_div+d/128,1/128,4)
+          hills[i][j].counter_div = util.clamp(hills[i][j].counter_div-d/128,1/128,4)
         elseif s_c["loop"]["focus"] == 2 then
-          hills[i][j].loop = d > 0 and true or false
+          hills[i][j].loop = d < 0 and true or false
         end
       else
         hills[i][j].looper.clock_time = util.round(util.clamp(hills[i][j].looper.clock_time + d,0,128))

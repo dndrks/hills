@@ -57,7 +57,7 @@ if norns == nil then
 
   draw_circle = function(x,y,r)
     screen.move(x,y)
-    screen.circle(util.clamp(r,2,math.huge))
+    screen.circle(r)
   end
   
   screen.font_face = function() end
@@ -280,7 +280,7 @@ development_state = function()
   params:hide('kildare_feedback')
   params:hide('kildare_main')
   params:hide('kildare_lfo_header')
-  params:hide('lfos')
+  -- params:hide('lfos')
   for i = 1,number_of_hills do
     -- params:hide('hill_'..i..'_highway_header')
     -- params:hide('hill_'..i..'_mode')
@@ -314,31 +314,25 @@ function midi_to_hz(note)
 end
 
 local pre_note = {}
-incoming_midi_device = {}
+midi_devices = {}
 outgoing_midi_device = {}
 
 function init()
+  local frames = 0
 	startup_animation = clock.run(function()
 		while true do
 			clock.sleep(1 / 60)
 			screen.clear()
-			if frames == nil then
-				frames = 0
-			else
-				frames = frames + 1
-			end
-			if frames > 94 then
-				screen.move(108, 64)
-				screen.color(math.random(64), 108, 184, math.random(255))
-				screen.text_center("__/\\______/\\\\___")
-				screen.move(128, 64)
-				screen.color(196, math.random(156), 159, math.random(255))
-				screen.text_center("____/\\\\\\\\\\___/\\_")
-				screen.move(148, 64)
-				screen.color(92, math.random(71), 47, math.random(255))
-				screen.text_center("/\\///_____/\\\\\\__")
-				-- screen_dirty = true
-			end
+			frames = frames + 1
+			screen.move(108, 64)
+			screen.color(math.random(64), 108, 184, math.random(255))
+			screen.text_center("__/\\______/\\\\___")
+			screen.move(128, 64)
+			screen.color(196, math.random(156), 159, math.random(255))
+			screen.text_center("____/\\\\\\\\\\___/\\_")
+			screen.move(148, 64)
+			screen.color(92, math.random(71), 47, math.random(255))
+			screen.text_center("/\\///_____/\\\\\\__")
 			screen.refresh()
 		end
 	end)
@@ -389,9 +383,9 @@ function init()
 
   hills = {}
 
-  for i = 1,#midi.vinports do -- query all ports
-    incoming_midi_device[i] = midi.connect_input(i) -- connect each device
-    incoming_midi_device[i].event = function(timestamp, bytes)
+  for i = 1,#midi.vports do -- query all ports
+    midi_devices[i] = midi.connect(i) -- connect each device
+    midi_devices[i].event = function(bytes)
       local d = midi.to_msg(bytes)
       if d.type == 'note_on' then
         for j = 1,number_of_hills do
@@ -436,10 +430,6 @@ function init()
         end
       end
     end
-  end
-
-  for i = 1,#midi.voutports do
-    outgoing_midi_device[i] = midi.connect_output(i)
   end
 
   scale_names = {}
@@ -565,7 +555,7 @@ function init()
 
 	menu_rebuild_clock = clock.run(function()
 		while true do
-			clock.sleep(1 / 15)
+			clock.sleep(1 / 60)
 			if screen_dirty then
 				redraw()
 				paramsMenu.redraw()
@@ -777,7 +767,8 @@ function init()
   end
 
   function kildare.model_change_callback(hill,model)
-    hill_names[hill] = hill..': '..model
+    -- hill_names[hill] = hill..': '..model
+    hill_names[hill] = tostring(hill)
     
     prms.change_UI_name('hill_'..hill..'_group', hill_names[hill])
     -- prms.change_UI_name('hill_'..hill..'_note_header', 'note management '..hill_names[hill])
@@ -1165,7 +1156,7 @@ stop = function(i,clock_synced_loop)
         seg.perf_led = false
         grid_dirty = true
         if hills_midi_output[i] then
-          outgoing_midi_device[dev]:note_off(pre_note[i],0,ch)
+          midi_devices[dev]:note_off(pre_note[i],0,ch)
         end
       end
     end
@@ -1313,13 +1304,14 @@ force_note = function(i,j,played_note)
   if hills_midi_output[i] then
 		local ch = hills_note_channel[i]
 		local dev = hills_midi_device[i]
-    if pre_note[i] ~= nil and not hills_legato[i] then
-      outgoing_midi_device[dev]:note_off(pre_note[i],0,ch)
-    end
-    outgoing_midi_device[dev]:note_on(played_note,127,ch)
+    -- if pre_note[i] ~= nil and not hills_legato[i] then
+    --   midi_devices[dev]:note_off(pre_note[i],0,ch)
+    -- end
+    midi_devices[dev]:note_on(played_note,127,ch)
   end
 
   pre_note[i] = played_note
+  print('>>>',pre_note[i])
 
 end
 
@@ -1407,9 +1399,9 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
 						local ch = hills_note_channel[i]
 						local dev = hills_midi_device[i]
 						if pre_note[i] ~= nil and not hills_legato[i] then
-							outgoing_midi_device[dev]:note_off(pre_note[i], 0, ch)
+							midi_devices[dev]:note_off(pre_note[i], 0, ch)
 						end
-						outgoing_midi_device[dev]:note_on(played_note, retrig_vel, ch)
+						midi_devices[dev]:note_on(played_note, retrig_vel, ch)
 						print(i,clock.get_beats())
 					end
         else
@@ -1430,9 +1422,9 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
             local ch = hills_note_channel[i]
             local dev = hills_midi_device[i]
             if pre_note[i] ~= nil and not hills_legato[i] then
-              outgoing_midi_device[dev]:note_off(pre_note[i], 0, ch)
+              midi_devices[dev]:note_off(pre_note[i], 0, ch)
             end
-            outgoing_midi_device[dev]:note_on(played_note, retrig_vel, ch)
+            midi_devices[dev]:note_on(played_note, retrig_vel, ch)
             print('retrigged',i,clock.get_beats(),retrig_vel)
           end
         end
@@ -1442,9 +1434,9 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
 				local ch = hills_note_channel[i]
 				local dev = hills_midi_device[i]
 				if pre_note[i] ~= nil and not hills_legato[i] then
-					outgoing_midi_device[dev]:note_off(pre_note[i], 0, ch)
+					midi_devices[dev]:note_off(pre_note[i], 0, ch)
 				end
-				outgoing_midi_device[dev]:note_on(played_note, vel_target, ch)
+				midi_devices[dev]:note_on(played_note, vel_target, ch)
 				print(i,clock.get_beats())
 			end
     end
