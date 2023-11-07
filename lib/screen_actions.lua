@@ -127,6 +127,13 @@ function screen_actions.draw()
             screen.color(64, 108, 184)
           end
           screen.rect(horizontal,vertical,util.round_up(hills[hf][focus].note_timedelta[i]*2),8)
+					screen.color(110, 103, 219, 30)
+					for j = -2, 1 do
+						for k = 1, 8, 2 do
+							screen.move(horizontal + j, vertical + k)
+							screen.line_rel(1, 0)
+						end
+					end
         end
       end
       local menus = {"hill: "..focus,"bound","notes","loop","smpl"}
@@ -138,11 +145,7 @@ function screen_actions.draw()
       end
       local upper_bound
       if ui.hill_focus <= 7 then
-        if params:string("hill "..ui.hill_focus.." sample output") == "yes" then
-          upper_bound = 5
-        else
-          upper_bound = 4
-        end
+				upper_bound = 4
       else
         upper_bound = 5
       end
@@ -171,25 +174,16 @@ function screen_actions.draw()
           local current_focus = s_c.hills.focus
           if current_focus < tab.count(seg.note_timestamp) then
             duration_marker = seg.note_timestamp[current_focus+1] - seg.note_timestamp[current_focus]
-            screen.text_right("step duration: "..string.format("%0.4g",duration_marker))
+            -- screen.text_right("step duration: "..string.format("%0.4g",duration_marker))
+            screen.text_right("step duration: "..string.format("%.0f",duration_marker*100))
           else
-            screen.text_right("total duration: "..string.format("%0.4g",seg.note_timestamp[current_focus] - seg.note_timestamp[1]))
+            -- screen.text_right("total duration: "..string.format("%0.4g",seg.note_timestamp[current_focus] - seg.note_timestamp[1]))
+            screen.text_right("total duration: "..string.format("%.0f",(seg.note_timestamp[current_focus] - seg.note_timestamp[1])*100))
           end
           if key1_hold then
-            draw_popup("|\\_\\|")
-            screen.move(64,26)
-            screen.level(screen_actions.popup_focus[1] == 1 and 15 or 4)
-            screen.text("SEED: "..util.round(seg.population*100).."%")
-            screen.move(64,36)
-            screen.level(screen_actions.popup_focus[1] == 2 and 15 or 4)
-            -- screen.text("QUANT: "..params:string("hill "..hf.." quant value"))
-            screen.move(14,48)
+            screen.move(128,36)
             screen.level(15)
-            screen.text('K3: send '..(screen_actions.popup_focus[1] == 1 and 'seed' or 'quant'))
-            -- screen.move(0,64)
-            -- screen.text("K2: SEED ("..util.round(seg.population*100).."%)")
-            -- screen.move(128,64)
-            -- screen.text_right("K3: QUANT "..params:string("hill "..hf.." quant value"))
+            screen.text("-> REBUILD")
           end
         elseif ui.menu_focus == 2 then
           screen.level(s_c["bounds"]["focus"] == 1 and 15 or 3)
@@ -211,19 +205,6 @@ function screen_actions.draw()
           else
             local target_sample_voice
             local target_sample_string = ""
-            if params:string('hill '..hf..' sample output') == "yes" then
-              target_sample_voice = params:get('hill '..hf..' sample slot')
-              -- if params:string('sample'..target_sample_voice..'_sampleMode') == 'distribute' then
-              --   if sample_info['sample'..target_sample_voice].sample_count == nil then
-              --     target_sample_string = ""
-              --   else
-              --     local scaled_idx = util.round(sample_info['sample'..target_sample_voice].sample_count * (params:get('hill '..hf..' sample distribution')/100))
-              --     target_sample_string = ' | sample: '..(util.wrap(note_number - params:get("hill "..hf.." base note"),0,scaled_idx-1) + 1)
-              --   end
-              -- elseif params:string('sample'..target_sample_voice..'_sampleMode') == 'chop' then
-              --   target_sample_string = ' | slice: '..(util.wrap(note_number - params:get("hill "..hf.." base note"),0,params:get('hill '..hf..' sample slice count') - 1) + 1)
-              -- end
-            end
             screen.text(
               note_number.."/"..mu.note_num_to_name(note_number)..
               (hills[hf][focus].note_num.active[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["notes"]["focus"]] and "" or " (m)")
@@ -231,23 +212,13 @@ function screen_actions.draw()
             )
           end
           if key1_hold then
-            draw_popup("\\/\\|")
-            screen.move(60,24)
+            -- draw_popup("\\/\\|")
+            screen.move(128,24)
             screen.level(screen_actions.popup_focus[3] == 1 and 15 or 4)
             screen.text('velocity: '..(hills[hf][focus].note_velocity[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["notes"]["focus"]]))
-            screen.move(60,34)
+            screen.move(128,34)
             screen.level(screen_actions.popup_focus[3] == 2 and 15 or 4)
-            screen.text('degree: '..hills[hf][focus].note_num.chord_degree[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["notes"]["focus"]])
-            screen.move(14,44)
-            screen.level(screen_actions.popup_focus[3] == 3 and 15 or 4)
-            screen.text("K3: "..ui.screen_controls[hf][focus]["notes"]["transform"])
-            -- screen.move(14,48)
-            -- screen.level(15)
-            -- screen.text('K3: send '..(screen_actions.popup_focus[1] == 1 and 'seed' or 'quant'))
-            -- screen.move(0,64)
-            -- screen.text("K2: "..(hills[hf][focus].note_num.active[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["notes"]["focus"]] and "mute" or "un-mute"))
-            -- screen.move(128,64)
-            -- screen.text_right("K3: "..ui.screen_controls[hf][focus]["notes"]["transform"])
+            screen.text("-> "..ui.screen_controls[hf][focus]["notes"]["transform"])
           end
         elseif ui.menu_focus == 4 then
           screen.level(s_c["loop"]["focus"] == 1 and (key1_hold and 3 or 15) or 3)
@@ -295,8 +266,6 @@ function screen_actions.draw()
       end
     elseif ui.control_set == 'step parameters' then
       _fkprm.redraw()
-    elseif ui.control_set == 'poly parameters' then
-      _polyparams.redraw()
     end
   elseif ui.control_set == 'seq' then
     local menus = {"step","rec","tport"}

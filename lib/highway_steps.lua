@@ -371,10 +371,6 @@ function hway_ui.draw_menu()
 
     elseif ui.control_set == 'step parameters' then
       _fkprm.redraw()
-    elseif ui.control_set == 'poly parameters' then
-      _polyparams.redraw()
-    elseif ui.control_set == 'cc parameters' then
-      _ccparams.redraw()
     end
   end
 end

@@ -49,9 +49,10 @@ end
 
 local function build_page()
   page = {}
-  local ignore_range = {params.lookup['kildare_st_header'], params.lookup['kildare_st_preload']}
+	-- local ignore_range = {params.lookup['kildare_st_header'], params.lookup['kildare_st_preload']}
   local i = params.lookup['kildare_1_group']
   repeat
+    print(params:visible(i))
     if params:visible(i)
     -- and (i < ignore_range[1] or i > ignore_range[2])
     then
@@ -62,7 +63,7 @@ local function build_page()
     else
       i = i + 1
     end
-  until i == params.lookup['hills_main_header']
+  until i == params.lookup['hills_pattern_header']
 end
 
 local function build_sub(sub)
@@ -228,6 +229,7 @@ end
 
 function m:force(index, voice, hill, page, step, mode)
   if mode == 'all' then
+    print('force all')
     for i = track[voice][hill][page].start_point, track[voice][hill][page].end_point do
       local target_trig = get_focus(voice,hill,page,i)
       if target_trig[voice][hill][page][i].params[index] ~= params:lookup_param(index).raw then
@@ -498,6 +500,7 @@ m.init = function()
   m.fine = false
   m.adjusted_params = {}
   m.adjusted_params_lock_trigs = {}
+  print('504')
   for i = 1,number_of_hills do
     m.adjusted_params[i] = {}
     m.adjusted_params_lock_trigs[i] = {}
@@ -514,6 +517,7 @@ m.init = function()
       end
     end
   end
+	print("520")
 end
 
 return m

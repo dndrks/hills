@@ -33,10 +33,6 @@ end
 function enc_actions.parse(n,d)
   if ui.control_set == 'step parameters' then
     _fkprm.enc(n,d)
-  elseif ui.control_set == 'poly parameters' then
-    _polyparams.enc(n,d)
-  elseif ui.control_set == 'cc parameters' then
-    _ccparams.enc(n,d)
   else
     local s_c = ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]
     local i = ui.hill_focus
@@ -89,7 +85,7 @@ function enc_actions.parse(n,d)
             if not key1_hold then
               s_c["notes"]["focus"] = util.clamp(s_c["notes"]["focus"]+d,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
             else
-              _s.popup_focus[3] = util.clamp(_s.popup_focus[3]+d,1,3)
+              _s.popup_focus[3] = util.clamp(_s.popup_focus[3]+d,1,2)
             end
           elseif ui.menu_focus == 4 then
             s_c["loop"]["focus"] = util.clamp(s_c["loop"]["focus"]+d,1,s_c["loop"]["max"])
@@ -181,8 +177,6 @@ function enc_actions.parse(n,d)
                 if _s.popup_focus[3] == 1 then
                   _t.adjust_velocity(i,j,s_c["notes"]["focus"],d)
                 elseif _s.popup_focus[3] == 2 then
-                  hills[i][j].note_num.chord_degree[s_c["notes"]["focus"]] = util.clamp(hills[i][j].note_num.chord_degree[s_c["notes"]["focus"]]+d, 1, 7)
-                elseif _s.popup_focus[3] == 3 then
                   local note_adjustments = {"mute step", "shuffle notes","reverse notes","rotate notes","rand fill notes","static notes","shuffle vel","reverse vel","rotate vel","rand vel","static vel"}
                   local current_adjustment = tab.key(note_adjustments,s_c["notes"]["transform"])
                   s_c["notes"]["transform"] = note_adjustments[util.clamp(current_adjustment+d,1,#note_adjustments)]

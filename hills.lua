@@ -9,13 +9,35 @@
 -- send OSC to an external instance of Kildare:
 -- osc_echo = "224.0.0.1"
 -- osc_echo = "169.254.64.84"
--- osc_echo = "224.0.0.1"
+-- osc_echo = "224.0.0.1" 
 -- osc_echo = "169.254.202.238"
 -- osc_echo = "192.168.0.137"
 -- osc_echo = "169.254.111.133"
 osc_echo = "192.168.2.1"
 
 engine = include 'lib/engine'
+
+number_of_hills = 7
+number_of_patterns = 8
+number_of_snapshots = 16
+
+-- params stand-ins
+_ps = {}
+for i = 1,number_of_hills do
+  _ps[i] = {
+    iterator_midi_device = {},
+    iterator_midi_record = {},
+    iterator = {},
+    iso_quantize = {},
+    iso_velocity = {},
+  }
+  for j = 1,8 do
+    _ps[i][j] = {
+
+    }
+  end
+end
+_ps.global_snapshot_mod_mode = {'free','free','free','free','free','free'}
 
 local util_round = util.round
 local lin_lin = util.linlin
@@ -57,7 +79,17 @@ if norns == nil then
 
   draw_circle = function(x,y,r)
     screen.move(x,y)
-    screen.circle(r)
+		screen.circle(r)
+    if r >= 3 then
+      screen.color(129,120,231)
+			screen.circle(r/3)
+    elseif r >= 2 then
+      screen.color(213,210,123)
+			screen.circle(r/3)
+    elseif r == 1 then
+      screen.color(120,234,28)
+      screen.pixel(x,y)
+    end
   end
   
   screen.font_face = function() end
@@ -65,6 +97,7 @@ if norns == nil then
 end
 
 function full_PSET_swap()
+  print('full PSET swap')
   clock.run(
     function()
       clock.sleep(0.1)
@@ -74,8 +107,6 @@ function full_PSET_swap()
           params:set(i..'_voice_state',0)
         end
         clock.sleep(0.1)
-        _polyparams.reset_polyparams()
-        _ccparams.reset_polyparams()
         clock.sleep(0.1)
         send_to_engine('reset',{})
         clock.sleep(0.3)
@@ -89,28 +120,29 @@ end
 
 kildare = include('kildare/lib/kildare')
 
-function kildare.restart_needed_callback()
-  norns.script.clear()
-  norns.script.load('code/hills/lib/restart_notify.lua')
-end
-
 engine.name = "Kildare"
 if osc_echo ~= nil then
   -- osc.send({osc_echo,57120},"/command",{'establish_engine'})
   osc.send({osc_echo,57120},"/engine/load/name",{'Kildare'})
 end
 
-number_of_hills = 7
-number_of_patterns = 8
 hill_names = {
-  "1: bd",
-  "2: sd",
-  "3: tm",
-  "4: cp",
-  "5: rs",
-  "6: cb",
-  "7: hh",
-  "8: saw"
+  -- "1: bd",
+  -- "2: sd",
+  -- "3: tm",
+  -- "4: cp",
+  -- "5: rs",
+  -- "6: cb",
+  -- "7: hh",
+  -- "8: saw"
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
 }
 
 pre_step_page = 'play'
@@ -209,7 +241,7 @@ function externalIterator(noteNum)
     end
     hills[j][k].index = util.wrap(hills[j][k].index + 1, hills[j][k].low_bound.note,hills[j][k].high_bound.note)
   end
-  if params:string('hill_'..j..'_iterator_midi_record') == 'yes' then
+  if _ps[j].iterator_midi_record then
     for k = 1,16 do
       local table_to_record =
         {
@@ -242,13 +274,11 @@ _k = include 'lib/key_actions'
 _s = include 'lib/screen_actions'
 local _flow = include 'lib/flow'
 _song = include 'lib/song'
-_ca = include 'lib/clip'
+-- _ca = include 'lib/clip'
 _cp = include 'lib/copy-paste'
 _surveyor = include 'lib/surveyor'
 _snapshots = include 'lib/snapshot'
 _fkprm = include 'lib/fkprm'
-_polyparams = include 'lib/polyparams'
-_ccparams = include 'lib/ccparams'
 _hsteps = include 'lib/highway_steps'
 _htracks = include 'lib/highway_tracks'
 bc = include("lib/beatclock")
@@ -270,17 +300,17 @@ development_state = function()
 
     -- -- BERLIN
     -- params:set('hill_'..i..'_flatten',0)
-    params:set('voice_model_'..i, 14)
-    params:set('hill '..i..' MIDI output', 2)
+    -- params:set('voice_model_'..i, 14)
+    -- params:set('hill '..i..' MIDI output', 2)
     --/BERLIN
   end
 
-  params:hide('kildare_fx_header')
-  params:hide('kildare_delay')
-  params:hide('kildare_feedback')
-  params:hide('kildare_main')
-  params:hide('kildare_lfo_header')
-  -- params:hide('lfos')
+  -- params:hide('kildare_fx_header')
+  -- params:hide('kildare_delay')
+  -- params:hide('kildare_feedback')
+  -- params:hide('kildare_main')
+  -- params:hide('kildare_lfo_header')
+  -- -- params:hide('lfos')
   for i = 1,number_of_hills do
     -- params:hide('hill_'..i..'_highway_header')
     -- params:hide('hill_'..i..'_mode')
@@ -296,8 +326,7 @@ development_state = function()
     params:hide("hill "..i.." crow output")
     params:hide('hill_'..i..'_JF_header')
     params:hide("hill "..i.." JF output")
-
-
+    params:set('hill '..i..' MIDI output', 2)
   end
   rebuild_params = true
 
@@ -318,12 +347,10 @@ midi_devices = {}
 outgoing_midi_device = {}
 
 function init()
-  local frames = 0
 	startup_animation = clock.run(function()
 		while true do
 			clock.sleep(1 / 60)
 			screen.clear()
-			frames = frames + 1
 			screen.move(108, 64)
 			screen.color(math.random(64), 108, 184, math.random(255))
 			screen.text_center("__/\\______/\\\\___")
@@ -339,8 +366,7 @@ function init()
 
   paramsMenu.loadMessage = "loading hills params..."
   print('starting: '..util.time())
-  kildare.init(number_of_hills, true)
-  _ca.init() -- initialize clips
+  -- _ca.init() -- initialize clips
   _snapshots.init()
   _flow.init()
   print('initializing song: '..util.time())
@@ -395,8 +421,8 @@ function init()
           if d.note == _midi.iterator.note[j]
           and d.vel >= _midi.iterator.velocity_lo[j]
           and d.vel <= _midi.iterator.velocity_hi[j]
-          and params:string('hill_'..j..'_iterator') == 'external MIDI'
-          and params:get('hill_'..j..'_iterator_midi_device') == i
+          and _ps[j].iterator == 'external MIDI'
+          and _ps[j].iterator_midi_device == i
           then
             if hills[j].highway then
               _htracks.tick(j)
@@ -407,7 +433,7 @@ function init()
               end
               hills[j][k].index = util.wrap(hills[j][k].index + 1, hills[j][k].low_bound.note,hills[j][k].high_bound.note)
             end
-            if params:string('hill_'..j..'_iterator_midi_record') == 'yes' then
+            if _ps[j].iterator_midi_record then
               for k = 1,16 do
                 local table_to_record =
                   {
@@ -440,9 +466,8 @@ function init()
   end
   
   prms.init()
+	print("459")
   _fkprm.init()
-  _polyparams.init()
-  _ccparams.init()
   _midi.init()
 	-- prms.reload_engine(params:string("global engine"),true)
   
@@ -630,9 +655,6 @@ function init()
     snapshot_overwrite = tab.load(this_filepath.."snapshots/overwrite_state.txt")
     _fkprm.adjusted_params = tab.load(this_filepath.."per-step/_fkprm.txt")
     -- _fkprm.adjusted_params_lock_trigs = tab.load(this_filepath.."per-step/_fkprm-lock_trigs.txt")
-    if util.file_exists(this_filepath.."per-voice/_polyparams.txt") then
-      _polyparams.adjusted_params = tab.load(this_filepath.."per-voice/_polyparams.txt")
-    end
     for j = 1,number_of_hills do
       track[j] = tab.load(this_filepath.."track/"..j..".txt")
       for subs = 1,#track[j] do
@@ -648,7 +670,6 @@ function init()
     print('loading pset!'..this_filepath)
     if util.file_exists(this_filepath.."poly-params.txt") then
       print('loading poly params!')
-      -- kildare.queued_read_file = this_filepath.."poly-params.txt"
       engine.load_poly_params(this_filepath.."poly-params.txt")
     end
     full_PSET_swap()
@@ -686,7 +707,6 @@ function init()
     -- local pset_string = string.sub(filename,string.len(filename) - 6, -1)
     -- local pset_number = pset_string:gsub(".pset","")
     print("saving hills data for PSET: "..number)
-    kildare.move_audio_into_perm(_path.audio..'kildare/'..number..'/')
     util.make_dir(_path.data.."hills/"..number.."/data")
     util.make_dir(_path.data.."hills/"..number.."/patterns")
     util.make_dir(_path.data.."hills/"..number.."/song")
@@ -708,7 +728,6 @@ function init()
     tab.save(snapshot_overwrite, _path.data.."hills/"..number.."/snapshots/overwrite_state.txt")
     tab.save(_fkprm.adjusted_params, _path.data.."hills/"..number.."/per-step/_fkprm.txt")
     -- tab.save(_fkprm.adjusted_params_lock_trigs, _path.data.."hills/"..number.."/per-step/_fkprm-lock_trigs.txt")
-    tab.save(_polyparams.adjusted_params, _path.data.."hills/"..number.."/per-voice/_polyparams.txt")
     params_write_silent(filename,name)
     os.execute('touch '.._path.data..'hills/'..number..'/poly-params.txt')
     engine.save_poly_params(_path.data..'hills/'..number..'/poly-params.txt')
@@ -770,13 +789,13 @@ function init()
     -- hill_names[hill] = hill..': '..model
     hill_names[hill] = tostring(hill)
     
-    prms.change_UI_name('hill_'..hill..'_group', hill_names[hill])
+    -- prms.change_UI_name('hill_'..hill..'_group', hill_names[hill])
     -- prms.change_UI_name('hill_'..hill..'_note_header', 'note management '..hill_names[hill])
-    prms.change_UI_name('hill_'..hill..'_kildare_header', 'Kildare management '..hill_names[hill])
-    prms.change_UI_name('hill_'..hill..'_sample_header', 'sample management '..hill_names[hill])
-    prms.change_UI_name('hill_'..hill..'_MIDI_header', 'MIDI management '..hill_names[hill])
-    prms.change_UI_name('hill_'..hill..'_crow_header', 'crow management '..hill_names[hill])
-    prms.change_UI_name('hill_'..hill..'_JF_header', 'JF management '..hill_names[hill])
+    -- prms.change_UI_name('hill_'..hill..'_kildare_header', 'Kildare management '..hill_names[hill])
+    -- prms.change_UI_name('hill_'..hill..'_sample_header', 'sample management '..hill_names[hill])
+    -- prms.change_UI_name('hill_'..hill..'_MIDI_header', 'MIDI management '..hill_names[hill])
+    -- prms.change_UI_name('hill_'..hill..'_crow_header', 'crow management '..hill_names[hill])
+    -- prms.change_UI_name('hill_'..hill..'_JF_header', 'JF management '..hill_names[hill])
     -- prms.change_UI_name('snapshot_crossfade_header_'..hill, 'crossfader '..hill_names[hill])
 
     grid_dirty = true
@@ -823,18 +842,15 @@ function init()
 
   clock.run(
     function()
-      clock.sleep(2)
+      -- clock.sleep(2)
+      clock.sleep(0.1)
       development_state()
-      if kildare.queued_read_file ~= nil then
-        print('!!!!!!!!!!!!!!!!!!!!!!!!queud read')
-        engine.load_poly_params(kildare.queued_read_file)
-        kildare.queued_read_file = nil
-      end
       -- print('dev state: '..util.time())
       -- print('starting from toggle')
       clock.run(
         function()
-          clock.sleep(1)
+          -- clock.sleep(1)
+          clock.sleep(0.1)
 			    clock.cancel(startup_animation)
           -- print("D>D>D>D>D",startup_animation)
           loading_done = true
@@ -1295,7 +1311,7 @@ local function extract_voice_from_string(s)
 end
 
 force_note = function(i,j,played_note)
-  local vel_target = params:get('hill_'..i..'_iso_velocity')
+  local vel_target =  _ps[i].iso_velocity
   local retrig_index = 0
 	if not hills_legato[i] then
 		-- send note...

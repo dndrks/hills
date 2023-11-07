@@ -26,7 +26,11 @@ function key_actions.lr_nav(d, modifiers)
         if not key1_hold then
           s_c["hills"]["focus"] = util.clamp(s_c["hills"]["focus"]+d,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
         else
-          _s.popup_focus[1] = util.clamp(_s.popup_focus[1]+d,1,2)
+					if _s.popup_focus[1] == 1 then
+						-- params:delta("hill [" .. i .. "][" .. j .. "] population", modifiers[1] == "alt" and d*10 or d)
+					elseif _s.popup_focus[1] == 2 then
+						-- params:delta("hill "..i.." quant value",d)
+					end
         end
       elseif ui.menu_focus == 2 then
         s_c["bounds"]["focus"] = util.clamp(s_c["bounds"]["focus"]+d,1,s_c["bounds"]["max"])
@@ -37,8 +41,28 @@ function key_actions.lr_nav(d, modifiers)
         if not key1_hold then
           s_c["notes"]["focus"] = util.clamp(s_c["notes"]["focus"]+d,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
         else
-          _s.popup_focus[3] = util.clamp(_s.popup_focus[3]+d,1,3)
+					if _s.popup_focus[3] == 1 then
+						_t.adjust_velocity(i, j, s_c["notes"]["focus"], mod_active and -d * 10 or -d)
+					elseif _s.popup_focus[3] == 2 then
+						local note_adjustments = {
+							"mute step",
+							"shuffle notes",
+							"reverse notes",
+							"rotate notes",
+							"rand fill notes",
+							"static notes",
+							"shuffle vel",
+							"reverse vel",
+							"rotate vel",
+							"rand vel",
+							"static vel",
+						}
+						local current_adjustment = tab.key(note_adjustments, s_c["notes"]["transform"])
+						s_c["notes"]["transform"] =
+							note_adjustments[util.clamp(current_adjustment + d, 1, #note_adjustments)]
+					end
         end
+        
       elseif ui.menu_focus == 4 then
         s_c["loop"]["focus"] = util.clamp(s_c["loop"]["focus"]+d,1,s_c["loop"]["max"])
         for _hills = 1,8 do
@@ -90,25 +114,21 @@ function key_actions.lr_nav(d, modifiers)
   end
 end
 
-function key_actions.ud_nav(d)
+function key_actions.ud_nav(d, modifiers)
   local s_c,i,j,s_q = table.unpack(share_aliases())
 
   if ui.control_set == "play" then
-    if params:string("hill "..i.." sample output") == "yes" then
-      ui.menu_focus = util.clamp(ui.menu_focus+d,1,5)
-    else
-      ui.menu_focus = util.clamp(ui.menu_focus+d,1,ui.hill_focus <= 7 and 4 or 5)
-    end
+		ui.menu_focus = util.clamp(ui.menu_focus + d, 1, ui.hill_focus <= 7 and 4 or 5)
   elseif ui.control_set == "edit" and hills[i].highway == false then
     if ui.menu_focus == 1 then
       if not key1_hold then
-        _t.nudge(i,j,ui.screen_controls[i][j].hills.focus,d)
-      else
-        if _s.popup_focus[1] == 1 then
-          hills[i][j].population = util.clamp((hills[i][j].population*100)+d,10,100)/100
-        elseif _s.popup_focus[1] == 2 then
-          -- params:delta("hill "..i.." quant value",d)
+        local mod_active
+        if #modifiers == 1 and modifiers[1] == "alt" then
+          mod_active = true
         end
+        _t.nudge(i,j,ui.screen_controls[i][j].hills.focus,mod_active and d*10 or d)
+      else
+				_s.popup_focus[1] = util.clamp(_s.popup_focus[1] + d, 1, 2)
       end
     elseif ui.menu_focus == 2 then
       if s_c["bounds"]["focus"] == 1 then
@@ -129,15 +149,7 @@ function key_actions.ud_nav(d)
         -- end
         _t.transpose(i,j,s_c["notes"]["focus"],-d)
       else
-        if _s.popup_focus[3] == 1 then
-          _t.adjust_velocity(i,j,s_c["notes"]["focus"],d)
-        elseif _s.popup_focus[3] == 2 then
-          hills[i][j].note_num.chord_degree[s_c["notes"]["focus"]] = util.clamp(hills[i][j].note_num.chord_degree[s_c["notes"]["focus"]]+d, 1, 7)
-        elseif _s.popup_focus[3] == 3 then
-          local note_adjustments = {"mute step", "shuffle notes","reverse notes","rotate notes","rand fill notes","static notes","shuffle vel","reverse vel","rotate vel","rand vel","static vel"}
-          local current_adjustment = tab.key(note_adjustments,s_c["notes"]["transform"])
-          s_c["notes"]["transform"] = note_adjustments[util.clamp(current_adjustment+d,1,#note_adjustments)]
-        end
+				_s.popup_focus[3] = util.clamp(_s.popup_focus[1] + d, 1, 2)
       end
     elseif ui.menu_focus == 4 then
       if not key1_hold then
@@ -245,20 +257,33 @@ function key_actions.parse(char, modifiers, is_repeat, state)
     elseif char.name == 'backspace' then
 			_fkprm.key(2, state)
     end
-  elseif ui.control_set == 'poly parameters' then
-    _polyparams.key(char, modifiers, is_repeat, state)
   else
     if char.name == 'return' and state == 1 then
       if ui.control_set == 'play' then
         ui.control_set = 'edit'
       elseif ui.control_set == 'edit' then
-        grid_conditional_entry = not grid_conditional_entry
-        if grid_conditional_entry == true then
-          print(track[i][j].ui_position)
-          -- conditional_entry_steps.focus[i] = {track[i][j].ui_position}
-					_g.process_modifier(conditional_entry_steps, track[i][j].ui_position, i, j)
+        if hills[i].highway then
+          grid_conditional_entry = not grid_conditional_entry
+          if grid_conditional_entry == true then
+            print(track[i][j].ui_position)
+            -- conditional_entry_steps.focus[i] = {track[i][j].ui_position}
+            _g.process_modifier(conditional_entry_steps, track[i][j].ui_position, i, j)
+          else
+            conditional_entry_steps.focus[i] = {}
+          end
         else
-          conditional_entry_steps.focus[i] = {}
+          -- if ui.menu_focus == 1 and _s.popup_focus[1] == 2 then
+          if ui.menu_focus == 1 then
+            hodgepodge(i,j)
+          elseif ui.menu_focus == 3 then
+						_t[s_c["notes"]["transform"]](
+							i,
+							j,
+							hills[i][j].low_bound.note,
+							hills[i][j].high_bound.note,
+							s_c.notes.focus
+						)
+          end
         end
       end
     elseif char.name == 'backspace' and state == 1 then
@@ -269,6 +294,8 @@ function key_actions.parse(char, modifiers, is_repeat, state)
       key_actions.lr_nav(char.name == 'left' and -1 or 1, modifiers)
     elseif (char.name == 'up' or char.name == 'down') and state == 1 then
       key_actions.ud_nav(char.name == 'up' and -1 or 1, modifiers)
+    elseif char.name == 'rshift' and state == 1 then
+      key1_hold = not key1_hold
     end
     -- if z == 1 then
     --   local s_c = ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]

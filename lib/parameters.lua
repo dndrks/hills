@@ -4,6 +4,74 @@ _lfo = require("lfo")
 
 local vports = {}
 
+local custom_actions = {
+	"carHz",
+	"delayEnv",
+	"feedbackEnv",
+	"sampleMode",
+	"sampleFile",
+	"sampleClear",
+	"playbackRateBase",
+	"playbackRateOffset",
+	"playbackPitchControl",
+	"loop",
+}
+
+for mpIter = 1, 28 do
+	table.insert(custom_actions, "midiCC_num_" .. mpIter)
+	table.insert(custom_actions, "midiCC_ch_" .. mpIter)
+	table.insert(custom_actions, "midiCC_val_" .. mpIter)
+end
+
+midi_params = {}
+for mpIter = 1, 28 do
+	table.insert(midi_params, { type = "separator", name = "midi cc output #" .. mpIter })
+	table.insert(midi_params, {
+		id = "midiCC_val_" .. mpIter,
+		name = "cc value",
+		type = "control",
+		min = 0,
+		max = 127,
+		warp = "lin",
+		quantum = 1 / 127,
+		default = 0,
+		step = 1,
+		formatter = function(param)
+			return (round_form((type(param) == "table" and param:get() or param), 1, ""))
+		end,
+	})
+	table.insert(midi_params, {
+		id = "midiCC_num_" .. mpIter,
+		name = "cc number",
+		type = "control",
+		min = 0,
+		max = 127,
+		warp = "lin",
+		quantum = 1 / 127,
+		default = mpIter - 1,
+		step = 1,
+		formatter = function(param)
+			return (round_form((type(param) == "table" and param:get() or param), 1, ""))
+		end,
+	})
+	table.insert(midi_params, {
+		id = "midiCC_ch_" .. mpIter,
+		name = "cc channel",
+		type = "control",
+		min = 1,
+		max = 16,
+		warp = "lin",
+		quantum = 1 / 16,
+		default = 1,
+		step = 1,
+		formatter = function(param)
+			return (round_form((type(param) == "table" and param:get() or param), 1, ""))
+		end,
+	})
+end
+
+local how_many_params = tab.count(midi_params)
+
 local function refresh_params_vports()
   for i = 1,#midi.vports do
     vports[i] = midi.vports[i].name ~= "none" and (tostring(i)..": "..util.trim_string_to_width(midi.vports[i].name,90)) or tostring(i)..": [device]"
@@ -129,7 +197,7 @@ function parameters.init()
 
   params:add_separator('hills_main_header', 'hills + highways')
   for i = 1,number_of_hills do
-    params:add_group('hill_'..i..'_group', hill_names[i], 78 + ((number_of_hills-1)*2))
+    params:add_group('hill_'..i..'_group', hill_names[i]..": settings", 79 + ((number_of_hills-1)*2))
 
     params:add_separator('hill_'..i..'_highway_header', 'mode')
     params:add_option('hill_'..i..'_mode', 'mode', {'hill','highway'}, 1)
@@ -150,6 +218,7 @@ function parameters.init()
       'hill'
     }, 1)
     params:set_action('hill_'..i..'_iterator', function(x)
+      _ps[i].iterator = params:string('hill_'..i..'_iterator')
       if x == 1 then
         if hills[i].highway then
           if not _seamstress.clock.threads[track_clock[i]] then
@@ -238,6 +307,10 @@ function parameters.init()
       all_midi[j] = j..': '..all_midi[j]
     end
     params:add_option('hill_'..i..'_iterator_midi_device', 'midi device', all_midi, 1)
+    params:set_action('hill_'..i..'_iterator_midi_device', function(x) 
+      _ps[i].iterator_midi_device = x
+    end
+    )
     params:add_number('hill_'..i..'_iterator_midi_note', 'note on = trigger', 0,127, 59+i)
     params:set_action('hill_'..i..'_iterator_midi_note', function(x)
       _midi.iterator.note[i] = x
@@ -252,6 +325,9 @@ function parameters.init()
     end)
     -- params:add_binary('hill_'..i..'_iterator_portamento')
     params:add_option('hill_'..i..'_iterator_midi_record','record triggers?', {'no','yes'}, 1)
+    params:set_action('hill_'..i..'_iterator_midi_record', function(x)
+      _ps[i].iterator_midi_record = x == 2
+    end)
 
     for j = 1,number_of_hills do
       if i ~= j then
@@ -340,6 +416,16 @@ function parameters.init()
       end
       screen_dirty = true
     end)
+		params:add_trigger("hill " .. i .. " rescale", "rescale")
+		params:set_action("hill " .. i .. " rescale", function()
+      for j = 1,8 do
+        local highest_val = math.max(table.unpack(hills[i][j].note_num.pool))
+        for k = 1,#hills[i][j].note_num.pool do
+          hills[i][j].note_num.pool[k] = util.round(util.linlin(1,highest_val,1,hills[i][j].note_num.max,hills[i][j].note_num.pool[k]))
+        end
+      end
+      screen_dirty = true
+    end)
     params:add_trigger("hill "..i.." octave up","base octave up")
     params:set_action("hill "..i.." octave up",
       function()
@@ -362,7 +448,7 @@ function parameters.init()
     )
     params:add_option("hill "..i.." random offset style", "random offset style", {"+ oct","- oct","+/- oct"},1)
     params:set_action("hill "..i.." random offset style",function(x) hills_random_offset_style[i] = x end)
-    params:add_number("hill "..i.." random offset probability","random offset probability",0,100,0)
+    params:add_number("hill "..i.." random offset probability","random offset",0,100,0,'%')
     params:set_action("hill "..i.." random offset probability",function(x) hills_random_offset_prob[i] = x end)
     params:add_binary('hill_'..i..'_legato','legato', 'momentary', 0)
     params:set_action("hill_"..i..'_legato', function(x) hills_legato[i] = x == 1 end)
@@ -371,8 +457,12 @@ function parameters.init()
 
     params:add_separator('hill_'..i..'_iso_header', 'isometric keys management')
     params:add_number('hill_'..i..'_iso_velocity', 'fixed velocity', 0, 127, 70)
+    params:set_action('hill_'..i..'_iso_velocity', function()
+      _ps[i].iso_velocity = params:string('hill_'..i..'_iso_velocity')
+    end)
     params:add_number('hill_'..i..'_iso_octave', 'octave', -4, 4, 0)
     params:add_option('hill_'..i..'_iso_quantize', 'quantize to scale?', {'no','yes'}, 1)
+    params:set_action('hill_'..i..'_iso_quantize', function(x) _ps[i].iso_quantize = x == 2 end)
 
     params:add_separator('hill_'..i..'_kildare_header', "Kildare management "..hill_names[i])
     params:add_option("hill "..i.." kildare_notes","send pitches?",{"no","yes"},params:string('hill_'..i..'_mode') == 'hill' and 2 or 1)
@@ -462,12 +552,12 @@ function parameters.init()
       -- _menu.rebuild_params() 
     end
     params:add_number("hill "..i.." sample slice count", "slice count",2,48,16)
-    params:add_number("hill "..i.." sample distribution", "total distribution",0,100,100, 
+    params:add_number("hill "..i.." sample distribution", "total distribution",0,100,100, nil,
       function(param)
         return(util.round(sample_info[params:get('hill '..i..' sample slot')].sample_count * (param:get()/100))..'/'..sample_info[params:get('hill '..i..' sample slot')].sample_count)
       end
     )   
-    params:add_number("hill "..i.." sample probability", "playback probability",0,100,100, function(param) return(param:get().."%") end)
+    params:add_number("hill "..i.." sample probability", "playback probability",0,100,100, nil, function(param) return(param:get().."%") end)
     params:add_option("hill "..i.." sample repitch", "send pitches?",{"no","yes"},1)
     params:add_option("hill "..i.." sample momentary", "stop when released?", {"no","yes"},1)
 
@@ -523,7 +613,7 @@ function parameters.init()
         hills[i][j].shape = curves.easingNames[x]
       end)
       params:hide("hill ["..i.."]["..j.."] shape")
-      params:add_number("hill ["..i.."]["..j.."] population","hill ["..i.."]["..j.."] population",40,100,math.random(40,100))
+      params:add_number("hill ["..i.."]["..j.."] population","hill ["..i.."]["..j.."] population",1,100,math.random(40,100))
       params:set_action("hill ["..i.."]["..j.."] population",
       function(x)
         hills[i][j].population = x/100
@@ -633,6 +723,82 @@ function parameters.init()
     params:add_option("hill "..i.." JF output id","output id",{"IDENTITY","2N","3N","4N","5N","6N","all"},1)
     params:hide("hill "..i.." JF output style")
     params:hide("hill "..i.." JF output id")
+
+		local osc_params_count = 4
+    params:add_option('voice_model_'..i,'voice model', {'midi'},1)
+		kildare.model_change_callback(i, "midi")
+    params:hide('voice_model_'..i)
+		
+  end
+
+  params:add_separator('hills_midiCC_header', "midi cc's")
+  for i = 1,number_of_hills do
+    -- local shown_set = params:string("voice_model_" .. i)
+    -- params:add_group("kildare_" .. i .. "_group", i .. ": " .. shown_set, how_many_params)
+    params:add_group("kildare_" .. i .. "_group", i .. ": midi cc's", how_many_params)
+
+    for k, v in pairs({ "midi" }) do
+      for prms, d in pairs(midi_params) do
+        if d.type == "control" then
+          local quantum_size = 0.01
+          if d.quantum ~= nil then
+            quantum_size = d.quantum
+          end
+          local step_size = 0
+          if d.step ~= nil then
+            step_size = d.step
+          end
+          if d.id == "carHz" then
+            quantum_size = 1 / math.abs(d.max - d.min)
+          end
+          params:add_control(
+            i .. "_" .. v .. "_" .. d.id,
+            d.name,
+            controlspec.new(d.min, d.max, d.warp, step_size, d.default, nil, quantum_size),
+            d.formatter
+          )
+        elseif d.type == "number" then
+          params:add_number(i .. "_" .. v .. "_" .. d.id, d.name, d.min, d.max, d.default, d.formatter)
+        elseif d.type == "option" then
+          params:add_option(i .. "_" .. v .. "_" .. d.id, d.name, d.options, d.default)
+        elseif d.type == "separator" then
+          params:add_separator(i .. "_separator_" .. v .. "_" .. d.name, d.name)
+        elseif d.type == "file" then
+          -- params:add_file(i.."_"..v..'_'..d.id, d.name, d.default)
+          print("no file params")
+          params:add_binary(i .. "_" .. v .. "_" .. d.id, d.name, 0)
+        elseif d.type == "binary" then
+          params:add_binary(i .. "_" .. v .. "_" .. d.id, d.name, d.behavior)
+        end
+        -- build actions:
+        if d.type ~= "separator" then
+          if not tab.contains(custom_actions, d.id) then
+            params:set_action(i .. "_" .. v .. "_" .. d.id, function(x)
+              -- if engine.name == "Kildare" then
+              if v == params:string("voice_model_" .. i) then
+                send_to_engine("set_voice_param", { i, d.id, x })
+                Kildare.voice_param_callback(i, d.id, x)
+                Kildare.last_adjusted_param = { i, v, d.id }
+              end
+              -- end
+            end)
+          elseif string.find(d.id, "midiCC_val_") then -- midi cc value
+            local beg, which_def =
+              string.find(i .. "_" .. v .. "_" .. d.id, i .. "_" .. v .. "_midiCC_val_")
+            which_def = string.sub(i .. "_" .. v .. "_" .. d.id, which_def + 1)
+            -- print(i,v,d.id,which_def)
+            params:set_action(i .. "_" .. v .. "_" .. d.id, function(x)
+              local ccNum = params:get(i .. "_" .. v .. "_midiCC_num_" .. which_def)
+              local ch = params:get(i .. "_" .. v .. "_midiCC_ch_" .. which_def)
+              local dev = hills_midi_device[i]
+              midi_devices[dev]:cc(ccNum, x, ch)
+              -- send to midi devices
+              kildare.last_adjusted_param = { i, v, d.id }
+            end)
+          end
+        end
+      end
+    end
   end
 
   params:add_separator('hills_pattern_header', 'pattern + snapshot settings')
@@ -665,6 +831,7 @@ function parameters.init()
   for i = 1,6 do
     params:add_option('global_snapshot_mod_mode_'..i, i..': mode', {'free','clocked'})
     params:set_action('global_snapshot_mod_mode_'..i, function(x)
+      _ps.global_snapshot_mod_mode[i] = params:string("global_snapshot_mod_mode_"..i)
       if x == 1 then
         params:show('global_snapshot_mod_time_'..i)
         params:hide('global_snapshot_mod_beats_'..i)
@@ -686,6 +853,7 @@ function parameters.init()
       1,
       64,
       i,
+      nil,
       function(param) return (param:get().." beats") end
     )
   end
@@ -850,7 +1018,8 @@ function parameters.init()
 
   menu_rebuild_queued = true
   -- _menu.rebuild_params()
-  clock.run(function() clock.sleep(1) params:bang() all_loaded = true end)
+  -- clock.run(function() clock.sleep(1) params:bang() all_loaded = true end)
+  clock.run(function() clock.sleep(0.1) params:bang() all_loaded = true end)
 end
 
 return parameters

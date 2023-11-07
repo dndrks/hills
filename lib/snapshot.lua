@@ -10,7 +10,7 @@ function snapshot.init()
     snapshot_overwrite[i] = {}
   end
 
-  local all_the_voices = {'bd','sd','tm','cp','rs','cb','hh','saw','fld','timbre','ptr','input','sample','midi'}
+  local all_the_voices = {'midi'}
 
   for i = 1,number_of_hills do
     for j = 1,#all_the_voices do
@@ -51,8 +51,8 @@ function snapshot.pack(voice,coll)
       d_string = voice..'_'..d_voice..'_'
     end
 
-    for i = 1, #kildare_drum_params[d_voice] do
-      local d = kildare_drum_params[d_voice][i]
+    for i = 1, #midi_params do
+      local d = midi_params[i]
       if d.type ~= 'separator' and not d.lfo_exclude then
         snapshots[voice][d_voice][coll][d.id] = params:get(d_string..d.id)
       end
@@ -88,8 +88,8 @@ function snapshot.unpack(voice, coll)
       d_string = voice..'_'..d_voice..'_'
     end
 
-    for i = 1, #kildare_drum_params[d_voice] do
-      local d = kildare_drum_params[d_voice][i]
+    for i = 1, #midi_params do
+      local d = midi_params[i]
       if d.type ~= 'separator' and not d.lfo_exclude and snapshots[voice][d_voice][coll][d.id] ~= nil then
         params:set(d_string..d.id, snapshots[voice][d_voice][coll][d.id])
       end
@@ -141,8 +141,7 @@ function snapshot.clear(_t,slot)
   local d_voice, _snap
   if type(_t) == 'number' then
     if _t <= 10 then
-      d_voice = params:string('voice_model_'.._t)
-      snapshots[_t][d_voice][slot] = {}
+      snapshots[_t].midi[slot] = {}
     end
   else
     snapshots[_t][slot] = {}
@@ -197,7 +196,7 @@ function snapshot.crossfade(voice,scene_a,scene_b,val)
     -- original_srcs = _t.deep_copy(snapshots[voice][coll])
   end
 
-  local d = (type(voice) == 'number' and voice <=10) and kildare_drum_params[d_voice] or kildare_fx_params[voice]
+  local d = (type(voice) == 'number' and voice <=10) and midi_params or kildare_fx_params[voice]
   for i = 1, #d do
     local destination = d[i]
     if destination.type ~= 'separator'
@@ -228,9 +227,9 @@ function snapshot.route_funnel(voice,coll,mod_idx)
     focus = snapshots[voice]
   end
   if mod_idx ~= 0 then
-    if params:string('global_snapshot_mod_mode_'..mod_idx) == "free" then
+    if _ps.global_snapshot_mod_mode[mod_idx] == "free" then
       mod_idx = params:get('global_snapshot_mod_time_'..mod_idx)
-    elseif params:string('global_snapshot_mod_mode_'..mod_idx) == "clocked" then
+    elseif _ps.global_snapshot_mod_mode[mod_idx] == "clocked" then
       mod_idx = clock.get_beat_sec() * params:get('global_snapshot_mod_beats_'..mod_idx)
     end
   end
@@ -257,8 +256,8 @@ function snapshot.route_funnel(voice,coll,mod_idx)
     end
 
     if type(voice) == 'number' and voice <= 10 then
-      for i = 1, #kildare_drum_params[d_voice] do
-        local d = kildare_drum_params[d_voice][i]
+      for i = 1, #midi_params do
+        local d = midi_params[i]
         if d.type ~= 'separator' and not d.lfo_exclude then
           original_srcs[d.id] = params:get(d_string..d.id)
         end
@@ -278,8 +277,8 @@ function snapshot.route_funnel(voice,coll,mod_idx)
         focus.current_value = r_val
 
         if type(voice) == 'number' and voice <=10 then
-          for i = 1, #kildare_drum_params[d_voice] do
-            local d = kildare_drum_params[d_voice][i]
+          for i = 1, #midi_params do
+            local d = midi_params[i]
             if d.type ~= 'separator' and not d.lfo_exclude and snapshots[voice][d_voice][coll][d.id] ~= nil then
               params:set(d_string..d.id, util.linlin(0,1,original_srcs[d.id],snapshots[voice][d_voice][coll][d.id],r_val))
             end

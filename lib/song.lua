@@ -153,7 +153,7 @@ function clock.transport.start()
 				clock.cancel(track_clock[i])
 				track_clock[i] = nil
 			end
-			if params:string("hill_" .. i .. "_iterator") == "internal" then
+			if _ps[i].iterator == "internal" then
 				if i == 1 then
 					print("starting")
 				end
@@ -187,7 +187,7 @@ function song.toggle_transport()
         clock.cancel(track_clock[i])
         track_clock[i] = nil
       end
-      if params:string('hill_'..i..'_iterator') == 'internal' then
+      if _ps[i].iterator == 'internal' then
         if i == 1 then print('starting') end
         _htracks.start_playback(i, track[i].active_hill)
         track_clock[i] = clock.run(_htracks.iterate,i)

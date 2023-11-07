@@ -72,18 +72,32 @@ end
 
 -- 2. REVERSAL
 m['reverse notes'] = function(i,j,start_point,end_point,focus,sc)
-  local target = sc ~= nil and hills[i][j].sample_controls.rate or hills[i][j].note_num.pool
+  local target = hills[i][j].note_num.pool
   local rev = {}
+  local j = 0
   for k = end_point, start_point, -1 do
-    rev[end_point - k + 1] = target[k]
+    j = j+1
+    rev[j] = target[k]
   end
+  -- tab.print(rev)
+  -- print('----')
+  -- tab.print(target)
+  j = 0
   for k = start_point, end_point do
-    local range = (end_point-start_point)+1
-    target[k] = rev[util.linlin(start_point,end_point,1,range,k)]
-    if target == hills[i][j].note_num.pool then
-      hills[i][j].note_num.chord_degree[k] = util.wrap(hills[i][j].note_num.pool[k], 1, 7)
-    end
+    j = j+1
+    target[k] = rev[j]
   end
+  -- print('eeeee')
+	-- tab.print(rev)
+	-- print("----")
+	-- tab.print(target)
+  -- for k = start_point, end_point do
+  --   local range = (end_point-start_point)+1
+  --   target[k] = rev[util.linlin(start_point,end_point,1,range,k)]
+  --   -- if target == hills[i][j].note_num.pool then
+  --   --   hills[i][j].note_num.chord_degree[k] = util.wrap(hills[i][j].note_num.pool[k], 1, 7)
+  --   -- end
+  -- end
 end
 
 m.reverse = function(i,j,start_point,end_point,focus,sc)

@@ -76,7 +76,7 @@ function grid_lib.pattern_execute(data)
     local j = data.hill_j
     local played_index = (((7-data.y)*5) + (data.x-1)-1)
     if data.z == 1 then
-      if params:string('hill_'..i..'_iso_quantize') == 'yes' then
+      if _ps[i].iso_quantize then
         if data.legato then
           -- send_note_data(i,j,1,hills[i].note_ocean[played_index+1] + (12 * data.octave))
         else
@@ -90,7 +90,7 @@ function grid_lib.pattern_execute(data)
         end
       end
     else
-      if params:string('hill_'..i..'_iso_quantize') == 'yes' then
+      if _ps[i].iso_quantize then
         grid_lib.earthsea_release(i,hills[i].note_ocean[played_index+1] + (12 * data.octave))
       else
         grid_lib.earthsea_release(i,(hills_base_note[i] + played_index) + (12 * data.octave))
@@ -537,11 +537,7 @@ function g.key(x,y,z)
           mods['notes'] = not mods['notes']
           exit_mod(mods['notes'])
         elseif y == 2 then
-          if params:string('voice_model_'..ui.hill_focus) == 'sample' then
-            grid_lib.cc_press(x,y,z)
-          else
-            grid_lib.earthsea_press(x,y,z)
-          end
+					grid_lib.earthsea_press(x, y, z)
         elseif y == 8 then
           mods['alt'] = z == 1
         end
@@ -558,14 +554,14 @@ function g.key(x,y,z)
       if x > 1 and x <= number_of_hills+1 and not mod_held then
         if z == 1 and y <= 8 then
           if hills[x-1].highway == false then
-            if params:string('hill_'..(x-1)..'_iterator') == 'internal' then
+            if _ps[x-1].iterator == 'internal' then
               _a.start(x-1,y,true)
             else
               hills[x-1].segment = y
             end
             hills[x-1].screen_focus = y
           else
-            if params:string('hill_'..(x-1)..'_iterator') == 'internal' and #track[x-1] >= y then
+            if _ps[x-1].iterator == 'internal' and #track[x-1] >= y then
               _htracks.stop_playback(x-1)
               track[x-1].active_hill = y
               _htracks.start_playback(x-1,y)
@@ -590,7 +586,7 @@ function g.key(x,y,z)
           end
         elseif z == 0 and y <= 8 then
           if hills[x-1].highway == false and hills[x-1][y].playmode == "momentary" and hills[x-1].segment == y then
-            if params:string('hill_'..(x-1)..'_iterator') == 'internal' then
+            if _ps[x-1].iterator == 'internal' then
               stop(x-1,true)
             end
           elseif hills[x-1].highway and hills[x-1][y].playmode == "momentary" then
@@ -601,9 +597,6 @@ function g.key(x,y,z)
             -- end
           end
           hills[x-1][y].perf_led = false
-          if params:string("hill "..(x-1).." sample momentary") == "yes" then
-            _ca.stop_sample(params:get("hill "..(x-1).." sample slot"))
-          end
           for i = 1,16 do
             grid_pattern[i]:watch(
               {
@@ -615,7 +608,7 @@ function g.key(x,y,z)
             )
           end
         elseif y > 8 and y <= 16 then
-					print("new earthsea stuff")
+					-- print("new earthsea stuff")
 					print(x, y - 8, z)
 					grid_lib.earthsea_press(x, y - 8, z)
         end
@@ -679,11 +672,7 @@ function g.key(x,y,z)
 						hills[ui.hill_focus].screen_focus = y
           end
         elseif mods['notes'] then
-          if params:string('voice_model_'..ui.hill_focus) == 'sample' then
-            grid_lib.cc_press(x,y,z)
-          else
-            grid_lib.earthsea_press(x,y,z)
-          end
+					grid_lib.earthsea_press(x, y, z)
         elseif mods["playmode"] and z == 1 then
           if mods['playmode_extended'] then
             if #iter_link_source == 0 then
@@ -833,6 +822,8 @@ function g.key(x,y,z)
         mods["snapshots_extended"] = not mods["snapshots_extended"]
       elseif x == 16 and y == 8 and z == 1 and mods['playmode'] then
         mods['playmode_extended'] = not mods['playmode_extended']
+      elseif x == 1 and y == 16 then
+				mods["alt"] = z == 1
       end
       if mod_held and mods["snapshots"] and is_toggle_state_off() then
         if x == 9 or x == 10 then
@@ -1166,7 +1157,7 @@ local function process_ccES(i,j,played_note)
       _htracks.change_trig_state(focused_set,current_step, true, i, j, _page)
     end
     focused_set.base_note[current_step] = played_note
-    focused_set.velocities[current_step] = params:get('hill_'..i..'_iso_velocity')
+    focused_set.velocities[current_step] =  _ps[i].iso_velocity
   elseif track[i].manual_note_entry then
     if params:string('hill '..i..' kildare_notes') == 'no' then
       params:set('hill '..i..' kildare_notes',2)
@@ -1178,7 +1169,7 @@ local function process_ccES(i,j,played_note)
       _htracks.change_trig_state(focused_set,pos, true, i, j, _page)
     end
     focused_set.base_note[pos] = played_note
-    focused_set.velocities[pos] = params:get('hill_'..i..'_iso_velocity')
+    focused_set.velocities[pos] =  _ps[i].iso_velocity
     track[i][j].ui_position = util.wrap(track[i][j].ui_position+1,track[i][j][_page].start_point,track[i][j][_page].end_point)
   -- else
   end
@@ -1189,70 +1180,6 @@ local function process_ccES(i,j,played_note)
       force_note(i,j,played_note)
       print('forced notes')
     end
-  end
-end
-
-function grid_lib.cc_press(x,y,z)
-  if y == 1 and z == 1 and x <= 11 then
-    ui.hill_focus = x-1
-  end
-  local i = ui.hill_focus
-  local j = hills[ui.hill_focus].screen_focus
-  local _page = highway_ui.seq_page[i]
-  -- change between patterns:
-  if y == 2 and z == 1 and (x > 1 and x <= 9) then
-    pattern_selector(i,j,x-1)
-  end
-  if y >= 4 and y <= 7 and x >= 2 and x <= 5 and z == 1 then
-    if not cc[i].alt then
-      cc[i].x = x
-      cc[i].y = y
-      local played_index = (cc[i].x - 2) + ((cc[i].y - 4) * 4)
-      local played_note
-      played_note = (hills_base_note[i] + played_index) + (12 * params:get('hill_'..i..'_iso_octave'))
-      process_ccES(i,j,played_note)
-      for k = 1,16 do
-        local table_to_record =
-        {
-          ["event"] = "cc",
-          ["x"] = cc[i].x,
-          ["y"] = cc[i].y,
-          ["id"] = k,
-          ["hill_i"] = i,
-          ["hill_j"] = j,
-          ["octave"] = params:get('hill_'..i..'_iso_octave'),
-          ["legato"] = hills_legato[i]
-        }
-        write_pattern_data(k,table_to_record,false)
-      end
-    elseif cc[i].alt then
-      cc[i].focus_x = x
-      cc[i].focus_y = y
-      local played_index = (cc[i].focus_x - 2) + ((cc[i].focus_y - 4) * 4)
-      _ccparams.pad_focus = played_index+1
-    end
-  elseif x == 1 and y == 2 and z == 1 then
-    track[i].manual_note_entry = not track[i].manual_note_entry
-  elseif x == 6 and y == 8 and z == 1 then
-    if track[i].manual_note_entry then
-      local focused_set = track[i][j].focus == 'main' and track[i][j][_page] or track[i][j][_page].fill
-      local pos = track[i][j].ui_position
-      _htracks.change_trig_state(focused_set,pos, false, i, j,_page)
-      track[i][j].ui_position = util.wrap(track[i][j].ui_position+1,track[i][j][_page].start_point,track[i][j][_page].end_point)
-    end
-  elseif (x == 5 or x == 7) and y == 8 and z == 1 and track[i].manual_note_entry then
-    track[i][j].ui_position = util.wrap(track[i][j].ui_position + (x == 5 and -1 or 1), track[i][j][_page].start_point, track[i][j][_page].end_point)
-  elseif x == 6 and y == 3 and z == 1 then
-    if ui.control_set ~= 'cc parameters' then
-      _ccparams.flip_to_fkprm(ui.control_set)
-    else
-      _ccparams.flip_from_fkprm()
-      cc[i].alt = false
-    end
-  elseif x == 7 and y == 3 and ui.control_set == "cc parameters" then
-    cc[i].alt = z == 1
-  elseif x == 7 and y == 6 then
-    track[i].mute_during_note_entry = z == 1
   end
 end
 
@@ -1281,7 +1208,7 @@ function grid_lib.earthsea_press(x,y,z)
     local midi_notes = hills[i].note_ocean
     local played_index = (((7-es[i].y)*5) + (es[i].x-1)-1)
     local played_note
-    if params:string('hill_'..i..'_iso_quantize') == 'yes' then
+    if _ps[i].iso_quantize then
       played_note = hills[i].note_ocean[played_index+1] + (12 * params:get('hill_'..i..'_iso_octave'))
     else
       played_note = (hills_base_note[i] + played_index) + (12 * params:get('hill_'..i..'_iso_octave'))
@@ -1341,8 +1268,9 @@ function grid_redraw()
     _surveyor.draw_grid()
   else
     for i = 1,8 do
-      g:led(1,i,mods[modkeys[i]] and 15 or 0)
+      g:led(1,i,mods[modkeys[i]] and 15 or 2)
     end
+		g:led(1,16, mods.alt and 15 or 2)
     for i = 1+1,number_of_hills+1 do
       for j = 1,8 do
         if mod_held then
@@ -1477,8 +1405,7 @@ function grid_redraw()
               if i-1 < extension_limit then
                 local _snap,d_voice
                 if i-1 <= 10 then
-                  d_voice = params:string('voice_model_'..i-1)
-                  _snap = snapshots[i-1][d_voice]
+                  _snap = snapshots[i-1].midi
                 else
                   print('else?')
                   _snap = snapshots[i-1]
@@ -1674,13 +1601,13 @@ function grid_redraw()
 		end
 		for x = 2, 6 do
 			for y = 11, 15 do
-				if es[i].x == x and es[i].y == y - 8 then
+				if es[i].x == x and es[i].y == y - 8 and es[i].z == 1 then
 					g:led(x, y, 15)
-				elseif patterned_es[i].x == x and patterned_es[i].y == y - 8 then
+				elseif patterned_es[i].x == x and patterned_es[i].y == y - 8 and patterned_es[i].z == 1 then
 					g:led(x, y, 12)
 				else
 					g:led(x, y, 2)
-					if params:string("hill_" .. i .. "_iso_quantize") == "no" then
+					if _ps[i].iso_quantize == false then
 						local note_index = (((7 - (y - 8)) * 5) + (x - 1) - 1) % 12 -- 0-base
 						if hills[i].note_intervals[note_index] ~= nil then
 							g:led(x, y, 8)
@@ -1944,7 +1871,7 @@ function grid_lib.draw_es()
         g:led(x,y,12)
       else
         g:led(x,y,2)
-        if params:string('hill_'..i..'_iso_quantize') == 'no' then
+        if _ps[i].iso_quantize == false then
           local note_index = ((((7-y)*5) + (x-1)-1))%12 -- 0-base
           if hills[i].note_intervals[note_index] ~= nil then
             g:led(x,y,8)
@@ -1958,9 +1885,9 @@ function grid_lib.draw_es()
       end
     end
   end
-  local vel_to_led = util.round(util.linlin(0,127,7,3,params:get('hill_'..i..'_iso_velocity')))
+  local vel_to_led = util.round(util.linlin(0,127,7,3, _ps[i].iso_velocity))
   for y = 3,7 do
-    if params:get('hill_'..i..'_iso_velocity') == 0 then
+    if  _ps[i].iso_velocity == 0 then
       g:led(8,y,3)
     elseif y < vel_to_led then
       g:led(8,y,3)
