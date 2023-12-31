@@ -197,7 +197,7 @@ function parameters.init()
 
   params:add_separator('hills_main_header', 'hills + highways')
   for i = 1,number_of_hills do
-    params:add_group('hill_'..i..'_group', hill_names[i]..": settings", 79 + ((number_of_hills-1)*2))
+    params:add_group('hill_'..i..'_group', hill_names[i]..": settings", 79 + ((number_of_patterns + 1)*2) + ((number_of_hills-1)*2))
 
     params:add_separator('hill_'..i..'_highway_header', 'mode')
     params:add_option('hill_'..i..'_mode', 'mode', {'hill','highway'}, 1)
@@ -454,7 +454,7 @@ function parameters.init()
     params:set_action("hill_"..i..'_legato', function(x) hills_legato[i] = x == 1 end)
     params:add_option("hill "..i.." accent mult", 'accent multiplier', {'0.125x','0.25x','0.33x','0.5x','0.75x','1.5x','2x','3x','4x','5x','6x','7x','8x','9x','10x'},7)
     params:set_action("hill "..i.." accent mult", function(x) hills_accent_mult[i] = params:string("hill "..i.." accent mult"):sub(1,-2) end)
-
+    
     params:add_separator('hill_'..i..'_iso_header', 'isometric keys management')
     params:add_number('hill_'..i..'_iso_velocity', 'fixed velocity', 0, 127, 70)
     params:set_action('hill_'..i..'_iso_velocity', function()
@@ -598,6 +598,34 @@ function parameters.init()
       hills_note_channel[i] = x
     end)
     params:add_number("hill "..i.." velocity","velocity",0,127,60)
+
+		params:add_separator("hill_" .. i .. "_timing_header", "timing management")
+		for j = 1, number_of_patterns do
+			params:add_number(
+				"hill_" .. i .. "_loop_rate_" .. j,
+				"hill " .. j .. " loop rate",
+				1,
+				512,
+				128,
+				nil,
+				function(param)
+					return (util.round(param:get() / 128, 0.01) .. "x")
+				end
+			)
+			params:set_action("hill_" .. i .. "_loop_rate_" .. j, function(x)
+				hills[i][j].counter_div = x / 128
+				screen_dirty = true
+			end)
+		end
+
+		params:add_separator("reseed_hills_" .. i, "reseed")
+		for j = 1, number_of_patterns do
+			params:add_binary("hill_" .. i .. "_reseed_" .. j, "hill "..j, "trigger")
+			params:set_action("hill_" .. i .. "_reseed_" .. j, function()
+				hodgepodge(i, j)
+			end)
+		end
+
     local fixed_ccs = {}
     fixed_ccs[1] = "none"
     for j = 0,127 do
