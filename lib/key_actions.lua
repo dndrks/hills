@@ -51,6 +51,8 @@ function key_actions.lr_nav(d, modifiers)
 							"rotate notes",
 							"rand fill notes",
 							"static notes",
+              "up octave",
+              "down octave",
 							"shuffle vel",
 							"reverse vel",
 							"rotate vel",
@@ -137,7 +139,7 @@ function key_actions.ud_nav(d, modifiers)
         if not key1_hold then
           _t.adjust_hill_end(i,j,-d)
         else
-          _t.snap_bound(i,j)
+          -- _t.snap_bound(i,j)
         end
       end
     elseif ui.menu_focus == 3 then
@@ -265,7 +267,7 @@ function key_actions.parse(char, modifiers, is_repeat, state)
         if hills[i].highway then
           grid_conditional_entry = not grid_conditional_entry
           if grid_conditional_entry == true then
-            print(track[i][j].ui_position)
+            -- print(track[i][j].ui_position)
             -- conditional_entry_steps.focus[i] = {track[i][j].ui_position}
             _g.process_modifier(conditional_entry_steps, track[i][j].ui_position, i, j)
           else
@@ -273,9 +275,19 @@ function key_actions.parse(char, modifiers, is_repeat, state)
           end
         else
           -- if ui.menu_focus == 1 and _s.popup_focus[1] == 2 then
-          if ui.menu_focus == 1 then
-            hodgepodge(i,j)
-          elseif ui.menu_focus == 3 then
+          if ui.menu_focus == 1 and key1_hold then
+						if params:string("reseed_style_" .. i) == "multinode" then
+							hodgepodge(i, j)
+						elseif params:string("reseed_style_" .. i) == "single" then
+							construct(i, j, true)
+						end
+          elseif ui.menu_focus == 2 and key1_hold then
+            if s_c["bounds"]["focus"] == 1 then
+						  _t.snap_bound(i, j, "min")
+            else
+              _t.snap_bound(i, j, "max")
+            end
+          elseif ui.menu_focus == 3 and key1_hold then
 						_t[s_c["notes"]["transform"]](
 							i,
 							j,
@@ -289,12 +301,13 @@ function key_actions.parse(char, modifiers, is_repeat, state)
     elseif char.name == 'backspace' and state == 1 then
       if ui.control_set == 'edit' then
         ui.control_set = 'play'
+        key1_hold = false
       end
     elseif (char.name == 'right' or char.name == 'left') and state == 1 then
       key_actions.lr_nav(char.name == 'left' and -1 or 1, modifiers)
     elseif (char.name == 'up' or char.name == 'down') and state == 1 then
       key_actions.ud_nav(char.name == 'up' and -1 or 1, modifiers)
-    elseif char.name == 'rshift' and state == 1 then
+    elseif char.name == 'rshift' and state == 1 and ui.control_set == "edit" then
       key1_hold = not key1_hold
     end
     -- if z == 1 then

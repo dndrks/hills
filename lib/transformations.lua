@@ -16,7 +16,7 @@ local m = {}
 -- end
 
 m.adjust_velocity = function(i,j,pos,delta)
-  hills[i][j].note_velocity[pos] = util.clamp(hills[i][j].note_velocity[pos]+delta,0,127)
+  hills[i][j].note_velocity[pos] = util.clamp(hills[i][j].note_velocity[pos]-delta,0,127)
 end
 
 m.transpose = function(i,j,pos,delta)
@@ -401,6 +401,14 @@ m['static notes'] = function(i,j,start_point,end_point,pos)
   end
 end
 
+m["up octave"] = function(i, j, start_point, end_point, pos)
+	hills[i][j].note_num.octave_offset[pos] = util.clamp(hills[i][j].note_num.octave_offset[pos] + 1, -5, 5)
+end
+
+m["down octave"] = function(i, j, start_point, end_point, pos)
+	hills[i][j].note_num.octave_offset[pos] = util.clamp(hills[i][j].note_num.octave_offset[pos] - 1, -5, 5)
+end
+
 m["static vel"] = function(i,j,start_point,end_point,pos)
   local e_p = end_point
   if e_p == nil then
@@ -534,16 +542,16 @@ m.kill = function(i,j,index)
 
 end
 
-m.snap_bound = function(i,j)
+m.snap_bound = function(i,j,which)
   local h = hills[i]
   local seg = h[j]
   local clamp_to
-  if seg.index < 1 then
+  if seg.index <= 1 then
     clamp_to = 1
   else
     clamp_to = seg.index-1
   end
-  seg.high_bound.note = clamp_to
+  seg[which == "min" and "low_bound" or "high_bound"].note = clamp_to
 end
 
 m.reseed = function(i,j)

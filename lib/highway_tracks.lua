@@ -219,6 +219,7 @@ function track_actions.init(target, hill_number, clear_reset)
     track[target][hill_number][pages].base_note = {}
     track[target][hill_number][pages].seed_default_note = {}
     track[target][hill_number][pages].chord_degrees = {}
+		track[target][hill_number][pages].octave_offset = {}
     track[target][hill_number][pages].velocities = {}
     track[target][hill_number][pages].trigs = {}
     track[target][hill_number][pages].muted_trigs = {}
@@ -244,6 +245,7 @@ function track_actions.init(target, hill_number, clear_reset)
       ["base_note"] = {},
       ["seed_default_note"] = {},
       ["chord_degrees"] = {},
+      ["octave_offset"] = {},
       ["velocities"] = {},
       ["trigs"] = {},
       ["muted_trigs"] = {},
@@ -269,6 +271,7 @@ function track_actions.init(target, hill_number, clear_reset)
       track[target][hill_number][pages].base_note[i] = -1
       track[target][hill_number][pages].seed_default_note[i] = true
       track[target][hill_number][pages].chord_degrees[i] = 1
+			track[target][hill_number][pages].octave_offset[i] = 0
       track[target][hill_number][pages].velocities[i] = 127
       track[target][hill_number][pages].trigs[i] = false
       track[target][hill_number][pages].muted_trigs[i] = false
@@ -290,6 +293,7 @@ function track_actions.init(target, hill_number, clear_reset)
       track[target][hill_number][pages].fill.base_note[i] = -1
       track[target][hill_number][pages].fill.seed_default_note[i] = true
       track[target][hill_number][pages].fill.chord_degrees[i] = 1
+			track[target][hill_number][pages].fill.octave_offset[i] = 0
       track[target][hill_number][pages].fill.velocities[i] = 127
       track[target][hill_number][pages].fill.trigs[i] = false
       track[target][hill_number][pages].fill.muted_trigs[i] = false

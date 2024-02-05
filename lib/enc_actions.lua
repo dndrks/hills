@@ -177,7 +177,21 @@ function enc_actions.parse(n,d)
                 if _s.popup_focus[3] == 1 then
                   _t.adjust_velocity(i,j,s_c["notes"]["focus"],d)
                 elseif _s.popup_focus[3] == 2 then
-                  local note_adjustments = {"mute step", "shuffle notes","reverse notes","rotate notes","rand fill notes","static notes","shuffle vel","reverse vel","rotate vel","rand vel","static vel"}
+									local note_adjustments = {
+										"mute step",
+										"shuffle notes",
+										"reverse notes",
+										"rotate notes",
+										"rand fill notes",
+										"static notes",
+                    "up octave",
+                    "down octave",
+										"shuffle vel",
+										"reverse vel",
+										"rotate vel",
+										"rand vel",
+										"static vel",
+									}
                   local current_adjustment = tab.key(note_adjustments,s_c["notes"]["transform"])
                   s_c["notes"]["transform"] = note_adjustments[util.clamp(current_adjustment+d,1,#note_adjustments)]
                 end
@@ -192,7 +206,7 @@ function enc_actions.parse(n,d)
                   hills[i][j].loop = d > 0 and true or false
                 end
               else
-                hills[i][j].looper.clock_time = util.round(util.clamp(hills[i][j].looper.clock_time + d,0,128))
+                hills[i][j].looper.clock_time = util.round(util.clamp(hills[i][j].looper.clock_time - d,0,128))
                 if hills[i][j].looper.clock_time == 0 then
                   hills[i][j].looper.mode = "phase"
                 else

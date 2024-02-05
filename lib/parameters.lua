@@ -68,6 +68,12 @@ for mpIter = 1, 28 do
 			return (round_form((type(param) == "table" and param:get() or param), 1, ""))
 		end,
 	})
+	table.insert(midi_params, {
+		id = "midiCC_name_" .. mpIter,
+		name = "[set nickname]",
+		type = "text",
+		text = "",
+	})
 end
 
 local how_many_params = tab.count(midi_params)
@@ -195,9 +201,10 @@ end
 function parameters.init()
   refresh_params_vports()
 
-  params:add_separator('hills_main_header', 'hills + highways')
+  -- params:add_separator('hills_main_header', 'hills + highways')
+  params:add_separator('hills_main_header', 'hills')
   for i = 1,number_of_hills do
-    params:add_group('hill_'..i..'_group', hill_names[i]..": settings", 79 + ((number_of_patterns + 1)*2) + ((number_of_hills-1)*2))
+    params:add_group('hill_'..i..'_group', hill_names[i]..": settings", 80 + ((number_of_patterns + 1)*2) + ((number_of_hills-1)*2))
 
     params:add_separator('hill_'..i..'_highway_header', 'mode')
     params:add_option('hill_'..i..'_mode', 'mode', {'hill','highway'}, 1)
@@ -210,6 +217,7 @@ function parameters.init()
       hills[i].screen_focus = 1
       screen_dirty = true
     end)
+    params:hide('hill_'..i..'_mode')
 		params:add_option("hill " .. i .. " reset at stop", "reset index @ stop?", { "no", "yes" }, 2)
     params:add_option('hill_'..i..'_iterator', 'iterator', {
       'internal',
@@ -619,10 +627,15 @@ function parameters.init()
 		end
 
 		params:add_separator("reseed_hills_" .. i, "reseed")
+    params:add_option("reseed_style_"..i, "reseed style", {'multinode', 'single'}, 1)
 		for j = 1, number_of_patterns do
 			params:add_binary("hill_" .. i .. "_reseed_" .. j, "hill "..j, "trigger")
 			params:set_action("hill_" .. i .. "_reseed_" .. j, function()
-				hodgepodge(i, j)
+        if params:string("reseed_style_"..i) == "multinode" then
+				  hodgepodge(i, j)
+        elseif params:string("reseed_style_"..i) == "single" then
+          construct(i,j,true)
+        end
 			end)
 		end
 
@@ -790,6 +803,7 @@ function parameters.init()
         elseif d.type == "option" then
           params:add_option(i .. "_" .. v .. "_" .. d.id, d.name, d.options, d.default)
         elseif d.type == "separator" then
+          -- print(i .. "_separator_" .. v .. "_" .. d.name,d.name)
           params:add_separator(i .. "_separator_" .. v .. "_" .. d.name, d.name)
         elseif d.type == "file" then
           -- params:add_file(i.."_"..v..'_'..d.id, d.name, d.default)
@@ -797,9 +811,22 @@ function parameters.init()
           params:add_binary(i .. "_" .. v .. "_" .. d.id, d.name, 0)
         elseif d.type == "binary" then
           params:add_binary(i .. "_" .. v .. "_" .. d.id, d.name, d.behavior)
+        elseif d.type == "text" then
+          params:add_text(i .. "_" .. v .. "_" .. d.id, d.name, d.text)
+          params:set_action(i .. "_" .. v .. "_" .. d.id,
+            function(x)
+              if x ~= "" then
+                local id = string.match(d.id, "%d[%d]*")
+                local header_lookup = params:lookup_param(i .. "_separator_" .. v .. "_midi cc output #" .. id)
+                local name = header_lookup.name
+                header_lookup.name = x
+                params:lookup_param(i .. "_" .. v .. "_" .. d.id).text = ""
+              end
+            end
+          )
         end
         -- build actions:
-        if d.type ~= "separator" then
+        if d.type ~= "separator" and d.type ~= "text" then
           if not tab.contains(custom_actions, d.id) then
             params:set_action(i .. "_" .. v .. "_" .. d.id, function(x)
               -- if engine.name == "Kildare" then

@@ -103,9 +103,9 @@ function full_PSET_swap()
       clock.sleep(0.1)
       if PSET_SWAPPING == nil then
         PSET_SWAPPING = true
-        for i = 1,7 do
-          params:set(i..'_voice_state',0)
-        end
+        -- for i = 1,7 do
+        --   params:set(i..'_voice_state',0)
+        -- end
         clock.sleep(0.1)
         clock.sleep(0.1)
         send_to_engine('reset',{})
@@ -421,7 +421,7 @@ function init()
           if d.note == _midi.iterator.note[j]
           and d.vel >= _midi.iterator.velocity_lo[j]
           and d.vel <= _midi.iterator.velocity_hi[j]
-          and _ps[j].iterator == 'external MIDI'
+          and _ps[j].iterator == 'external MIDI notes'
           and _ps[j].iterator_midi_device == i
           then
             if hills[j].highway then
@@ -466,7 +466,7 @@ function init()
   end
   
   prms.init()
-	print("459")
+	-- print("459")
   _fkprm.init()
   _midi.init()
 	-- prms.reload_engine(params:string("global engine"),true)
@@ -546,6 +546,7 @@ function init()
         ["pool"] = {}, -- gets filled with the constructed hill's notes
         ["active"] = {}, -- tracks whether the note should play
         ["chord_degree"] = {}, -- defines the shell voicing chord degree
+        ["octave_offset"] = {},
       }
       hills[i][j].note_velocity = {}
 
@@ -604,15 +605,16 @@ function init()
   params.action_read = function(filename,name,number)
     readingPSET = true
     print("loading hills data for PSET: "..number)
-    for i = 1,number_of_hills do
-      if params:get(i..'_voice_state') == 0 then
-        _menu.m.PARAMS.on[params.lookup[i..'_voice_state']] = 0
-      else
-        _menu.m.PARAMS.on[params.lookup[i..'_voice_state']] = 1
-      end
-    end
-    -- for i = 1,7 do params:set(i..'_voice_state',0) end
-    local this_filepath = _path.data..'hills/'..number..'/'
+    -- for i = 1,number_of_hills do
+    --   if params:get(i..'_voice_state') == 0 then
+    --     _menu.m.PARAMS.on[params.lookup[i..'_voice_state']] = 0
+    --   else
+    --     _menu.m.PARAMS.on[params.lookup[i..'_voice_state']] = 1
+    --   end
+    -- end
+		-- for i = 1,7 do params:set(i..'_voice_state',0) end
+		local data_path = path.seamstress .. "/data/"
+    local this_filepath = data_path..'hills/'..number..'/'
     for i = 1,number_of_hills do
       if hills[i].active then
         stop(i,true)
@@ -668,22 +670,23 @@ function init()
     -- params:bang() -- TODO VERIFY IF THIS IS OKAY TO LEAVE OUT
     grid_dirty = true
     print('loading pset!'..this_filepath)
-    if util.file_exists(this_filepath.."poly-params.txt") then
-      print('loading poly params!')
-      engine.load_poly_params(this_filepath.."poly-params.txt")
-    end
-    full_PSET_swap()
+    -- if util.file_exists(this_filepath.."poly-params.txt") then
+    --   print('loading poly params!')
+    --   engine.load_poly_params(this_filepath.."poly-params.txt")
+    -- end
+    -- full_PSET_swap()
+    screen_dirty = true
     clock.run(
       function()
         clock.sleep(0.3)
         readingPSET = false
-        if PSET_LOOP == nil then PSET_LOOP = 0 end
-        PSET_LOOP = PSET_LOOP + 1
-        print('PSET NOT READING')
-        if PSET_LOOP == 3 then
-          PSET_LOOP = 0
-          PSET_SWAPPING = nil
-        end
+        -- if PSET_LOOP == nil then PSET_LOOP = 0 end
+        -- PSET_LOOP = PSET_LOOP + 1
+        -- print('PSET NOT READING')
+        -- if PSET_LOOP == 3 then
+        --   PSET_LOOP = 0
+        --   PSET_SWAPPING = nil
+        -- end
       end
     )
   end
@@ -691,6 +694,9 @@ function init()
   local function params_write_silent(filename,name)
     print("pset >>>>>>> write: "..filename)
     local fd = io.open(filename, "w+")
+		local function quote(s)
+			return '"' .. s:gsub('"', '\\"') .. '"'
+		end
     if fd then
       io.output(fd)
       io.write("-- "..name.."\n")
@@ -707,38 +713,40 @@ function init()
     -- local pset_string = string.sub(filename,string.len(filename) - 6, -1)
     -- local pset_number = pset_string:gsub(".pset","")
     print("saving hills data for PSET: "..number)
-    util.make_dir(_path.data.."hills/"..number.."/data")
-    util.make_dir(_path.data.."hills/"..number.."/patterns")
-    util.make_dir(_path.data.."hills/"..number.."/song")
-    util.make_dir(_path.data.."hills/"..number.."/snapshots")
-    util.make_dir(_path.data.."hills/"..number.."/track")
-    util.make_dir(_path.data.."hills/"..number.."/per-step")
-    util.make_dir(_path.data.."hills/"..number.."/per-voice")
+    local data_path = path.seamstress .. "/data/"
+    util.make_dir(data_path.."hills/"..number.."/data")
+    util.make_dir(data_path.."hills/"..number.."/patterns")
+    util.make_dir(data_path.."hills/"..number.."/song")
+    util.make_dir(data_path.."hills/"..number.."/snapshots")
+    util.make_dir(data_path.."hills/"..number.."/track")
+    util.make_dir(data_path.."hills/"..number.."/per-step")
+    util.make_dir(data_path.."hills/"..number.."/per-voice")
     for i = 1,number_of_hills do
-      tab.save(hills[i],_path.data.."hills/"..number.."/data/"..i..".txt")
-      tab.save(track[i],_path.data.."hills/"..number.."/track/"..i..".txt")
+      tab.save(hills[i],data_path.."hills/"..number.."/data/"..i..".txt")
+      tab.save(track[i],data_path.."hills/"..number.."/track/"..i..".txt")
     end
     for i = 1,16 do
-      tab.save(grid_pattern[i],_path.data.."hills/"..number.."/patterns/"..i..".txt")
+      tab.save(grid_pattern[i],data_path.."hills/"..number.."/patterns/"..i..".txt")
     end
     for i = 1,#song_atoms do
-      tab.save(song_atoms[i],_path.data.."hills/"..number.."/song/"..i..".txt")
+      tab.save(song_atoms[i],data_path.."hills/"..number.."/song/"..i..".txt")
     end
-    tab.save(snapshots,_path.data.."hills/"..number.."/snapshots/all.txt")
-    tab.save(snapshot_overwrite, _path.data.."hills/"..number.."/snapshots/overwrite_state.txt")
-    tab.save(_fkprm.adjusted_params, _path.data.."hills/"..number.."/per-step/_fkprm.txt")
-    -- tab.save(_fkprm.adjusted_params_lock_trigs, _path.data.."hills/"..number.."/per-step/_fkprm-lock_trigs.txt")
+    tab.save(snapshots,data_path.."hills/"..number.."/snapshots/all.txt")
+    tab.save(snapshot_overwrite, data_path.."hills/"..number.."/snapshots/overwrite_state.txt")
+    tab.save(_fkprm.adjusted_params, data_path.."hills/"..number.."/per-step/_fkprm.txt")
+    -- tab.save(_fkprm.adjusted_params_lock_trigs, data_path.."hills/"..number.."/per-step/_fkprm-lock_trigs.txt")
     params_write_silent(filename,name)
-    os.execute('touch '.._path.data..'hills/'..number..'/poly-params.txt')
-    engine.save_poly_params(_path.data..'hills/'..number..'/poly-params.txt')
+    -- os.execute('touch '..data_path..'hills/'..number..'/poly-params.txt')
+    -- engine.save_poly_params(data_path..'hills/'..number..'/poly-params.txt')
   end
 
   params.action_delete = function(filename, name, pset_number)
-    local delete_this_folder = _path.audio..'kildare/'..pset_number..'/'
-    if util.file_exists(delete_this_folder) then
-      os.execute('rm -r '..delete_this_folder)
-    end
-    delete_this_folder = _path.data..'hills/'..pset_number..'/'
+		-- local delete_this_folder = _path.audio..'kildare/'..pset_number..'/'
+		-- if util.file_exists(delete_this_folder) then
+		--   os.execute('rm -r '..delete_this_folder)
+		-- end
+		local data_path = path.seamstress .. "/data/"
+    delete_this_folder = data_path..'hills/'..pset_number..'/'
     if util.file_exists(delete_this_folder) then
       os.execute('rm -r '..delete_this_folder)
     end
@@ -879,41 +887,43 @@ function pass_data_into_storage(i,j,index,data)
   else
     hills[i][j].note_num.pool[index] = data[1]
   end
-  hills[i][j].note_timestamp[index] = data[2]
+  hills[i][j].note_timestamp[index] = util.round(data[2],0.01)
   hills[i][j].high_bound.note = #hills[i][j].note_num.pool
   hills[i][j].note_num.active[index] = true
   hills[i][j].note_num.chord_degree[index] = util.wrap(hills[i][j].note_num.pool[index], 1, 7)
+	hills[i][j].note_num.octave_offset[index] = 0
   hills[i][j].note_velocity[index] = 127
 
   hills[i][j].sample_controls.loop[index] = false
   hills[i][j].sample_controls.rate[index] = 9
 end
 
--- construct = function(i,j,shuffle)
---   local h = hills[i]
---   local seg = h[j]
---   local total_notes = util_round(#h.note_ocean*seg.population)
---   local index = 0
---   local reasonable_max = seg.note_num.min ~= seg.note_num.max and seg.note_num.max or seg.note_num.min+1
---   for k = 0,seg.duration*100 do
---     local last_val = seg.current_val
---     seg.current_val = math.floor(util.wrap(curves[seg.shape](k/100,1,total_notes-1,seg.duration),seg.note_num.min,reasonable_max))
---     local note_num = seg.note_num.min ~= seg.note_num.max and seg.current_val or seg.note_num.min
---     if util_round(last_val) ~= util_round(seg.current_val) then
---       if i == 1 and j == 1 then print(k/100) end
---       index = index + 1
---       pass_data_into_storage(i,j,index,{note_num,k/100})
---     end
---   end
---   calculate_timedeltas(i,j)
---   if shuffle then
---     _t['shuffle notes'](i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
---   end
---   -- TODO: redraws for every construct
---   screen_dirty = true
--- end
+construct = function(i,j,shuffle)
+  local h = hills[i]
+  local seg = h[j]
+  local total_notes = util_round(#h.note_ocean*seg.population)
+  local index = 0
+	seg.shape = easingNames[math.random(#easingNames)] -- change shape
+  local reasonable_max = seg.note_num.min ~= seg.note_num.max and seg.note_num.max or seg.note_num.min+1
+  for k = 0,seg.duration*100 do
+    local last_val = seg.current_val
+    seg.current_val = math.floor(util.wrap(curves[seg.shape](k/100,1,total_notes-1,seg.duration),seg.note_num.min,reasonable_max))
+    local note_num = seg.note_num.min ~= seg.note_num.max and seg.current_val or seg.note_num.min
+    if util_round(last_val) ~= util_round(seg.current_val) then
+      if i == 1 and j == 1 then print(k/100) end
+      index = index + 1
+      pass_data_into_storage(i,j,index,{note_num,k/100})
+    end
+  end
+  calculate_timedeltas(i,j)
+  if shuffle then
+    _t['shuffle notes'](i,j,hills[i][j].low_bound.note,hills[i][j].high_bound.note)
+  end
+  screen_dirty = true
+end
 
-stepOffset = 0
+-- TODO: is this var necessary??
+local stepOffset = 0
 
 hodgepodge = function(i,j)
   local h = hills[i]
@@ -934,13 +944,9 @@ hodgepodge = function(i,j)
   for stuff = 1,total_notes % splits do
     splitter[stuff] = splitter[stuff] + 1
   end
-  -- splitter[1] = math.floor(total_notes/3)
-  -- local nt = (total_notes - splitter[1])
-  -- splitter[2] = math.floor(nt/2)
-  -- splitter[3] = math.floor((nt - splitter[2]))
 
-  easedTimes = {}
-  easedNotes = {}
+  local easedTimes = {}
+  local easedNotes = {}
   -- for steps = 1,total_notes do
   for splitsteps = 1,#splitter do
     seg.shape = easingNames[math.random(#easingNames)] -- change shape
@@ -985,8 +991,6 @@ hodgepodge = function(i,j)
         end
       end
     end
-    -- print(seg.shape, seg.population)
-    -- tab.print(easedTimes[splitsteps])
   end
 
   allTimes = {}
@@ -1016,35 +1020,6 @@ hodgepodge = function(i,j)
     currentCount = #allTimes
 
   end
-  -- for times = 2,#easedTimes[2] do
-  --   -- allTimes[#allTimes+1] = easedTimes[2][times] +  allTimes[#allTimes]
-  --   local thisLast = easedTimes[2][#easedTimes[2]]
-  --   local prevLast = allTimes[currentCount]
-  --   allTimes[#allTimes+1] = util.linlin(
-  --     0,
-  --     thisLast,
-  --     prevLast,
-  --     prevLast + thisLast,
-  --     easedTimes[2][times]
-  --   )
-  --   allNotes[#allNotes+1] = easedNotes[2][times]
-  -- end
-  -- currentCount = #allTimes
-  -- for times = 2,#easedTimes[3] do
-  --   local thisLast = easedTimes[3][#easedTimes[3]]
-  --   local prevLast = allTimes[currentCount]
-  --   -- allTimes[#allTimes+1] = easedTimes[3][times] +  allTimes[#allTimes]
-  --   allTimes[#allTimes+1] = util.linlin(
-  --     0,
-  --     thisLast,
-  --     prevLast,
-  --     prevLast + thisLast,
-  --     easedTimes[3][times]
-  --   )
-  --   allNotes[#allNotes+1] = easedNotes[3][times]
-  -- end
-
-  -- tab.print(allTimes)
 
   for index = 1,#allTimes do
     if allTimes[index] < 0 then print('WOAHHH') end
@@ -1059,22 +1034,22 @@ hodgepodge = function(i,j)
   -- print(i,j,total_notes,populous, #allTimes)
 end
 
-reconstruct = function(i,j,new_shape)
-  local h = hills[i]
-  local seg = h[j]
-  -- keep min and max timestamps the same...
-  local beginVal = seg.note_timestamp[seg.low_bound.note]
-  local endVal = seg.note_timestamp[seg.high_bound.note]
-  local change = endVal - beginVal
-  local duration = endVal - beginVal
-  for k = seg.low_bound.note,seg.high_bound.note do
-    print('reconstructing curves '..curves[new_shape](seg.note_timestamp[k],beginVal,change,duration))
-    local new_timestamp = curves[new_shape](seg.note_timestamp[k],beginVal,change,duration)
-    seg.note_timestamp[k] = new_timestamp
-  end
-  calculate_timedeltas(i,j)
-  screen_dirty = true
-end
+-- reconstruct = function(i,j,new_shape)
+--   local h = hills[i]
+--   local seg = h[j]
+--   -- keep min and max timestamps the same...
+--   local beginVal = seg.note_timestamp[seg.low_bound.note]
+--   local endVal = seg.note_timestamp[seg.high_bound.note]
+--   local change = endVal - beginVal
+--   local duration = endVal - beginVal
+--   for k = seg.low_bound.note,seg.high_bound.note do
+--     print('reconstructing curves '..curves[new_shape](seg.note_timestamp[k],beginVal,change,duration))
+--     local new_timestamp = curves[new_shape](seg.note_timestamp[k],beginVal,change,duration)
+--     seg.note_timestamp[k] = new_timestamp
+--   end
+--   calculate_timedeltas(i,j)
+--   screen_dirty = true
+-- end
 
 calculate_timedeltas = function(i,j)
   for k = 1,#hills[i][j].note_timestamp do
@@ -1106,7 +1081,7 @@ iterate = function(i)
             -- 230821 //
             -- local reasonable_max = seg.note_timestamp[seg.high_bound.note]
             local reasonable_max = seg.note_timestamp[util.clamp(seg.high_bound.note+1,1,#seg.note_num.pool)]
-            if util_round(seg.step,0.01) > util_round(reasonable_max,0.01) then
+            if util_round(seg.step,0.01) == util_round(reasonable_max,0.01) then
             --//
               if seg.looper.mode == "phase" then
                 _a.start(i,h.segment)
@@ -1115,6 +1090,8 @@ iterate = function(i)
               end
             end
           grid_dirty = true
+          else
+            print("dan: TODO FIX THIS BEFORE SHIPPING")
           end
         else
           if util_round(seg.note_timestamp[seg.index+1],0.01) == util_round(seg.step,0.01) then
@@ -1159,7 +1136,7 @@ stop = function(i,clock_synced_loop)
   seg.iterated = true
   if params:string('hill '..i..' reset at stop') == 'yes' then
     seg.step = seg.note_timestamp[seg.low_bound.note] -- reset
-    seg.index = 1
+    -- seg.index = 1
   end
   screen_dirty = true
   local ch = hills_note_channel[i]
@@ -1185,13 +1162,6 @@ stop = function(i,clock_synced_loop)
   screen_dirty = true
   grid_dirty = true
 end
-
--- local function inject_data_into_storage(i,j,index,data)
---   table.insert(hills[i][j].note_num.pool, index, data[1])
---   table.insert(hills[i][j].note_timestamp, index, data[2])
---   table.insert(hills[i][j].note_num.chord_degree, index, util.wrap(data[1], 1, 7))
---   hills[i][j].high_bound.note = #hills[i][j].note_num.pool
--- end
 
 local function adjust_timestamps_for_injection(i,j,index,duration)
   for k = index,#hills[i][j].note_timestamp do
@@ -1339,6 +1309,7 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
   else
     played_note = get_random_offset(i,midi_notes[note_val])
   end
+  played_note = played_note + (hills[i][j].note_num.octave_offset[index] * 12)
   local _active, _page, _ap, focused_set
   if hills[i].highway == true then
     _active = track[i][j]
@@ -1418,7 +1389,7 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
 							midi_devices[dev]:note_off(pre_note[i], 0, ch)
 						end
 						midi_devices[dev]:note_on(played_note, retrig_vel, ch)
-						print(i,clock.get_beats())
+						-- print(i,clock.get_beats())
 					end
         else
           local destination_vel = focused_set.velocities[index] * (focused_set.accented_trigs[index] and accent_vel or 1)
@@ -1441,7 +1412,7 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
               midi_devices[dev]:note_off(pre_note[i], 0, ch)
             end
             midi_devices[dev]:note_on(played_note, retrig_vel, ch)
-            print('retrigged',i,clock.get_beats(),retrig_vel)
+            -- print('retrigged',i,clock.get_beats(),retrig_vel)
           end
         end
       end
@@ -1453,7 +1424,7 @@ pass_note = function(i,j,seg,note_val,index,retrig_index)
 					midi_devices[dev]:note_off(pre_note[i], 0, ch)
 				end
 				midi_devices[dev]:note_on(played_note, vel_target, ch)
-				print(i,clock.get_beats())
+				-- print(i,clock.get_beats())
 			end
     end
     manual_iter(i,j)

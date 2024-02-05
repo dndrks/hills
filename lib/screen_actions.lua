@@ -174,17 +174,21 @@ function screen_actions.draw()
           local current_focus = s_c.hills.focus
           if current_focus < tab.count(seg.note_timestamp) then
             duration_marker = seg.note_timestamp[current_focus+1] - seg.note_timestamp[current_focus]
+            duration_marker = (duration_marker /(32*seg.counter_div)) * clock.get_beat_sec()
+            duration_marker = util.round(duration_marker*100,0.001)
             -- screen.text_right("step duration: "..string.format("%0.4g",duration_marker))
-            screen.text_right("step duration: "..string.format("%.0f",duration_marker*100))
+            -- screen.text_right("step "..current_focus.." duration: "..string.format("%.0f",duration_marker*100))
+            screen.text_right("step "..current_focus.." duration: "..duration_marker.."s")
           else
             -- screen.text_right("total duration: "..string.format("%0.4g",seg.note_timestamp[current_focus] - seg.note_timestamp[1]))
-            screen.text_right("total duration: "..string.format("%.0f",(seg.note_timestamp[current_focus] - seg.note_timestamp[1])*100))
+            duration_marker = seg.note_timestamp[current_focus] - seg.note_timestamp[1]
+						duration_marker = (duration_marker / (32 * seg.counter_div)) * clock.get_beat_sec()
+						duration_marker = util.round(duration_marker * 100, 0.001)
+            screen.text_right("total duration: "..duration_marker.."s")
           end
-          if key1_hold then
-            screen.move(128,36)
-            screen.level(15)
-            screen.text("-> REBUILD")
-          end
+          screen.move(128,36)
+          screen.level(key1_hold and 15 or 3)
+          screen.text("-> REBUILD")
         elseif ui.menu_focus == 2 then
           screen.level(s_c["bounds"]["focus"] == 1 and 15 or 3)
           screen.move(40,5)
@@ -192,10 +196,17 @@ function screen_actions.draw()
           screen.level(s_c["bounds"]["focus"] == 1 and 3 or 15)
           screen.move(120,5)
           screen.text_right("max: "..seg.high_bound.note)
+          screen.move(128, 36)
+          screen.level(key1_hold and 15 or 3)
+          screen.text("-> SNAP " .. (s_c["bounds"]["focus"] == 1 and "MIN" or "MAX"))
+          screen.move(128, 43)
+          screen.text("   TO CURRENT POSITON")
+          screen.move(128, 50)
+          screen.text("   ("..(seg.index-1 ~= 0 and seg.index-1 or 1)..")")
         elseif ui.menu_focus == 3 then
           screen.level(key1_hold == true and 3 or 15)
           screen.move(40,5)
-          local note_number = h.note_ocean[seg.note_num.pool[s_c["notes"]["focus"]]]
+          local note_number = h.note_ocean[seg.note_num.pool[s_c["notes"]["focus"]]] + (seg.note_num.octave_offset[s_c["notes"]["focus"]] * 12)
           if ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus].notes.velocity then
             screen.text(
               note_number.."/"..mu.note_num_to_name(note_number)..
@@ -211,15 +222,12 @@ function screen_actions.draw()
               ..target_sample_string
             )
           end
-          if key1_hold then
-            -- draw_popup("\\/\\|")
-            screen.move(128,24)
-            screen.level(screen_actions.popup_focus[3] == 1 and 15 or 4)
-            screen.text('velocity: '..(hills[hf][focus].note_velocity[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["notes"]["focus"]]))
-            screen.move(128,34)
-            screen.level(screen_actions.popup_focus[3] == 2 and 15 or 4)
-            screen.text("-> "..ui.screen_controls[hf][focus]["notes"]["transform"])
-          end
+          screen.move(128,24)
+          screen.level(screen_actions.popup_focus[3] == 1 and (key1_hold and 15) or 4)
+          screen.text('velocity: '..(hills[hf][focus].note_velocity[ui.screen_controls[ui.hill_focus][hills[ui.hill_focus].screen_focus]["notes"]["focus"]]))
+          screen.move(128,34)
+          screen.level(screen_actions.popup_focus[3] == 2 and (key1_hold and 15) or 4)
+          screen.text("-> "..ui.screen_controls[hf][focus]["notes"]["transform"])
         elseif ui.menu_focus == 4 then
           screen.level(s_c["loop"]["focus"] == 1 and (key1_hold and 3 or 15) or 3)
           screen.move(40,5)
@@ -227,11 +235,9 @@ function screen_actions.draw()
           screen.level(s_c["loop"]["focus"] == 1 and 3 or (key1_hold and 3 or 15))
           screen.move(120,5)
           screen.text_right("∞: "..(tostring(seg.loop) == "true" and "on" or "off"))
-          if key1_hold then
-            screen.level(15)
-            screen.move(128,64)
-            screen.text_right("RESET: "..(seg.looper.mode == "phase" and "PHASE" or "CLOCK ("..seg.looper.clock_time.." beats)"))
-          end
+          screen.level(key1_hold and 15 or 3)
+          screen.move(128,64)
+          screen.text_right("RESET: "..(seg.looper.mode == "phase" and "PHASE" or "CLOCK ("..seg.looper.clock_time.." beats)"))
         elseif ui.menu_focus == 5 then
           screen.level(key1_hold == true and 3 or 15)
           screen.move(40,5)

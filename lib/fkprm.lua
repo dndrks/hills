@@ -52,7 +52,7 @@ local function build_page()
 	-- local ignore_range = {params.lookup['kildare_st_header'], params.lookup['kildare_st_preload']}
   local i = params.lookup['kildare_1_group']
   repeat
-    print(params:visible(i))
+    -- print(params:visible(i))
     if params:visible(i)
     -- and (i < ignore_range[1] or i > ignore_range[2])
     then
@@ -102,7 +102,7 @@ function m.lr_nav(d, modifiers)
   if params.count > 0 then
     if params:lookup_param(page[m.pos+1]).t == 2 then
       local dx = m.fine and (d/20) or (jump and d*10 or d)
-      print(dx)
+      -- print(dx)
       if grid_data_entry then
         m:delta_many(params:lookup_param(page[m.pos+1]).id, dx, m.voice_focus, m.hill_focus, m.page_focus)
       else
@@ -500,7 +500,7 @@ m.init = function()
   m.fine = false
   m.adjusted_params = {}
   m.adjusted_params_lock_trigs = {}
-  print('504')
+  -- print('504')
   for i = 1,number_of_hills do
     m.adjusted_params[i] = {}
     m.adjusted_params_lock_trigs[i] = {}
@@ -517,7 +517,7 @@ m.init = function()
       end
     end
   end
-	print("520")
+	-- print("520")
 end
 
 return m

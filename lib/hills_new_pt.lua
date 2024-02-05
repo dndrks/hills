@@ -28,7 +28,7 @@ end
 
 --- clear this pattern
 function pattern:clear()
-  print('pattern clear')
+  -- print('pattern clear')
   self:end_playback()
   self.rec = 0
   self:set_overdub(0)
@@ -58,7 +58,7 @@ function pattern:begin_playback()
   self.play = 1
   self.clock = clock.run(
     function()
-      print('starting playback', self.name)
+      -- print('starting playback', self.name)
       -- while true do
       while self.play == 1 do
         clock.sync(1/48)
@@ -77,7 +77,7 @@ function pattern:begin_playback()
           end
           if self.step >= self.end_point then
             if self.loop == 0 then
-              print('end loop')
+              -- print('end loop')
               self:end_playback()
             elseif self.loop == 1 then
               self.step = 0
@@ -92,7 +92,7 @@ end
 function pattern:end_playback()
   self.play = 0
   -- if self.clock then clock.cancel(self.clock) end
-  print('clock ending')
+  -- print('clock ending')
   -- self.step = 0
 end
 
@@ -100,7 +100,7 @@ end
 function pattern:rec_stop()
   self.rec = 0
   self.end_point = self.step
-  print('rec stop')
+  -- print('rec stop')
   self:end_playback()
 end
 
@@ -159,7 +159,7 @@ function pattern:rec_event_mono(e)
       then
         register_a_new_mono_step = false
         already_registered_index = i
-        print(already_registered_index)
+        -- print(already_registered_index)
         break
       else
         register_a_new_mono_step = true
@@ -228,7 +228,7 @@ function pattern:stop()
     self.play = 0
     -- self.overdub = 0
     self:set_overdub(0)
-    print('stop')
+    -- print('stop')
     self:end_playback()
   end
 end
