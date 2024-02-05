@@ -10,6 +10,10 @@ end
 
 function key_actions.lr_nav(d, modifiers)
   local s_c,i,j,s_q = table.unpack(share_aliases())
+
+	if #modifiers == 1 and modifiers[1] == "alt" then
+		mod_active = true
+	end
   
   if ui.control_set == "play" then
     if hills[i].highway then
@@ -119,25 +123,26 @@ end
 function key_actions.ud_nav(d, modifiers)
   local s_c,i,j,s_q = table.unpack(share_aliases())
 
+	local mod_active
+	if #modifiers == 1 and modifiers[1] == "alt" then
+		mod_active = true
+	end
+
   if ui.control_set == "play" then
 		ui.menu_focus = util.clamp(ui.menu_focus + d, 1, ui.hill_focus <= 7 and 4 or 5)
   elseif ui.control_set == "edit" and hills[i].highway == false then
     if ui.menu_focus == 1 then
       if not key1_hold then
-        local mod_active
-        if #modifiers == 1 and modifiers[1] == "alt" then
-          mod_active = true
-        end
         _t.nudge(i,j,ui.screen_controls[i][j].hills.focus,mod_active and d*10 or d)
       else
 				_s.popup_focus[1] = util.clamp(_s.popup_focus[1] + d, 1, 2)
       end
     elseif ui.menu_focus == 2 then
       if s_c["bounds"]["focus"] == 1 then
-        _t.adjust_hill_start(i,j,-d)
+        _t.adjust_hill_start(i,j,mod_active and -d*6 or -d)
       elseif s_c["bounds"]["focus"] == 2 then
         if not key1_hold then
-          _t.adjust_hill_end(i,j,-d)
+          _t.adjust_hill_end(i,j,mod_active and -d*6 or -d)
         else
           -- _t.snap_bound(i,j)
         end
@@ -149,14 +154,15 @@ function key_actions.ud_nav(d, modifiers)
         -- else
         --   _t.transpose(i,j,s_c["notes"]["focus"],d)
         -- end
-        _t.transpose(i,j,s_c["notes"]["focus"],-d)
+        _t.transpose(i,j,s_c["notes"]["focus"],mod_active and -d*7 or -d)
       else
 				_s.popup_focus[3] = util.clamp(_s.popup_focus[1] + d, 1, 2)
       end
     elseif ui.menu_focus == 4 then
       if not key1_hold then
         if s_c["loop"]["focus"] == 1 then
-          hills[i][j].counter_div = util.clamp(hills[i][j].counter_div-d/128,1/128,4)
+          d = mod_active and -d*6.4 or -d
+          hills[i][j].counter_div = util.clamp(hills[i][j].counter_div+d/128,1/128,4)
         elseif s_c["loop"]["focus"] == 2 then
           hills[i][j].loop = d < 0 and true or false
         end

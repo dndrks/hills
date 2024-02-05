@@ -73,6 +73,7 @@ for mpIter = 1, 28 do
 		name = "[set nickname]",
 		type = "text",
 		text = "",
+    lfo_exclude = true
 	})
 end
 
@@ -861,6 +862,8 @@ function parameters.init()
   params:add_group('global_pattern_group', 'global', 25)
   params:add_separator('global_transport_settings','transport')
   params:add_option('global_transport_mode', 'start mode', {'highways','song'}, 1)
+  params:hide('global_transport_settings')
+  params:hide('global_transport_mode')
   params:add_separator('global_pattern_settings','patterns')
   params:add_option('global_pattern_start_rec_at', 'start rec at', {'first event','when engaged'}, 1)
   params:set_action('global_pattern_start_rec_at', function(x)
@@ -880,6 +883,8 @@ function parameters.init()
       params:set('pattern_'..i..'_parameter_change_restore',x)
     end
   end)
+
+  params:hide('global_pattern_parameter_change_capture')
 
   params:add_separator('global_snapshot_settings','snapshot mods')
   local default_times = {0.1,0.5,1.2,2.0,4.5,10}
@@ -1055,6 +1060,7 @@ function parameters.init()
     params:add_option('pattern_'..i..'_start_rec_at', 'start rec at', {'first event','when engaged'}, 1)
     params:add_option('pattern_'..i..'_snapshot_mod_restore', 'capture snapshot mods', {'no','yes'}, 1)
     params:add_option('pattern_'..i..'_parameter_change_restore', 'capture param changes', {'no','yes'}, 1)
+    params:hide('pattern_'..i..'_parameter_change_restore')
     params:add_separator('pattern_'..i..'_links_header', 'links')
     for j = 1,16 do
       if i ~= j then
